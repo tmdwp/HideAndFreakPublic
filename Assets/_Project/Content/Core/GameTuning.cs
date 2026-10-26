@@ -76,7 +76,7 @@ namespace GuardVsMannequin.Core
         /// <summary>변신 중 주기적 소음 간격의 최댓값(초).</summary>
         public static float DisguiseNoiseIntervalMax => Get(nameof(DisguiseNoiseIntervalMax), 14f);
 
-        /// <summary>감정 표현 한 번의 재생 시간(초). 실제/가짜 마네킹이 같아야 구분되지 않는다.</summary>
+        /// <summary>감정 표현 한 번의 재생 시간(초).</summary>
         public static float EmoteDuration => Get(nameof(EmoteDuration), 1.5f);
 
         #endregion
@@ -94,6 +94,49 @@ namespace GuardVsMannequin.Core
 
         /// <summary>사물을 세로축으로 돌리는 최대 각도(도, ±). 180이면 아무 방향.</summary>
         public static float PropJitterRotation => Mathf.Clamp(Get(nameof(PropJitterRotation), 180f), 0f, 180f);
+
+        #endregion
+
+        #region 변신 사물 물리 (총에 맞으면 튕겨나감)
+
+        /// <summary>총에 맞은 사물이 튕겨나갈지 여부. (1 = 켬, 0 = 끔)</summary>
+        public static bool PropPhysicsEnabled => Get(nameof(PropPhysicsEnabled), 1f) > 0.5f;
+
+        /// <summary>튕겨나가는 사물의 최대 크기(가장 긴 변, m). 이보다 큰 사물은 움직이지 않는다. (통로 막힘 방지)</summary>
+        public static float PropPhysicsMaxSize => Mathf.Max(0f, Get(nameof(PropPhysicsMaxSize), 2f));
+
+        /// <summary>동시에 움직이는 사물 수 상한. 넘으면 가장 오래 움직인 사물부터 그 자리에서 멈춘다.</summary>
+        public static int PropPhysicsMaxActive => Mathf.Max(1, GetInt(nameof(PropPhysicsMaxActive), 40));
+
+        /// <summary>사물 질량 = 겉모습 경계 부피 × 이 밀도(kg/m³).</summary>
+        public static float PropDensity => Mathf.Max(0.01f, Get(nameof(PropDensity), 40f));
+
+        /// <summary>사물 질량 최솟값(kg).</summary>
+        public static float PropMassMin => Mathf.Max(0.01f, Get(nameof(PropMassMin), 1f));
+
+        /// <summary>사물 질량 최댓값(kg).</summary>
+        public static float PropMassMax => Mathf.Max(PropMassMin, Get(nameof(PropMassMax), 40f));
+
+        /// <summary>총에 맞은 사물이 날아가는 세기. 속도(m/s) = 이 값 ÷ √질량(kg). (1kg 12m/s, 10kg 3.8m/s, 40kg 1.9m/s)</summary>
+        public static float GunKnockback => Mathf.Max(0f, Get(nameof(GunKnockback), 12f));
+
+        /// <summary>움직이는 사물이 멈춰 있는 사물·변신한 마네킹을 깨우는 최소 충격량(N·s).</summary>
+        public static float PropWakeImpulse => Mathf.Max(0f, Get(nameof(PropWakeImpulse), 5f));
+
+        /// <summary>이 속도(m/s) 이하로 <see cref="PropSettleTime"/> 동안 있으면 멈춘 것으로 본다.</summary>
+        public static float PropSettleSpeed => Mathf.Max(0f, Get(nameof(PropSettleSpeed), 0.05f));
+
+        /// <summary>멈춤으로 볼 때까지 느린 상태가 이어져야 하는 시간(초).</summary>
+        public static float PropSettleTime => Mathf.Max(0f, Get(nameof(PropSettleTime), 0.5f));
+
+        /// <summary>움직이는 사물 위치를 보내는 횟수(초당).</summary>
+        public static float PropSyncRate => Mathf.Clamp(Get(nameof(PropSyncRate), 20f), 5f, 60f);
+
+        /// <summary>판 시작 때 가장 낮은 사물보다 이만큼(m) 아래로 떨어지면 시작 위치로 되돌린다. (맵 밖 추락)</summary>
+        public static float PropKillDepth => Mathf.Max(1f, Get(nameof(PropKillDepth), 10f));
+
+        /// <summary>변신한 마네킹이 날아가는 "사물 모드"의 최대 시간(초). 넘으면 그 자리에서 멈춘다.</summary>
+        public static float DisguiseKnockbackMaxTime => Mathf.Max(0.5f, Get(nameof(DisguiseKnockbackMaxTime), 4f));
 
         #endregion
 
@@ -164,21 +207,15 @@ namespace GuardVsMannequin.Core
         /// <summary>손전등 범위(m).</summary>
         public static float FlashlightRange => Get(nameof(FlashlightRange), 25f);
 
+        /// <summary>손전등을 다시 켜고 끌 수 있을 때까지 시간(초). (연타로 동기화·소리가 몰리는 것 방지)</summary>
+        public static float FlashlightToggleCooldown => Get(nameof(FlashlightToggleCooldown), 0.2f);
+
         /// <summary>손전등 퍼짐 각도(도).</summary>
         public static float FlashlightAngle => Get(nameof(FlashlightAngle), 55f);
 
         #endregion
 
-        #region 가짜 마네킹·진행
-
-        /// <summary>게임 시작 시 생성할 가짜 마네킹 수의 최솟값.</summary>
-        public static int FakeMannequinMinCount => GetInt(nameof(FakeMannequinMinCount), 6);
-
-        /// <summary>게임 시작 시 생성할 가짜 마네킹 수의 최댓값.</summary>
-        public static int FakeMannequinMaxCount => GetInt(nameof(FakeMannequinMaxCount), 12);
-
-        /// <summary>탐색 단계 남은 시간이 이 값(초) 이하가 되면 가짜 마네킹을 정리한다.</summary>
-        public static float FakeMannequinPurgeTime => Get(nameof(FakeMannequinPurgeTime), 20f);
+        #region 진행
 
         /// <summary>판 시작 준비(카운트다운) 시간(초). 이 동안은 아무도 움직일 수 없다.</summary>
         public static float MatchStartDelay => Get(nameof(MatchStartDelay), 3f);

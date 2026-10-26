@@ -12,7 +12,8 @@ namespace GuardVsMannequin.UI
         Join,
         SteamJoin,
         DirectJoin,
-        Mods
+        Mods,
+        DirectCreate
     }
 
     /// <summary>
@@ -25,6 +26,9 @@ namespace GuardVsMannequin.UI
 
         /// <summary>이전(부모) 화면으로 돌아간다.</summary>
         void Back();
+
+        /// <summary>화면 목록에 그 화면이 있는지 여부. (예전 프리팹에는 새 화면이 없을 수 있음)</summary>
+        bool HasScreen(LobbyScreen screen);
     }
 
     /// <summary>

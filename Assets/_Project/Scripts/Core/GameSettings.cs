@@ -20,7 +20,14 @@ namespace GuardVsMannequin.Core
         public int objectiveCount;
         public int generatorCount;
         public float generatorDestroyTime;
+        /// <summary>총 발사 간격(초). 탄창 안에서 한 발을 쏜 뒤 다음 발까지 기다리는 시간.</summary>
         public float gunCooldown;
+
+        /// <summary>총 탄창 크기(발). 다 쏘면 <see cref="gunReloadTime"/> 동안 장전한다.</summary>
+        public int gunMagazineSize;
+
+        /// <summary>총 장전 시간(초). 탄창을 다 쓰면 자동으로 장전한다.</summary>
+        public float gunReloadTime;
 
         /// <summary>가드 수류탄 쿨타임(초).</summary>
         public float grenadeCooldown;
@@ -59,7 +66,9 @@ namespace GuardVsMannequin.Core
                 objectiveCount = 3,
                 generatorCount = 5,
                 generatorDestroyTime = 10f,
-                gunCooldown = 3f,
+                gunCooldown = 1f,
+                gunMagazineSize = 4,
+                gunReloadTime = 5f,
                 grenadeCooldown = 15f,
                 guardMaxHealth = 3,
                 mannequinMaxHealth = 1,

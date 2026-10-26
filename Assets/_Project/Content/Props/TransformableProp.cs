@@ -31,6 +31,15 @@ namespace GuardVsMannequin.Props
         public PropAppearance Appearance => appearance ??= PropAppearance.Capture(this);
 
         /// <summary>
+        /// 지금 놓인 자리의 월드 경계. (서버의 변신 거리 검증)
+        /// 판마다 섞기로 외형을 복사한 뒤에 옮겨져도 맞도록, 복사해 둔 사물 기준 경계를 지금 위치·방향으로 옮겨 구한다.
+        /// 벽 조각은 경계가 고정 크기 조각이라 원래 벽의 경계를 쓴다. (벽은 섞기에서 옮기지 않음)
+        /// </summary>
+        public Bounds CurrentWorldBounds => isWall
+            ? Appearance.WorldBounds
+            : PropAppearance.ToWorld(Appearance.Bounds, transform.position, transform.rotation);
+
+        /// <summary>
         /// 이 사물로 변신할 수 있는지. 번호가 있고, 외형이 있고, 너무 크지 않아야 한다. (서버·클라이언트 같은 판정)
         /// </summary>
         public bool CanDisguiseAs => index != None && Appearance.Parts.Count > 0 && Appearance.LargestSize <= GameTuning.DisguiseMaxSize;

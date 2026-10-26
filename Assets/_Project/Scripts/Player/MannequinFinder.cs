@@ -6,7 +6,7 @@ using UnityEngine;
 namespace GuardVsMannequin.Player
 {
     /// <summary>
-    /// 범위 안의 실제 마네킹(변신 여부 무관)을 찾는다. 가짜 마네킹은 <see cref="PlayerIdentity"/>가 없어 제외된다. (서버 판정용)
+    /// 범위 안의 실제 마네킹(변신 여부 무관)을 찾는다. (서버 판정용)
     /// </summary>
     public sealed class MannequinFinder
     {

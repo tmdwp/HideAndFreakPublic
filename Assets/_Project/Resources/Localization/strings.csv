@@ -16,6 +16,9 @@ lobby.menu.create,방 만들기,Create Room
 lobby.menu.join,참가,Join
 lobby.create.steam,스팀 방 만들기,Create Steam Room
 lobby.create.direct,직접 방 만들기,Create Direct Room
+lobby.directCreate.normal,일반 방 만들기,Create Room
+lobby.directCreate.test,테스트 방 만들기,Create Test Room
+lobby.directCreate.testHint,"혼자 시작할 수 있고 승패가 나지 않습니다. 게임 중 F2로 역할·구울·시점·설정을 바꿉니다.","Start alone with no win/lose. Press F2 in game to switch role, ghoul, view and settings."
 lobby.steamCreate.hint,암호를 정하면 같은 암호를 입력한 사람만 들어올 수 있습니다. 비우면 방 코드만으로 들어올 수 있습니다.,Only players who enter the same password can join. Leave it blank to let anyone with the room code join.
 lobby.password.placeholder,암호 (비우면 없음),Password (blank = none)
 lobby.steamCreate.confirm,만들기,Create
@@ -75,6 +78,7 @@ notice.passwordRequired,암호가 필요한 방입니다. 암호를 입력하고
 notice.rejected.inGame,게임이 진행 중이라 들어갈 수 없습니다. 판이 끝난 뒤 다시 시도하세요.,A game is in progress. Try again after it ends.
 notice.rejected.notMember,방에 정상적으로 입장하지 못했습니다. 방 코드나 초대로 다시 시도하세요.,Could not enter the room properly. Try again with the room code or an invite.
 session.directRoomCode,직접 접속 방 (호스트 IP로 참가),Direct room (join by host IP)
+session.testRoomCode,테스트 방 (혼자 시작 가능),Test room (can start alone)
 
 # 룸
 room.members.header,참가자,Players
@@ -116,7 +120,9 @@ setting.GuardCount,가드 수,Guards
 setting.ObjectiveCount,목표 수행 횟수,Objectives Required
 setting.GeneratorCount,전원 장치 수,Power Units
 setting.GeneratorDestroyTime,전원 장치 파괴 시간,Power Unit Destroy Time
-setting.GunCooldown,총 쿨타임,Gun Cooldown
+setting.GunCooldown,총 발사 간격,Gun Fire Interval
+setting.GunMagazineSize,총 탄창 크기,Gun Magazine Size
+setting.GunReloadTime,총 장전 시간,Gun Reload Time
 setting.GrenadeCooldown,수류탄 쿨타임,Grenade Cooldown
 setting.GuardMaxHealth,가드 체력,Guard Health
 setting.MannequinMaxHealth,마네킹 체력,Mannequin Health
@@ -135,6 +141,7 @@ unit.count,{0}개,{0}
 unit.multiplier,{0}배,x{0}
 unit.meters,{0}m,{0}m
 unit.speed,{0}m/s,{0}m/s
+unit.rounds,{0}발,{0}
 
 # 맵 이름 (map.<맵 번호>)
 map.0,버려진 정신병원,Abandoned Asylum
@@ -142,6 +149,7 @@ map.1,산업 시설,Industrial Site
 map.2,공포 병원,Horror Hospital
 map.3,연금술사의 집,Alchemist House
 map.4, 연구실, Laboratory
+map.5,환승역,Transfer Station
 # 설정 화면
 options.title,설정,Settings
 options.language,언어,Language
@@ -223,10 +231,28 @@ hud.controls.move,이동,Move
 hud.controls.sprint,달리기,Sprint
 hud.controls.jump,점프,Jump
 hud.stamina,스태미나,Stamina
+test.openHint,F2 테스트 메뉴 / F3 시점,F2 Test menu / F3 View
+test.title,테스트 메뉴,Test Menu
+test.status,"모습: {0}   단계: {1}","Form: {0}   Phase: {1}"
+test.role.guard,가드,Guard
+test.role.mannequin,마네킹,Mannequin
+test.role.ghoul,구울,Ghoul
+test.role.none,없음 (관전 중),None (spectating)
+test.state.playing,탐색,Search
+test.state.hunting,사냥 시간,Hunt
+test.state.other,준비 중,Preparing
+test.swapRole,가드/마네킹 전환,Guard / Mannequin
+test.toggleHunt,마네킹/구울 전환,Mannequin / Ghoul
+test.togglePerspective,1인칭/3인칭 전환,1st / 3rd person
+test.settingsHint,"게임 설정 (바로 적용: 이동 속도·공격 범위·쿨타임·피해량 / 체력은 다음 스폰부터)","Game settings (instant: speed, attack range, cooldowns, damage / health: next spawn)"
+test.close,닫기,Close
+test.returnToRoom,룸으로 돌아가기 (맵 바꾸기),Return to Room (change map)
 hud.health,체력 {0} / {1},Health {0} / {1}
 hud.tool.ready,준비,Ready
 hud.tool.cooldown,{0}초,{0}s
 hud.tool.unavailable,-,-
+hud.tool.ammo,{0}/{1},{0}/{1}
+hud.tool.reloading,장전 {0}초,Reloading {0}s
 hud.spectating,관전 중,Spectating
 hud.spectatingDead,사망했습니다 · 관전 중,You died · Spectating
 hud.spectate.none,관전할 생존자가 없습니다.,No survivors to spectate.

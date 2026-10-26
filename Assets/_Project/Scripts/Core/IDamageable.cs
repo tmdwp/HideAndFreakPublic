@@ -4,7 +4,7 @@ namespace GuardVsMannequin.Core
 {
     /// <summary>
     /// 피해를 받을 수 있는 대상. 모든 호출은 서버에서만 이루어진다.
-    /// (플레이어, Phase 2의 가짜 마네킹 등)
+    /// (플레이어 등)
     /// </summary>
     public interface IDamageable
     {

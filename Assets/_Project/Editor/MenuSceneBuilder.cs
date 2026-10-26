@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using FishNet.Component.Scenes;
 using FishNet.Managing;
@@ -189,7 +190,82 @@ namespace GuardVsMannequin.Editor
                 CreateModMismatchPopup(canvas);
                 added++;
             }
+            if (canvas.GetComponent<LobbyCreateMenu>() != null && !HasLobbyScreen(canvas.GetComponent<LobbyView>(), LobbyScreen.DirectCreate))
+            {
+                CreateDirectCreateScreen(canvas);
+                added++;
+            }
             return added;
+        }
+
+        /// <summary>
+        /// "직접 방 만들기" 아래 화면(일반 방 만들기 / 테스트 방 만들기)을 만들어 로비 화면 목록에 등록한다.
+        /// 방 만들기 화면의 "직접 방 만들기" 버튼이 이 화면을 연다.
+        /// </summary>
+        private static void CreateDirectCreateScreen(GameObject canvas)
+        {
+            RectTransform screen = CreateScreen(canvas.transform, "DirectCreatePanel", "lobby.create.direct");
+            CreateHint(screen, "DirectHint", "lobby.direct.hint", 140f);
+            Button normalButton = CreateMenuButton(screen, "HostNormalButton", "lobby.directCreate.normal", 60f, EditorUiFactory.AccentColor);
+            Button testButton = CreateMenuButton(screen, "HostTestButton", "lobby.directCreate.test", -30f, EditorUiFactory.ButtonColor);
+            CreateHint(screen, "TestHint", "lobby.directCreate.testHint", -115f);
+            Button backButton = CreateMenuButton(screen, "BackButton", "lobby.back", -210f, EditorUiFactory.ButtonColor);
+
+            PlaceBeforeOverlayPanels(canvas, screen);
+            screen.gameObject.SetActive(false);
+            RegisterLobbyScreen(canvas.GetComponent<LobbyView>(), LobbyScreen.DirectCreate, screen.gameObject, LobbyScreen.Create, backButton);
+
+            LobbyCreateMenu menu = canvas.GetComponent<LobbyCreateMenu>();
+            TestEnvironmentSetupTool.SetField(menu, "hostDirectNormalButton", normalButton);
+            TestEnvironmentSetupTool.SetField(menu, "hostTestButton", testButton);
+        }
+
+        /// <summary>
+        /// 로비 화면 목록에 그 화면이 패널과 함께 등록되어 있는지 확인한다.
+        /// </summary>
+        private static bool HasLobbyScreen(LobbyView view, LobbyScreen screen)
+        {
+            if (view == null)
+                return false;
+
+            SerializedProperty screens = new SerializedObject(view).FindProperty("screens");
+            for (int i = 0; i < screens.arraySize; i++)
+            {
+                SerializedProperty entry = screens.GetArrayElementAtIndex(i);
+                if (entry.FindPropertyRelative("screen").enumValueIndex == (int)screen && entry.FindPropertyRelative("panel").objectReferenceValue != null)
+                    return true;
+            }
+            return false;
+        }
+
+        /// <summary>
+        /// 로비 화면 목록과 뒤로 버튼 목록에 화면 하나를 더한다.
+        /// </summary>
+        private static void RegisterLobbyScreen(LobbyView view, LobbyScreen screen, GameObject panel, LobbyScreen parent, Button backButton)
+        {
+            var serializedView = new SerializedObject(view);
+            SerializedProperty screens = serializedView.FindProperty("screens");
+            int index = screens.arraySize;
+            screens.arraySize++;
+            SerializedProperty added = screens.GetArrayElementAtIndex(index);
+            added.FindPropertyRelative("screen").enumValueIndex = (int)screen;
+            added.FindPropertyRelative("panel").objectReferenceValue = panel;
+            added.FindPropertyRelative("parent").enumValueIndex = (int)parent;
+
+            SerializedProperty backButtons = serializedView.FindProperty("backButtons");
+            backButtons.arraySize++;
+            backButtons.GetArrayElementAtIndex(backButtons.arraySize - 1).objectReferenceValue = backButton;
+            serializedView.ApplyModifiedPropertiesWithoutUndo();
+        }
+
+        /// <summary>
+        /// 설정·크레딧 패널이 있으면 그 앞에 둔다. (그 패널들이 화면 위에 그려지도록)
+        /// </summary>
+        private static void PlaceBeforeOverlayPanels(GameObject canvas, Transform screen)
+        {
+            SettingsPanelView settings = canvas.GetComponentInChildren<SettingsPanelView>(true);
+            if (settings != null && settings.transform.parent == canvas.transform)
+                screen.SetSiblingIndex(settings.transform.GetSiblingIndex());
         }
 
         /// <summary>
@@ -273,23 +349,9 @@ namespace GuardVsMannequin.Editor
             Button backButton = EditorUiFactory.CreateButton(modsScreen, "BackButton", "lobby.back", EditorUiFactory.ButtonColor);
             EditorUiFactory.Place(backButton, Center, new Vector2(225f, -220f), new Vector2(210f, 56f));
 
-            // 설정·크레딧 패널이 있으면 그 앞에 둔다. (그 패널들이 위에 그려지도록)
-            SettingsPanelView settings = canvas.GetComponentInChildren<SettingsPanelView>(true);
-            if (settings != null && settings.transform.parent == canvas.transform)
-                modsScreen.SetSiblingIndex(settings.transform.GetSiblingIndex());
+            PlaceBeforeOverlayPanels(canvas, modsScreen);
             modsScreen.gameObject.SetActive(false);
-
-            // 화면 목록과 뒤로 버튼 목록에 더한다.
-            int index = screens.arraySize;
-            screens.arraySize++;
-            SerializedProperty added = screens.GetArrayElementAtIndex(index);
-            added.FindPropertyRelative("screen").enumValueIndex = (int)LobbyScreen.Mods;
-            added.FindPropertyRelative("panel").objectReferenceValue = modsScreen.gameObject;
-            added.FindPropertyRelative("parent").enumValueIndex = (int)LobbyScreen.Main;
-            SerializedProperty backButtons = serializedView.FindProperty("backButtons");
-            backButtons.arraySize++;
-            backButtons.GetArrayElementAtIndex(backButtons.arraySize - 1).objectReferenceValue = backButton;
-            serializedView.ApplyModifiedPropertiesWithoutUndo();
+            RegisterLobbyScreen(view, LobbyScreen.Mods, modsScreen.gameObject, LobbyScreen.Main, backButton);
 
             LobbyModsMenu menu = canvas.AddComponent<LobbyModsMenu>();
             TestEnvironmentSetupTool.SetField(menu, "openButton", openButton);
@@ -586,9 +648,51 @@ namespace GuardVsMannequin.Editor
         }
 
         /// <summary>
+        /// 설정 줄 목록(settingRows 필드)을 가진 화면에, 코드에는 있지만 프리팹에 빠진 설정 줄을 기존 줄 옆에 더한다.
+        /// (룸 설정 화면, HUD 테스트 메뉴. 새 설정 항목을 기존 프리팹에 넣을 때 사용)
+        /// </summary>
+        /// <param name="owner">settingRows 필드를 가진 컴포넌트. 없으면 -1.</param>
+        /// <param name="include">이 화면에 보여줄 항목인지.</param>
+        /// <returns>추가한 줄 수. 대상을 찾지 못하면 -1.</returns>
+        internal static int AddMissingSettingRows(Component owner, Func<GameSettingId, bool> include)
+        {
+            if (owner == null)
+                return -1;
+
+            var serialized = new SerializedObject(owner);
+            SerializedProperty rows = serialized.FindProperty("settingRows");
+            var existing = new HashSet<GameSettingId>();
+            Transform list = null;
+            for (int i = 0; i < rows.arraySize; i++)
+            {
+                if (rows.GetArrayElementAtIndex(i).objectReferenceValue is SettingRowView row)
+                {
+                    existing.Add(row.SettingId);
+                    list = row.transform.parent;
+                }
+            }
+            if (list == null)
+                return -1;
+
+            int added = 0;
+            foreach (GameSettingDefinitions.Definition definition in GameSettingDefinitions.All)
+            {
+                if (existing.Contains(definition.id) || !include(definition.id))
+                    continue;
+
+                SettingRowView row = CreateSettingRow(list, definition.id);
+                rows.arraySize++;
+                rows.GetArrayElementAtIndex(rows.arraySize - 1).objectReferenceValue = row;
+                added++;
+            }
+            serialized.ApplyModifiedPropertiesWithoutUndo();
+            return added;
+        }
+
+        /// <summary>
         /// 설정 한 줄(이름 | - | 값 | +)을 만든다. 맵 이외의 값은 눌러서 키보드로 입력할 수 있는 칸이다.
         /// </summary>
-        private static SettingRowView CreateSettingRow(Transform parent, GameSettingId id)
+        internal static SettingRowView CreateSettingRow(Transform parent, GameSettingId id)
         {
             RectTransform row = EditorUiFactory.CreateRow(parent, $"Row_{id}", 38f, 8f);
 

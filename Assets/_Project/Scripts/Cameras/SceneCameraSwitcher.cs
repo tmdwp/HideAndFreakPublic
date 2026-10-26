@@ -37,8 +37,11 @@ namespace GuardVsMannequin.Cameras
         /// <summary>로컬 플레이어가 생기면 씬 카메라를 끈다.</summary>
         private void OnLocalPlayerSpawned(PlayerIdentity identity) => SetActive(false);
 
-        /// <summary>로컬 플레이어가 사라지면 씬 카메라를 켠다.</summary>
-        private void OnLocalPlayerDespawned(PlayerIdentity identity) => SetActive(true);
+        /// <summary>
+        /// 로컬 플레이어가 사라지면 씬 카메라를 켠다.
+        /// 다시 스폰(테스트 방 역할 전환 등)에서 새 아바타가 먼저 생긴 뒤 옛 아바타가 사라지면 켜지 않는다.
+        /// </summary>
+        private void OnLocalPlayerDespawned(PlayerIdentity identity) => SetActive(LocalPlayerEvents.Current == null);
 
         /// <summary>
         /// 카메라와 오디오 리스너를 함께 켜고 끈다.

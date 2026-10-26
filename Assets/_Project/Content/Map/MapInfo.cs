@@ -8,7 +8,7 @@ namespace GuardVsMannequin.Map
     /// <summary>
     /// 맵 단위 정보.
     /// - 천장 높이가 가드 히트스캔 사거리보다 낮은지 검증한다. (천장에 붙은 마네킹도 맞출 수 있어야 하기 때문)
-    /// - 맵별 캐릭터 외형: 비워 두면 프리팹의 기본 외형을 쓴다. 마네킹 외형을 바꾸면 가짜 마네킹도 같이 바뀐다.
+    /// - 맵별 캐릭터 외형: 비워 두면 프리팹의 기본 외형을 쓴다.
     /// - 사냥 시간 마네킹 외형: 비워 두면 프리팹의 기본 사냥 외형(Ghoul)을 쓴다. (모드 맵이 자기 괴물 외형을 지정할 때 사용)
     /// - 변신 사물: 맵에 놓인 TransformableProp을 그대로 복사하므로 따로 지정할 것이 없다.
     /// 씬에 하나만 둔다.
@@ -20,7 +20,7 @@ namespace GuardVsMannequin.Map
         [Tooltip("바닥에서 천장까지의 높이. 천장이 개방된 맵은 투명 천장 높이.")]
         [SerializeField] private float ceilingHeight = 4f;
 
-        [Tooltip("이 맵에서 마네킹(실제·가짜)이 쓸 외형. 비우면 프리팹의 기본 외형.")]
+        [Tooltip("이 맵에서 마네킹이 쓸 외형. 비우면 프리팹의 기본 외형.")]
         [SerializeField] private CharacterSkin mannequinSkin;
 
         [Tooltip("이 맵에서 가드가 쓸 외형. 비우면 프리팹의 기본 외형.")]

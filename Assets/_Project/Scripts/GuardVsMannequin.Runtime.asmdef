@@ -5,7 +5,6 @@
         "GuardVsMannequin.Content",
         "FishNet.Runtime",
         "GameKit.Dependencies",
-        "ECM2",
         "Unity.InputSystem",
         "Unity.AI.Navigation",
         "Unity.RenderPipelines.Core.Runtime",

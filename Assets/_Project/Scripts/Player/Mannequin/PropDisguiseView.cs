@@ -1,5 +1,4 @@
 using System.Collections.Generic;
-using ECM2;
 using GuardVsMannequin.Props;
 using UnityEngine;
 using UnityEngine.Rendering;
@@ -12,12 +11,10 @@ namespace GuardVsMannequin.Player.Mannequin
     /// 모든 피어에서 실행되어, 서버의 히트스캔도 변신한 크기로 판정된다.
     /// </summary>
     [RequireComponent(typeof(MannequinTransformer))]
-    public class PropDisguiseView : MonoBehaviour
+    public class PropDisguiseView : MonoBehaviour, IPerspectiveListener
     {
         private const float MinRadius = 0.15f;
         private const float MaxRadius = 1.0f;
-
-        [SerializeField] private CharacterMovement characterMovement;
 
         [Tooltip("변신 중 숨길 마네킹 본체 렌더러.")]
         [SerializeField] private Renderer[] bodyRenderers;
@@ -26,7 +23,9 @@ namespace GuardVsMannequin.Player.Mannequin
         private readonly List<MeshFilter> partFilters = new();
 
         private MannequinTransformer transformer;
+        private ICharacterMotor motor;
         private Transform disguiseRoot;
+        private Vector3 defaultLocalPosition;
         private float defaultRadius;
         private float defaultHeight;
         private bool disguiseShadowsOnly;
@@ -37,8 +36,12 @@ namespace GuardVsMannequin.Player.Mannequin
         private void Awake()
         {
             transformer = GetComponent<MannequinTransformer>();
-            defaultRadius = characterMovement.radius;
-            defaultHeight = characterMovement.height;
+            motor = GetComponent<ICharacterMotor>();
+            if (motor != null)
+            {
+                defaultRadius = motor.CapsuleRadius;
+                defaultHeight = motor.CapsuleHeight;
+            }
             transformer.DisguiseChanged += ApplyDisguise;
         }
 
@@ -73,13 +76,53 @@ namespace GuardVsMannequin.Player.Mannequin
 
             // 사물의 바닥이 캐릭터 발 위치(피벗)에 오도록 배치한다. 좌우 방향은 마네킹이 바라보는 방향을 따른다.
             Bounds bounds = appearance.Bounds;
-            disguiseRoot.localPosition = new Vector3(-bounds.center.x, -bounds.min.y, -bounds.center.z);
+            DisguiseBounds = bounds;
+            defaultLocalPosition = new Vector3(-bounds.center.x, -bounds.min.y, -bounds.center.z);
+            ResetPose();
             disguiseRoot.gameObject.SetActive(true);
 
             SetBodyVisible(false);
 
             float radius = Mathf.Clamp(Mathf.Max(bounds.size.x, bounds.size.z) * 0.5f, MinRadius, MaxRadius);
-            characterMovement.SetDimensions(radius, Mathf.Max(bounds.size.y, radius * 2f));
+            motor?.SetCapsule(radius, Mathf.Max(bounds.size.y, radius * 2f));
+        }
+
+        /// <summary>변신 외형이 보이는 중인지.</summary>
+        public bool IsShowing => disguiseRoot != null && disguiseRoot.gameObject.activeSelf;
+
+        /// <summary>지금 외형의 경계. (외형 기준 공간 — <see cref="WorldPose"/>로 월드에 놓인다)</summary>
+        public Bounds DisguiseBounds { get; private set; }
+
+        /// <summary>외형 기준 공간의 월드 자세. (외형이 없으면 아바타 자세)</summary>
+        public Pose WorldPose => disguiseRoot != null
+            ? new Pose(disguiseRoot.position, disguiseRoot.rotation)
+            : new Pose(transform.position, transform.rotation);
+
+        /// <summary>
+        /// 외형을 월드 자세에 그대로 놓는다. (날아가는 동안 서버 물리 자세를 따라감)
+        /// </summary>
+        public void SetWorldPose(Pose pose)
+        {
+            if (disguiseRoot != null)
+                disguiseRoot.SetPositionAndRotation(pose.position, pose.rotation);
+        }
+
+        /// <summary>
+        /// 외형을 아바타 기준 자세에 놓는다. (멈춘 뒤 넘어진 모습 유지)
+        /// </summary>
+        public void SetLocalPose(Pose pose)
+        {
+            if (disguiseRoot != null)
+                disguiseRoot.SetLocalPositionAndRotation(pose.position, pose.rotation);
+        }
+
+        /// <summary>
+        /// 외형을 기본 자세(사물 바닥이 발 위치, 똑바로 선 모습)로 되돌린다.
+        /// </summary>
+        public void ResetPose()
+        {
+            if (disguiseRoot != null)
+                disguiseRoot.SetLocalPositionAndRotation(defaultLocalPosition, Quaternion.identity);
         }
 
         /// <summary>
@@ -115,7 +158,7 @@ namespace GuardVsMannequin.Player.Mannequin
                 disguiseRoot.gameObject.SetActive(false);
 
             SetBodyVisible(true);
-            characterMovement.SetDimensions(defaultRadius, defaultHeight);
+            motor?.SetCapsule(defaultRadius, defaultHeight);
         }
 
         /// <summary>
@@ -141,6 +184,14 @@ namespace GuardVsMannequin.Player.Mannequin
             MeshRenderer partRenderer = part.AddComponent<MeshRenderer>();
             partRenderer.shadowCastingMode = ShadowMode;
             partRenderers.Add(partRenderer);
+        }
+
+        /// <summary>
+        /// 소유자 시점이 바뀌면 1인칭일 때 변신한 사물이 시야를 가리지 않게 그림자만 남긴다. (테스트 방 시점 전환)
+        /// </summary>
+        public void OnPerspectiveChanged(bool firstPerson)
+        {
+            SetDisguiseShadowsOnly(firstPerson);
         }
 
         /// <summary>

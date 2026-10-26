@@ -1,3 +1,5 @@
+using GuardVsMannequin.Room;
+using GuardVsMannequin.UI;
 using UnityEditor;
 using UnityEngine;
 
@@ -66,8 +68,14 @@ namespace GuardVsMannequin.Editor
             int hudAdded = EditPrefab(UiPrefabLibrary.HudCanvasPath, root => SharedUiBuilder.AddMissingHudSections(root.transform));
             int rowsAdded = EditPrefab(UiPrefabLibrary.SettingsPanelPath, SharedUiBuilder.AddMissingRebindRows);
             int lobbyAdded = EditPrefab(UiPrefabLibrary.LobbyCanvasPath, MenuSceneBuilder.AddMissingLobbySections);
+            // 새 게임 설정 항목(예: 총 탄창·장전)의 줄: 룸 설정 화면과 HUD 테스트 메뉴
+            int roomRowsAdded = EditPrefab(UiPrefabLibrary.RoomCanvasPath, root =>
+                MenuSceneBuilder.AddMissingSettingRows(root.GetComponentInChildren<RoomSettingsView>(true), GameSettingDefinitions.IsShownInRoom));
+            int testRowsAdded = EditPrefab(UiPrefabLibrary.HudCanvasPath, root =>
+                MenuSceneBuilder.AddMissingSettingRows(root.GetComponentInChildren<HudTestRoomPanel>(true), id => id != GameSettingId.Map));
 
-            Debug.Log($"[UiPrefabMenus] HUD 영역 {Describe(hudAdded)}, 키 설정 줄 {Describe(rowsAdded)}, 로비 영역(버전 표시·모드 화면·모드 경고 창) {Describe(lobbyAdded)}. " +
+            Debug.Log($"[UiPrefabMenus] HUD 영역 {Describe(hudAdded)}, 키 설정 줄 {Describe(rowsAdded)}, 로비 영역(버전 표시·모드 화면·모드 경고 창) {Describe(lobbyAdded)}, " +
+                      $"룸 설정 줄 {Describe(roomRowsAdded)}, 테스트 메뉴 설정 줄 {Describe(testRowsAdded)}. " +
                       "모양이 마음에 들면 '현재 UI를 초기화 기준으로 저장'으로 기준본도 갱신하세요.");
         }
 

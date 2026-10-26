@@ -116,6 +116,13 @@ namespace GuardVsMannequin.UI
         }
 
         /// <inheritdoc />
+        public bool HasScreen(LobbyScreen screen)
+        {
+            ScreenEntry entry = FindEntry(screen);
+            return entry != null && entry.panel != null;
+        }
+
+        /// <inheritdoc />
         public void OpenSettings()
         {
             settingsPanel.Open();

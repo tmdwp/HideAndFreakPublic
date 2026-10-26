@@ -31,7 +31,9 @@ namespace GuardVsMannequin.Room
         MannequinMoveSpeed,
         // 새 항목은 끝에 추가한다. (UI 프리팹이 번호로 저장하므로 중간에 넣으면 기존 줄이 어긋남) 표시 순서는 CSV가 정한다.
         GunDamage,
-        MannequinAttackDamage
+        MannequinAttackDamage,
+        GunMagazineSize,
+        GunReloadTime
     }
 
     /// <summary>
@@ -89,7 +91,9 @@ namespace GuardVsMannequin.Room
             new(GameSettingId.GuardMoveSpeed, 0.1f, GameSettingsValidator.MinMoveSpeed, GameSettingsValidator.MaxMoveSpeed, "unit.speed"),
             new(GameSettingId.MannequinMoveSpeed, 0.1f, GameSettingsValidator.MinMoveSpeed, GameSettingsValidator.MaxMoveSpeed, "unit.speed"),
             new(GameSettingId.GunDamage, 1f, 1f, 500f, string.Empty),
-            new(GameSettingId.MannequinAttackDamage, 1f, 1f, 500f, string.Empty)
+            new(GameSettingId.MannequinAttackDamage, 1f, 1f, 500f, string.Empty),
+            new(GameSettingId.GunMagazineSize, 1f, 1f, 10f, "unit.rounds"),
+            new(GameSettingId.GunReloadTime, 0.5f, 1f, 15f, "unit.seconds")
         };
 
         /// <summary>
@@ -186,6 +190,8 @@ namespace GuardVsMannequin.Room
                 GameSettingId.MannequinMoveSpeed => settings.mannequinMoveSpeed,
                 GameSettingId.GunDamage => settings.gunDamage,
                 GameSettingId.MannequinAttackDamage => settings.mannequinAttackDamage,
+                GameSettingId.GunMagazineSize => settings.gunMagazineSize,
+                GameSettingId.GunReloadTime => settings.gunReloadTime,
                 _ => 0f
             };
         }
@@ -272,6 +278,8 @@ namespace GuardVsMannequin.Room
                 case GameSettingId.MannequinMoveSpeed: settings.mannequinMoveSpeed = value; break;
                 case GameSettingId.GunDamage: settings.gunDamage = rounded; break;
                 case GameSettingId.MannequinAttackDamage: settings.mannequinAttackDamage = rounded; break;
+                case GameSettingId.GunMagazineSize: settings.gunMagazineSize = rounded; break;
+                case GameSettingId.GunReloadTime: settings.gunReloadTime = value; break;
             }
             return settings;
         }

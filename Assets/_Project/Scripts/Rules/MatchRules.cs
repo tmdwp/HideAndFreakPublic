@@ -35,9 +35,13 @@ namespace GuardVsMannequin.Rules
 
         /// <summary>
         /// 판이 끝나는 판정이면 결과를 기록하고, 다음 상태를 반환한다.
+        /// 테스트 방은 승패·시간으로 단계를 넘기지 않는다. (테스트 메뉴로만 사냥 시간을 켜고 끔)
         /// </summary>
         private GameState? Apply(MatchVerdict verdict)
         {
+            if (GameServices.Room?.IsTestRoom ?? false)
+                return null;
+
             if (verdict.EndsMatch)
                 matchResult.SetResult(verdict.Winner, verdict.Reason);
             return verdict.NextState;

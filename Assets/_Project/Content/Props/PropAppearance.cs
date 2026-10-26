@@ -7,7 +7,7 @@ namespace GuardVsMannequin.Props
     /// 변신 사물의 외형을 맵에 놓인 물체에서 그대로 복사한 정보. (메시·머티리얼·실제 크기·기울기, 자식 조각 포함)
     /// 좌표는 "사물 기준점에서 좌우 방향(월드 Y축 회전)만 뺀" 공간이다. 변신하면 마네킹이 바라보는 방향으로 놓인다.
     /// 벽으로 지정된 사물은 원래 크기와 관계없이 고정 크기 벽 조각(그 벽의 첫 번째 머티리얼)이 된다.
-    /// 씬의 물체는 움직이지 않으므로 사물마다 한 번만 만든다(<see cref="TransformableProp.Appearance"/>).
+    /// 외형은 사물 기준 공간이라 사물이 옮겨져도(판마다 섞기) 그대로 쓸 수 있으므로 사물마다 한 번만 만든다(<see cref="TransformableProp.Appearance"/>).
     /// </summary>
     public sealed class PropAppearance
     {
@@ -41,7 +41,10 @@ namespace GuardVsMannequin.Props
         /// <summary>사물 기준 공간에서 모든 조각을 감싸는 경계. (변신 배치와 충돌체 크기 계산)</summary>
         public Bounds Bounds { get; }
 
-        /// <summary>맵에 놓인 원래 물체의 월드 경계. (서버의 변신 거리 검증)</summary>
+        /// <summary>
+        /// 외형을 복사한 순간의 월드 경계. 사물이 그 뒤에 옮겨지면(판마다 섞기) 맞지 않으므로,
+        /// 거리 검증은 <see cref="TransformableProp.CurrentWorldBounds"/>를 쓴다. (벽 조각은 옮기지 않아 이 값을 그대로 쓴다)
+        /// </summary>
         public Bounds WorldBounds { get; }
 
         /// <summary>경계의 가장 긴 변(m).</summary>
@@ -136,6 +139,20 @@ namespace GuardVsMannequin.Props
             Bounds result = renderers[0].bounds;
             for (int i = 1; i < renderers.Count; i++)
                 result.Encapsulate(renderers[i].bounds);
+            return result;
+        }
+
+        /// <summary>
+        /// 사물 기준 공간의 경계를 지금 사물 위치·좌우 방향의 월드 경계로 바꾼다. (꼭짓점 8개 변환, 할당 없음)
+        /// </summary>
+        /// <param name="localBounds">사물 기준 공간의 경계. (<see cref="Bounds"/>)</param>
+        /// <param name="position">사물 기준점의 지금 월드 위치.</param>
+        /// <param name="rotation">사물의 지금 월드 회전. 좌우 방향만 쓴다.</param>
+        public static Bounds ToWorld(Bounds localBounds, Vector3 position, Quaternion rotation)
+        {
+            Matrix4x4 toWorld = Matrix4x4.TRS(position, YawOf(rotation), Vector3.one);
+            Bounds result = default;
+            Encapsulate(ref result, true, localBounds, toWorld);
             return result;
         }
 

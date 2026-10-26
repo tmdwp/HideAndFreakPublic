@@ -31,6 +31,46 @@ namespace GuardVsMannequin.Core
         /// <summary>룸 복귀 흐름. 룸 없이 실행하면 null.</summary>
         public static ISceneFlow SceneFlow { get; private set; }
 
+        /// <summary>테스트 방 조작. 테스트 방 게임 씬의 호스트(서버)에서만 있고, 그 밖에는 null.</summary>
+        public static ITestRoomActions TestRoom { get; private set; }
+
+        /// <summary>변신 사물 물리. 게임 씬의 서버에서만 있고, 그 밖에는 null.</summary>
+        public static IPropPhysics PropPhysics { get; private set; }
+
+        /// <summary>
+        /// 변신 사물 물리 서비스를 등록한다.
+        /// </summary>
+        public static void RegisterPropPhysics(IPropPhysics service)
+        {
+            PropPhysics = service;
+        }
+
+        /// <summary>
+        /// 등록된 서비스와 같을 때만 해제한다.
+        /// </summary>
+        public static void UnregisterPropPhysics(IPropPhysics service)
+        {
+            if (PropPhysics == service)
+                PropPhysics = null;
+        }
+
+        /// <summary>
+        /// 테스트 방 조작을 등록한다.
+        /// </summary>
+        public static void RegisterTestRoom(ITestRoomActions actions)
+        {
+            TestRoom = actions;
+        }
+
+        /// <summary>
+        /// 등록된 조작과 같을 때만 해제한다.
+        /// </summary>
+        public static void UnregisterTestRoom(ITestRoomActions actions)
+        {
+            if (TestRoom == actions)
+                TestRoom = null;
+        }
+
         /// <summary>
         /// 룸 정보와 흐름을 등록한다.
         /// </summary>

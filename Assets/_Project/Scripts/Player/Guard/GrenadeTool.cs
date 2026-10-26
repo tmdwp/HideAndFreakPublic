@@ -12,7 +12,6 @@ namespace GuardVsMannequin.Player.Guard
     /// 판정은 서버가 한다: 클라이언트는 조준만 보내고, 서버가 궤적·폭발 지점을 정해 모두에게 같은 연출(<see cref="GrenadeView"/>)을 보낸다.
     /// 궤적이 결정적이므로 수류탄을 네트워크 오브젝트로 만들지 않는다.
     /// </summary>
-    [RequireComponent(typeof(CameraAimProvider))]
     public class GrenadeTool : NetworkBehaviour, ITool
     {
         /// <summary>비정상 원점을 대체할 눈 높이(m).</summary>
@@ -92,12 +91,14 @@ namespace GuardVsMannequin.Player.Guard
         [ServerRpc]
         private void ThrowServerRpc(Vector3 origin, Vector3 direction)
         {
+            if (!AimRaycaster.IsValidAim(origin, direction))
+                return;
             if (!DamageRules.CanUseGuardTools(GameServices.State))
                 return;
             if (!cooldown.TryStartServer(Cooldown))
                 return;
 
-            origin = AimRaycaster.SanitizeOrigin(origin, transform, EyeHeight);
+            origin = AimRaycaster.SanitizeOrigin(origin, direction, transform, EyeHeight);
             Vector3 throwDirection = (direction.normalized + Vector3.up * UpwardBias).normalized;
             Vector3 start = origin + throwDirection * ThrowForwardOffset;
             Vector3 velocity = throwDirection * GameTuning.GrenadeThrowSpeed;

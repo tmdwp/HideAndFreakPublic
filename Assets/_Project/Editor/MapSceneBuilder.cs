@@ -487,7 +487,18 @@ namespace GuardVsMannequin.Editor
                 cumulative[i] = total;
             }
 
-            result = DrawPoints(triangulation, cumulative, total, indoor);
+            // 천장 검사는 아래에서 위로 쏘므로 메시의 뒷면을 맞혀야 한다. (윗면만 있는 천장 메시가 많아,
+            // 기본 설정이면 천장을 통과해 "천장 없음"이 되고 지붕 윗면이 바닥으로 잡힌다)
+            bool hitBackfaces = Physics.queriesHitBackfaces;
+            Physics.queriesHitBackfaces = true;
+            try
+            {
+                result = DrawPoints(triangulation, cumulative, total, indoor);
+            }
+            finally
+            {
+                Physics.queriesHitBackfaces = hitBackfaces;
+            }
 
             // 천장이 없는 실내 데모 씬(위가 열린 전시용 방 등)은 천장 조건 없이 다시 뽑는다.
             if (indoor && result.Count < FloorSampleCount / 20)

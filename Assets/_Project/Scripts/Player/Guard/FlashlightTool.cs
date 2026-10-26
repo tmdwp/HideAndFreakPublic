@@ -17,13 +17,14 @@ namespace GuardVsMannequin.Player.Guard
         [SerializeField] private Light spotLight;
 
         private readonly SyncVar<bool> isOn = new();
+        private readonly ToolCooldown cooldown = new();
 
         private IPlayerInput playerInput;
         private NoiseEmitter noiseEmitter;
 
         public string DisplayName => Loc.Get("tool.flashlight");
-        public float CooldownRemaining => 0f;
-        public bool IsReady => GameServices.CurrentStateOrWaiting == GameState.Hunting;
+        public float CooldownRemaining => cooldown.LocalRemaining;
+        public bool IsReady => GameServices.CurrentStateOrWaiting == GameState.Hunting && CooldownRemaining <= 0f;
 
         /// <summary>현재 켜져 있는지 여부.</summary>
         public bool IsOn => isOn.Value;
@@ -82,21 +83,25 @@ namespace GuardVsMannequin.Player.Guard
         }
 
         /// <summary>
-        /// 사냥 시간이면 서버에 켜기/끄기를 요청한다.
+        /// 사냥 시간이고 쿨타임이 끝났으면 서버에 켜기/끄기를 요청한다.
         /// </summary>
         private void OnFlashlightPressed()
         {
-            if (IsReady)
-                ToggleServerRpc();
+            if (!IsReady)
+                return;
+            cooldown.StartLocal(GameTuning.FlashlightToggleCooldown);
+            ToggleServerRpc();
         }
 
         /// <summary>
-        /// 서버에서 사냥 시간인지 확인하고 켜짐 상태를 뒤집는다.
+        /// 서버에서 사냥 시간·쿨타임을 확인하고 켜짐 상태를 뒤집는다.
         /// </summary>
         [ServerRpc]
         private void ToggleServerRpc()
         {
             if (GameServices.CurrentStateOrWaiting != GameState.Hunting)
+                return;
+            if (!cooldown.TryStartServer(GameTuning.FlashlightToggleCooldown))
                 return;
 
             isOn.Value = !isOn.Value;

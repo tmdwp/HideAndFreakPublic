@@ -1,4 +1,3 @@
-using ECM2;
 using FishNet.Object;
 using FishNet.Object.Synchronizing;
 using GuardVsMannequin.Core;
@@ -11,7 +10,6 @@ namespace GuardVsMannequin.Player
     /// - 관전자가 대상 플레이어의 시야로 볼 수 있게 한다.
     /// - 가드는 상하 시선을 카메라 피벗에 적용해, 원격 화면의 손전등이 실제 보는 방향을 비추게 한다.
     /// </summary>
-    [RequireComponent(typeof(Character))]
     public class PlayerViewSync : NetworkBehaviour
     {
         /// <summary>전송 주기(초).</summary>
@@ -27,7 +25,7 @@ namespace GuardVsMannequin.Player
         /// <summary>x = Pitch, y = Yaw.</summary>
         private readonly SyncVar<Vector2> syncedView = new();
 
-        private Character character;
+        private ICharacterMotor motor;
         private Vector2 lastSentView;
         private float nextSendTime;
 
@@ -38,11 +36,11 @@ namespace GuardVsMannequin.Player
         public float ViewYaw => IsOwner ? ReadLocalView().y : syncedView.Value.y;
 
         /// <summary>
-        /// 같은 오브젝트의 캐릭터를 캐시한다.
+        /// 같은 오브젝트의 캐릭터 이동 구현을 캐시한다.
         /// </summary>
         private void Awake()
         {
-            character = GetComponent<Character>();
+            motor = GetComponent<ICharacterMotor>();
         }
 
         /// <summary>
@@ -64,7 +62,8 @@ namespace GuardVsMannequin.Player
         /// </summary>
         private Vector2 ReadLocalView()
         {
-            Transform view = character.cameraTransform != null ? character.cameraTransform : transform;
+            Transform cameraView = motor?.ViewTransform;
+            Transform view = cameraView != null ? cameraView : transform;
             Vector3 euler = view.eulerAngles;
             return new Vector2(Mathf.DeltaAngle(0f, euler.x), euler.y);
         }
@@ -89,11 +88,13 @@ namespace GuardVsMannequin.Player
         }
 
         /// <summary>
-        /// 서버에서 시선 값을 갱신해 다른 클라이언트로 동기화한다.
+        /// 서버에서 시선 값을 갱신해 다른 클라이언트로 동기화한다. NaN·무한대 값은 버린다.
         /// </summary>
         [ServerRpc]
         private void SetViewServerRpc(Vector2 view)
         {
+            if (!float.IsFinite(view.x) || !float.IsFinite(view.y))
+                return;
             syncedView.Value = new Vector2(Mathf.Clamp(view.x, -90f, 90f), view.y);
         }
 

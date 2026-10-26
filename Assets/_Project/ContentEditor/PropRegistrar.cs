@@ -12,6 +12,7 @@ namespace GuardVsMannequin.Editor
     /// - 사물: 그 모습 그대로 변신
     /// - 벽: 고정 크기 벽 조각(1.2×2×0.25m, 첫 번째 머티리얼)으로 변신
     /// 조준 판정을 위해 충돌체가 없는 조각에 MeshCollider를 붙이고, 메시를 복사할 수 있도록 정적 배칭에서 뺀다.
+    /// 튕겨나갈 수 있는 크기의 사물은 충돌체를 볼록으로 바꾼다(<see cref="PropColliderBaker"/>).
     /// </summary>
     public static class PropRegistrar
     {
@@ -67,6 +68,9 @@ namespace GuardVsMannequin.Editor
                     Undo.AddComponent<MeshCollider>(filter.gameObject).sharedMesh = filter.sharedMesh;
                 ClearStaticFlags(filter.gameObject, prop.IsWall);
             }
+
+            // 총에 맞으면 튕겨나갈 수 있는 크기면 충돌체를 움직일 수 있는 모양(볼록)으로 바꾼다.
+            PropColliderBaker.Bake(prop);
         }
 
         /// <summary>

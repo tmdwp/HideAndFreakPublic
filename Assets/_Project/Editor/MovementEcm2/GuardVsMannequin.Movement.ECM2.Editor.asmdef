@@ -1,0 +1,23 @@
+{
+    "name": "GuardVsMannequin.Movement.ECM2.Editor",
+    "rootNamespace": "GuardVsMannequin.Editor",
+    "references": [
+        "GuardVsMannequin.Editor",
+        "GuardVsMannequin.Runtime",
+        "GuardVsMannequin.Movement.ECM2",
+        "ECM2"
+    ],
+    "includePlatforms": [
+        "Editor"
+    ],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": false,
+    "defineConstraints": [
+        "GVM_ECM2"
+    ],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

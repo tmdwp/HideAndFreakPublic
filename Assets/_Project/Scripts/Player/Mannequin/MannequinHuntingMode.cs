@@ -12,13 +12,13 @@ namespace GuardVsMannequin.Player.Mannequin
     /// - 소유자: 1인칭 전환(본인 몸은 그림자만), 제한된 시야(HuntVisionEffect)
     /// 동기화된 게임 상태를 보고 각자 한 번씩 적용한다.
     /// </summary>
-    [RequireComponent(typeof(MannequinCharacter), typeof(MannequinTransformer), typeof(PlayerHealth))]
+    [RequireComponent(typeof(MannequinTransformer), typeof(PlayerHealth))]
     public class MannequinHuntingMode : NetworkBehaviour
     {
         [Tooltip("1인칭에서 본인 화면에 보이지 않게(그림자만) 할 몸 렌더러.")]
         [SerializeField] private Renderer[] bodyRenderers;
 
-        private MannequinCharacter character;
+        private IPerspectiveCamera perspective;
         private MannequinTransformer transformer;
         private PlayerHealth health;
         private HuntVisionEffect huntVision;
@@ -33,7 +33,7 @@ namespace GuardVsMannequin.Player.Mannequin
         /// </summary>
         private void Awake()
         {
-            character = GetComponent<MannequinCharacter>();
+            perspective = GetComponent<IPerspectiveCamera>();
             transformer = GetComponent<MannequinTransformer>();
             health = GetComponent<PlayerHealth>();
             huntVision = GetComponent<HuntVisionEffect>();
@@ -90,7 +90,7 @@ namespace GuardVsMannequin.Player.Mannequin
         private void ApplyOnOwner()
         {
             ownerApplied = true;
-            character.SetFirstPerson(true);
+            perspective?.SetFirstPerson(true);
 
             foreach (Renderer bodyRenderer in CharacterSkinView.ResolveBodyRenderers(this, bodyRenderers))
                 bodyRenderer.shadowCastingMode = ShadowCastingMode.ShadowsOnly;

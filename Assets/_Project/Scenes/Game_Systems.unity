@@ -546,8 +546,8 @@ GameObject:
   - component: {fileID: 1968970285}
   - component: {fileID: 1968970277}
   - component: {fileID: 1968970282}
-  - component: {fileID: 1968970284}
   - component: {fileID: 1968970283}
+  - component: {fileID: 1968970289}
   m_Layer: 0
   m_Name: GameSystems
   m_TagString: Untagged
@@ -707,7 +707,7 @@ MonoBehaviour:
   stateMachine: {fileID: 1968970281}
   maxWaitForPlayers: 15
   maxLoadingWait: 120
---- !u!114 &1968970284
+--- !u!114 &1968970289
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -716,17 +716,12 @@ MonoBehaviour:
   m_GameObject: {fileID: 1968970276}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 41512733b88e1b1439a7751533d03834, type: 3}
+  m_Script: {fileID: 11500000, guid: 1274f598053543a2b5527c6dfc61ceb4, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: GuardVsMannequin.Runtime::GuardVsMannequin.AI.FakeMannequinSpawner
+  m_EditorClassIdentifier: GuardVsMannequin.Runtime::GuardVsMannequin.PropPhysics.PropPhysicsSync
   _componentIndexCache: 255
   _addedNetworkObject: {fileID: 1968970278}
   _networkObjectCache: {fileID: 0}
-  stateMachine: {fileID: 1968970281}
-  fakeMannequinPrefab: {fileID: 2337414809578422598, guid: 4987a9c305652394fa1cf0f782b8bd5a, type: 3}
-  spawnPoints: {fileID: 1968970287}
-  navMeshSurface: {fileID: 0}
-  scatterRadius: 4
 --- !u!114 &1968970285
 MonoBehaviour:
   m_ObjectHideFlags: 0

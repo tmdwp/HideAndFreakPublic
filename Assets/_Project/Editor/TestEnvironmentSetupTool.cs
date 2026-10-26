@@ -2,14 +2,12 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Reflection;
-using ECM2;
 using FishNet.Component.Transforming;
 using FishNet.Managing;
 using FishNet.Managing.Object;
 using FishNet.Managing.Transporting;
 using FishNet.Object;
 using FishNet.Transporting.Tugboat;
-using GuardVsMannequin.AI;
 using GuardVsMannequin.Audio;
 using GuardVsMannequin.Cameras;
 using GuardVsMannequin.Core;
@@ -21,6 +19,7 @@ using GuardVsMannequin.Player;
 using GuardVsMannequin.Player.Guard;
 using GuardVsMannequin.Player.Emotes;
 using GuardVsMannequin.Player.Mannequin;
+using GuardVsMannequin.PropPhysics;
 using GuardVsMannequin.Props;
 using GuardVsMannequin.Room;
 using GuardVsMannequin.Rules;
@@ -53,7 +52,6 @@ namespace GuardVsMannequin.Editor
         private const string GuardPrefabPath = PrefabFolder + "/Guard.prefab";
         private const string MannequinPrefabPath = PrefabFolder + "/Mannequin.prefab";
         private const string GeneratorPrefabPath = PrefabFolder + "/Generator.prefab";
-        private const string FakeMannequinPrefabPath = PrefabFolder + "/FakeMannequin.prefab";
         internal const string NoiseLibraryPath = SoFolder + "/NoiseLibrary.asset";
         internal const string ScenePath = SceneFolder + "/Game_Test.unity";
         internal const string LobbyScenePath = SceneFolder + "/Lobby.unity";
@@ -92,15 +90,21 @@ namespace GuardVsMannequin.Editor
 
             NoiseLibrary noiseLibrary = CreateNoiseLibrary();
 
+            // 아바타 이동 구현(ECM2)은 별도 어셈블리가 등록한다. 없으면(이동 라이브러리 미설치) 아바타 프리팹을 만들 수 없다.
+            if (AvatarMovementRigs.Current == null)
+            {
+                Debug.LogError("[TestSetup] 아바타 이동 구현이 없어 프리팹을 만들 수 없습니다. ECM2를 설치하면 GVM_ECM2 기호가 켜지고 이동 어셈블리가 컴파일됩니다.");
+                return;
+            }
+
             var prefabs = new ScenePrefabs
             {
                 guard = CreateGuardPrefab(inputActions, materials, noiseLibrary),
                 mannequin = CreateMannequinPrefab(inputActions, materials, noiseLibrary),
-                generator = CreateGeneratorPrefab(materials, noiseLibrary),
-                fakeMannequin = CreateFakeMannequinPrefab(materials)
+                generator = CreateGeneratorPrefab(materials, noiseLibrary)
             };
             NetworkObject roomStatePrefab = CreateRoomStatePrefab();
-            RegisterSpawnablePrefabs(prefabs.guard, prefabs.mannequin, prefabs.generator, prefabs.fakeMannequin, roomStatePrefab);
+            RegisterSpawnablePrefabs(prefabs.guard, prefabs.mannequin, prefabs.generator, roomStatePrefab);
 
             // 테스트 맵 → 게임 시스템 씬 → 룸 씬 → 로비 씬(시작 씬) 순서로 만든다. 마지막에 로비 씬이 열린 상태로 끝난다.
             CreateTestScene();
@@ -137,7 +141,7 @@ namespace GuardVsMannequin.Editor
         }
 
         /// <summary>
-        /// 저장된 네트워크 프리팹(가드, 마네킹, 전원 장치, 가짜 마네킹)을 불러온다. 하나라도 없으면 false.
+        /// 저장된 네트워크 프리팹(가드, 마네킹, 전원 장치)을 불러온다. 하나라도 없으면 false.
         /// (맵 생성 도구가 "테스트 환경 생성"으로 만든 프리팹을 재사용할 때 사용)
         /// </summary>
         internal static bool TryLoadScenePrefabs(out ScenePrefabs prefabs)
@@ -146,10 +150,9 @@ namespace GuardVsMannequin.Editor
             {
                 guard = AssetDatabase.LoadAssetAtPath<NetworkObject>(GuardPrefabPath),
                 mannequin = AssetDatabase.LoadAssetAtPath<NetworkObject>(MannequinPrefabPath),
-                generator = AssetDatabase.LoadAssetAtPath<NetworkObject>(GeneratorPrefabPath),
-                fakeMannequin = AssetDatabase.LoadAssetAtPath<NetworkObject>(FakeMannequinPrefabPath)
+                generator = AssetDatabase.LoadAssetAtPath<NetworkObject>(GeneratorPrefabPath)
             };
-            return prefabs.guard != null && prefabs.mannequin != null && prefabs.generator != null && prefabs.fakeMannequin != null;
+            return prefabs.guard != null && prefabs.mannequin != null && prefabs.generator != null;
         }
 
         /// <summary>
@@ -249,7 +252,6 @@ namespace GuardVsMannequin.Editor
             public NetworkObject guard;
             public NetworkObject mannequin;
             public NetworkObject generator;
-            public NetworkObject fakeMannequin;
         }
 
         /// <summary>
@@ -319,7 +321,7 @@ namespace GuardVsMannequin.Editor
         /// </summary>
         private static NetworkObject CreateGuardPrefab(InputActionAsset inputActions, Dictionary<string, Material> materials, NoiseLibrary noiseLibrary)
         {
-            GameObject root = CreateAvatarRoot("Guard", inputActions, out GuardCharacter character, out Behaviour[] ownerOnly);
+            GameObject root = CreateAvatarRoot("Guard", AvatarKind.Guard, inputActions, out Component character, out Behaviour[] ownerOnly);
 
             Renderer body = CreateVisual(root.transform, PrimitiveType.Capsule, "Body", new Vector3(0f, 0.9f, 0f), new Vector3(0.8f, 0.9f, 0.8f), materials["Guard"]);
             Renderer visor = CreateVisual(root.transform, PrimitiveType.Cube, "Visor", new Vector3(0f, 1.55f, 0.3f), new Vector3(0.5f, 0.15f, 0.2f), materials["Visor"]);
@@ -330,7 +332,7 @@ namespace GuardVsMannequin.Editor
             Camera playerCamera = CreatePlayerCamera(cameraPivot, Vector3.zero);
 
             SetField(character, "cameraPivot", cameraPivot);
-            ConfigureOwnership(root, character, playerCamera, ownerOnly, new[] { body, visor }, hideSkinForOwner: true);
+            ConfigureOwnership(root, playerCamera, ownerOnly, new[] { body, visor }, hideSkinForOwner: true);
             AddMoveSpeedController(root, PlayerRole.Guard);
 
             // 외형: SWAT + 더미 애니메이션 (외형이 없으면 기본 도형)
@@ -340,7 +342,7 @@ namespace GuardVsMannequin.Editor
             GuardWeaponView weaponView = AddWeaponView(root, cameraPivot);
 
             // 사격: 조준 → 소음 → 총 → 총알 연출
-            root.AddComponent<CameraAimProvider>();
+            AvatarMovementRigs.Current.AddAimProvider(root);
             AddNoiseEmitter(root, noiseLibrary);
             GunTool gun = root.AddComponent<GunTool>();
             SetField(gun, "tracerView", CreateTracer(root.transform, cameraPivot, materials["Tracer"], weaponView));
@@ -383,9 +385,9 @@ namespace GuardVsMannequin.Editor
         private static NetworkObject CreateMannequinPrefab(InputActionAsset inputActions, Dictionary<string, Material> materials,
             NoiseLibrary noiseLibrary)
         {
-            GameObject root = CreateAvatarRoot("Mannequin", inputActions, out MannequinCharacter character, out Behaviour[] ownerOnly);
+            GameObject root = CreateAvatarRoot("Mannequin", AvatarKind.Mannequin, inputActions, out Component character, out Behaviour[] ownerOnly);
 
-            // 가짜 마네킹과 완전히 같은 외형이어야 한다. (CreateMannequinVisual 공용, 외형은 맵이 바꿀 수 있음)
+            // 외형은 맵이 바꿀 수 있다. (MapInfo)
             Transform visual = CreateMannequinVisual(root.transform, materials, out Renderer body, out Renderer face);
 
             Transform followTarget = new GameObject("FollowTarget").transform;
@@ -394,16 +396,18 @@ namespace GuardVsMannequin.Editor
             Camera playerCamera = CreatePlayerCamera(root.transform, new Vector3(0f, 2.5f, -3.5f));
 
             SetField(character, "followTarget", followTarget);
-            ConfigureOwnership(root, character, playerCamera, ownerOnly, new Renderer[0]);
+            ConfigureOwnership(root, playerCamera, ownerOnly, new Renderer[0]);
             AddMoveSpeedController(root, PlayerRole.Mannequin);
 
-            // 변신: 조준 → 변신 상태 → 외형 적용, 상호작용
-            root.AddComponent<CameraAimProvider>();
+            // 변신: 조준 → 변신 상태 → 외형 적용(충돌체 크기는 ICharacterMotor로 바꿈), 상호작용
+            AvatarMovementRigs.Current.AddAimProvider(root);
             root.AddComponent<MannequinTransformer>();
 
             PropDisguiseView disguiseView = root.AddComponent<PropDisguiseView>();
-            SetField(disguiseView, "characterMovement", root.GetComponent<CharacterMovement>());
             SetArray(disguiseView, "bodyRenderers", new Object[] { body, face });
+
+            // 변신 중 총에 맞으면 진짜 사물처럼 날아감 (서버 대리 물체, 멈추면 넘어진 모습 유지)
+            root.AddComponent<DisguiseKnockback>();
 
             root.AddComponent<MannequinInteractor>();
             root.AddComponent<InteractAnimationView>();
@@ -417,8 +421,7 @@ namespace GuardVsMannequin.Editor
             // Phase 2: 소음(탐지/변신 중 주기 소음), 벽타기, 감정 표현
             AddNoiseEmitter(root, noiseLibrary);
             root.AddComponent<DisguiseNoiseEmitter>();
-            root.AddComponent<WallClimbAbility>();
-            root.AddComponent<DisguiseRotationAbility>();
+            AvatarMovementRigs.Current.AddMannequinAbilities(root);
             AddEmotes(root, visual);
 
             // Phase 3: 사냥 시간 모드(1인칭, 체력 배율, 속도), 근접 공격
@@ -488,43 +491,7 @@ namespace GuardVsMannequin.Editor
         }
 
         /// <summary>
-        /// 가짜 마네킹 프리팹을 만든다. 외형, 충돌체 크기, 감정 표현은 실제 마네킹과 같다.
-        /// NavMeshAgent는 서버에서만 켜지고, 위치는 서버 권한 NetworkTransform으로 동기화된다.
-        /// </summary>
-        private static NetworkObject CreateFakeMannequinPrefab(Dictionary<string, Material> materials)
-        {
-            var root = new GameObject("FakeMannequin");
-
-            CapsuleCollider capsule = root.AddComponent<CapsuleCollider>();
-            capsule.center = new Vector3(0f, 0.9f, 0f);
-            capsule.radius = 0.4f;
-            capsule.height = 1.8f;
-
-            NavMeshAgent agent = root.AddComponent<NavMeshAgent>();
-            agent.radius = 0.4f;
-            agent.height = 1.8f;
-            // 실제 속도는 FakeMannequinBrain이 게임 설정(마네킹 이동 속도)으로 다시 맞춘다.
-            agent.speed = 1.5f;
-            agent.angularSpeed = 540f;
-            agent.acceleration = 20f;
-            agent.stoppingDistance = 0.1f;
-            agent.enabled = false;
-
-            root.AddComponent<NetworkObject>();
-            root.AddComponent<NetworkTransform>();
-            root.AddComponent<FakeMannequin>();
-
-            // 외형(CharacterSkinView)도 CreateMannequinVisual이 실제 마네킹과 똑같이 붙인다.
-            Transform visual = CreateMannequinVisual(root.transform, materials, out _, out _);
-            AddEmotes(root, visual);
-            root.AddComponent<FakeMannequinBrain>();
-
-            return SavePrefab(root, FakeMannequinPrefabPath);
-        }
-
-        /// <summary>
         /// 마네킹 외형(본체 + 얼굴 표시)을 감정 표현용 컨테이너 아래에 만든다.
-        /// 실제/가짜 마네킹이 같은 함수를 써서 겉모습이 완전히 같도록 한다.
         /// </summary>
         private static Transform CreateMannequinVisual(Transform parent, Dictionary<string, Material> materials, out Renderer body, out Renderer face)
         {
@@ -557,7 +524,7 @@ namespace GuardVsMannequin.Editor
             SetField(skinView, "visualRoot", visualRoot);
             SetArray(skinView, "fallbackRenderers", fallback);
 
-            // 체력이 있는 아바타는 피격 시 Hit 트리거를 발동한다. (가짜 마네킹은 체력이 없음)
+            // 체력이 있는 아바타는 피격 시 Hit 트리거를 발동한다.
             if (root.GetComponent<PlayerHealth>() != null)
                 root.AddComponent<HitReactionAnimator>();
         }
@@ -638,20 +605,17 @@ namespace GuardVsMannequin.Editor
         /// <summary>
         /// 모든 아바타에 공통인 네트워크/이동/입력/체력 컴포넌트를 가진 루트를 만든다.
         /// 입력과 드라이버는 소유자에게만 켜지도록 비활성 상태로 둔다.
-        /// PlayerMovementDriver는 [RequireComponent(typeof(Character))]이므로, 실제 캐릭터를 먼저 추가해야
-        /// Unity가 기본 Character를 자동으로 덧붙이지 않는다.
+        /// 캐릭터·이동 드라이버는 이동 구현(<see cref="AvatarMovementRigs"/>)이 붙인다. 드라이버가 캐릭터를 요구하므로 캐릭터를 먼저 붙인다.
         /// </summary>
+        /// <param name="kind">아바타 종류. (이동 구현이 역할별 캐릭터를 고름)</param>
+        /// <param name="character">붙인 캐릭터 컴포넌트. (카메라 피벗 등 역할별 참조를 연결할 때 사용)</param>
         /// <param name="ownerOnly">로컬 소유자에게만 켤 컴포넌트. (입력, 이동 드라이버, 달리기 — 모두 꺼진 채로 만든다)</param>
-        private static GameObject CreateAvatarRoot<TCharacter>(string name, InputActionAsset inputActions, out TCharacter character,
-            out Behaviour[] ownerOnly) where TCharacter : Character
+        private static GameObject CreateAvatarRoot(string name, AvatarKind kind, InputActionAsset inputActions, out Component character,
+            out Behaviour[] ownerOnly)
         {
             var root = new GameObject(name);
-
-            CharacterMovement movement = root.AddComponent<CharacterMovement>();
-            movement.SetDimensions(0.4f, 1.8f);
-
-            character = root.AddComponent<TCharacter>();
-            ConfigureCharacter(character);
+            IAvatarMovementRig rig = AvatarMovementRigs.Current;
+            character = rig.AddCharacter(root, kind);
 
             root.AddComponent<NetworkObject>();
             root.AddComponent<NetworkTransform>();
@@ -661,7 +625,7 @@ namespace GuardVsMannequin.Editor
             PlayerInputReader inputReader = root.AddComponent<PlayerInputReader>();
             SetField(inputReader, "inputActions", inputActions);
 
-            PlayerMovementDriver driver = root.AddComponent<PlayerMovementDriver>();
+            Behaviour driver = rig.AddMovementDriver(root);
 
             // 달리기(Shift): 스태미나를 쓰며 빨리 달린다. 속도 배율은 MoveSpeedController가 적용한다.
             SprintAbility sprint = root.AddComponent<SprintAbility>();
@@ -670,30 +634,18 @@ namespace GuardVsMannequin.Editor
             foreach (Behaviour behaviour in ownerOnly)
                 behaviour.enabled = false;
 
-            if (root.GetComponents<Character>().Length != 1)
-                Debug.LogError($"[TestSetup] {name} 프리팹에 Character 컴포넌트가 여러 개 있습니다.");
+            if (root.GetComponents<ICharacterMotor>().Length != 1)
+                Debug.LogError($"[TestSetup] {name} 프리팹에 캐릭터 이동 구현(ICharacterMotor)이 하나가 아닙니다.");
             return root;
         }
 
         /// <summary>
-        /// 점프(Space)는 켜고, 이 게임에서 쓰지 않는 앉기를 끈다.
+        /// 소유권 설정 컴포넌트를 추가하고 참조를 연결한다. (캐릭터 이동 구현은 실행 중 ICharacterMotor로 찾는다)
         /// </summary>
-        private static void ConfigureCharacter(Character character)
-        {
-            var serialized = new SerializedObject(character);
-            serialized.FindProperty("_canEverJump").boolValue = true;
-            serialized.FindProperty("_canEverCrouch").boolValue = false;
-            serialized.ApplyModifiedPropertiesWithoutUndo();
-        }
-
-        /// <summary>
-        /// 소유권 설정 컴포넌트를 추가하고 참조를 연결한다.
-        /// </summary>
-        private static void ConfigureOwnership(GameObject root, Character character, Camera playerCamera, Behaviour[] ownerOnly, Renderer[] hiddenForOwner,
+        private static void ConfigureOwnership(GameObject root, Camera playerCamera, Behaviour[] ownerOnly, Renderer[] hiddenForOwner,
             bool hideSkinForOwner = false)
         {
             PlayerOwnershipSetup ownership = root.AddComponent<PlayerOwnershipSetup>();
-            SetField(ownership, "character", character);
             SetField(ownership, "playerCamera", playerCamera);
             SetArray(ownership, "ownerOnlyBehaviours", ownerOnly);
             SetArray(ownership, "hiddenForOwner", hiddenForOwner);
@@ -753,7 +705,7 @@ namespace GuardVsMannequin.Editor
             root.AddComponent<Generator>();
             AddNoiseEmitter(root, noiseLibrary);
 
-            // 가짜 마네킹이 전원 장치를 통과하지 않도록 NavMesh에 구멍을 낸다.
+            // 가드 스폰 후보(NavMesh 무작위 지점)가 전원 장치 안에 생기지 않도록 NavMesh에 구멍을 낸다.
             NavMeshObstacle obstacle = root.AddComponent<NavMeshObstacle>();
             obstacle.shape = NavMeshObstacleShape.Box;
             obstacle.center = box.center;
@@ -900,7 +852,7 @@ namespace GuardVsMannequin.Editor
         /// <summary>
         /// 게임 진행에 필요한 서버 시스템을 가진 씬 네트워크 오브젝트를 만든다.
         /// </summary>
-        internal static GameSystemsRefs CreateGameSystems(ScenePrefabs prefabs, NavMeshSurface navMeshSurface)
+        internal static GameSystemsRefs CreateGameSystems(ScenePrefabs prefabs)
         {
             var systems = new GameObject("GameSystems");
             systems.AddComponent<NetworkObject>();
@@ -913,8 +865,9 @@ namespace GuardVsMannequin.Editor
             GeneratorSpawner generatorSpawner = systems.AddComponent<GeneratorSpawner>();
             MatchResult matchResult = systems.AddComponent<MatchResult>();
             MatchRules matchRules = systems.AddComponent<MatchRules>();
-            FakeMannequinSpawner fakeSpawner = systems.AddComponent<FakeMannequinSpawner>();
             MatchSessionBridge sessionBridge = systems.AddComponent<MatchSessionBridge>();
+            // 총에 맞은 변신 사물 물리 진행·동기화 (참조 없음, GameServices로 등록)
+            systems.AddComponent<PropPhysicsSync>();
             SetField(sessionBridge, "stateMachine", stateMachine);
 
             SetField(stateMachine, "matchRulesComponent", matchRules);
@@ -927,11 +880,6 @@ namespace GuardVsMannequin.Editor
             SetField(generatorSpawner, "stateMachine", stateMachine);
             SetField(generatorSpawner, "objectiveTracker", objectiveTracker);
             SetField(generatorSpawner, "generatorPrefab", prefabs.generator);
-
-            SetField(fakeSpawner, "stateMachine", stateMachine);
-            SetField(fakeSpawner, "fakeMannequinPrefab", prefabs.fakeMannequin);
-            SetField(fakeSpawner, "spawnPoints", spawnPoints);
-            SetField(fakeSpawner, "navMeshSurface", navMeshSurface);
 
             SetField(matchResult, "stateMachine", stateMachine);
 

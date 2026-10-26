@@ -4,7 +4,7 @@ namespace GuardVsMannequin.Player
 {
     /// <summary>
     /// 위치 변화로 이동 속도를 계산해 애니메이터의 Speed / MoveX / MoveZ에 넣는다.
-    /// 입력이 아니라 위치를 쓰므로 원격 아바타·가짜 마네킹에서도 동작한다.
+    /// 입력이 아니라 위치를 쓰므로 원격 아바타에서도 동작한다.
     /// </summary>
     public sealed class LocomotionAnimatorDriver
     {

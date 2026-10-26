@@ -1,4 +1,3 @@
-using ECM2;
 using FishNet.Object;
 using UnityEngine;
 using UnityEngine.Rendering;
@@ -12,7 +11,6 @@ namespace GuardVsMannequin.Player
     [RequireComponent(typeof(PlayerIdentity))]
     public class PlayerOwnershipSetup : NetworkBehaviour
     {
-        [SerializeField] private Character character;
         [SerializeField] private Camera playerCamera;
 
         [Tooltip("로컬 소유자에게만 활성화할 컴포넌트. (입력, 이동 드라이버 등)")]
@@ -25,13 +23,17 @@ namespace GuardVsMannequin.Player
         [SerializeField] private bool hideSkinForOwner;
 
         private PlayerIdentity identity;
+        private ICharacterMotor motor;
 
         /// <summary>
-        /// 같은 오브젝트의 PlayerIdentity를 캐시한다.
+        /// 같은 오브젝트의 PlayerIdentity와 캐릭터 이동 구현을 캐시한다.
         /// </summary>
         private void Awake()
         {
             identity = GetComponent<PlayerIdentity>();
+            motor = GetComponent<ICharacterMotor>();
+            if (motor == null)
+                Debug.LogError($"[PlayerOwnershipSetup] '{name}'에 캐릭터 이동 구현(ICharacterMotor)이 없습니다. 이동 어셈블리(GuardVsMannequin.Movement.ECM2)가 컴파일되었는지 확인하세요.", this);
         }
 
         /// <summary>
@@ -59,16 +61,13 @@ namespace GuardVsMannequin.Player
         }
 
         /// <summary>
-        /// 카메라와 입력을 켜고, 이동이 부드럽게 보이도록 보간을 켠 뒤 로컬 플레이어로 등록한다.
+        /// 카메라와 입력을 켜고, 캐릭터 이동 구현에 카메라를 연결(보간 포함)한 뒤 로컬 플레이어로 등록한다.
         /// </summary>
         private void SetupAsOwner()
         {
             playerCamera.gameObject.SetActive(true);
-            character.camera = playerCamera;
+            motor?.SetupAsOwner(playerCamera);
             SetBehavioursEnabled(true);
-
-            // ECM2는 물리 단계(Fixed Timestep)에서만 움직이므로, 보간이 없으면 화면이 물리 주기로 끊겨 보인다.
-            character.characterMovement.interpolation = RigidbodyInterpolation.Interpolate;
 
             // 1인칭 역할은 외형(CharacterSkinView) 렌더러도 그림자만 남긴다.
             Renderer[] targets = hideSkinForOwner ? CharacterSkinView.ResolveBodyRenderers(this, hiddenForOwner) : hiddenForOwner;
@@ -85,9 +84,7 @@ namespace GuardVsMannequin.Player
         {
             playerCamera.gameObject.SetActive(false);
             SetBehavioursEnabled(false);
-
-            character.enabled = false;
-            character.characterMovement.interpolation = RigidbodyInterpolation.None;
+            motor?.SetupAsRemote();
         }
 
         /// <summary>

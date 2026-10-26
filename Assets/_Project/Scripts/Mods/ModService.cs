@@ -39,6 +39,12 @@ namespace GuardVsMannequin.Mods
         /// <summary>켜진 모드 목록 설명. (예: "author.maps@1.0.0#ab12cd34, ...", 없으면 빈 문자열)</summary>
         public string ModSetDescription { get; private set; } = string.Empty;
 
+        /// <summary>
+        /// 켜진 모드 ID 목록. (예: "author.maps, author.skins", 없으면 빈 문자열)
+        /// Steam 로비 데이터처럼 크기 제한이 있는 곳에 쓴다. 버전·파일 비교는 접속 후 서버가 지문과 <see cref="ModSetDescription"/>으로 한다.
+        /// </summary>
+        public string ModSetIds { get; private set; } = string.Empty;
+
         /// <summary>켜진 모드 목록 + 내장 맵 목록의 지문(8자리 16진수). 호스트와 같아야 입장할 수 있다.</summary>
         public string ModSetHash { get; private set; } = string.Empty;
 
@@ -93,7 +99,7 @@ namespace GuardVsMannequin.Mods
         /// 다르면 이번 접속 동안만 호스트의 모드 ID 목록대로 켜고 끈 뒤 지문을 다시 비교한다.
         /// 호스트의 모드가 없거나 버전·파일이 달라 지문이 맞지 않으면 원래 구성으로 되돌리고 false.
         /// </summary>
-        /// <param name="hostModList">호스트의 <see cref="ModSetDescription"/>. (예: "author.maps@1.0.0#ab12cd34, ...")</param>
+        /// <param name="hostModList">호스트의 <see cref="ModSetDescription"/>("author.maps@1.0.0#ab12cd34, ...") 또는 <see cref="ModSetIds"/>("author.maps, ...").</param>
         /// <param name="hostModHash">호스트의 <see cref="ModSetHash"/>.</param>
         public bool TryMatchHost(string hostModList, string hostModHash)
         {
@@ -237,6 +243,7 @@ namespace GuardVsMannequin.Mods
             foreach (ModInfo mod in ActiveMods)
                 parts.Add($"{mod.Id}@{mod.Manifest.version}#{mod.Manifest.contentHash}:{BundleSize(mod)}");
             ModSetDescription = string.Join(", ", parts.Select(p => p.Split(':')[0]));
+            ModSetIds = string.Join(", ", ActiveMods.Select(mod => mod.Id));
 
             string maps = string.Join("|", ContentRegistry.Instance.Maps.Select(m => m.Id));
             using SHA256 sha = SHA256.Create();

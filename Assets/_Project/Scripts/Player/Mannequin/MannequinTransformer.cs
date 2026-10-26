@@ -17,7 +17,6 @@ namespace GuardVsMannequin.Player.Mannequin
     /// 조준한 사물 찾기 <see cref="PropTargetFinder"/>, 번호로 사물 찾기 <see cref="PropRegistry"/>,
     /// 쿨타임 <see cref="ToolCooldown"/>, 외형 복사·적용 <see cref="PropDisguiseView"/>.
     /// </summary>
-    [RequireComponent(typeof(CameraAimProvider))]
     public class MannequinTransformer : NetworkBehaviour, ITool, IEmoteBlocker
     {
         // 서버 거리 검증 여유(m). 클라이언트 조준 판정은 몸-명중 지점 거리, 서버는 몸-사물 경계 거리라 조금 다르다.
@@ -27,6 +26,7 @@ namespace GuardVsMannequin.Player.Mannequin
         private readonly ToolCooldown cooldown = new();
 
         private IPlayerInput playerInput;
+        private IActionLock actionLock;
         private PropTargetFinder targetFinder;
 
         /// <summary>변신 상태가 바뀌었을 때. 인자는 새 사물 번호(해제 시 <see cref="TransformableProp.None"/>). 각 피어에서 한 번씩 호출된다.</summary>
@@ -51,6 +51,7 @@ namespace GuardVsMannequin.Player.Mannequin
         private void Awake()
         {
             playerInput = GetComponent<IPlayerInput>();
+            actionLock = GetComponent<IActionLock>();
             targetFinder = new PropTargetFinder(transform, GetComponent<IAimProvider>(), GameTuning.TransformRange);
             currentPropIndex.OnChange += OnPropIndexChanged;
         }
@@ -88,6 +89,9 @@ namespace GuardVsMannequin.Player.Mannequin
         /// </summary>
         private void OnSecondaryPressed()
         {
+            if (IsLocked)
+                return;
+
             if (IsDisguised)
             {
                 cooldown.StartLocal(GameTuning.UntransformCooldown);
@@ -117,7 +121,7 @@ namespace GuardVsMannequin.Player.Mannequin
         [ServerRpc]
         private void TransformServerRpc(int propIndex)
         {
-            if (IsDisguised || !PropRegistry.TryGet(propIndex, out TransformableProp prop) || !prop.CanDisguiseAs)
+            if (IsLocked || IsDisguised || !PropRegistry.TryGet(propIndex, out TransformableProp prop) || !prop.CanDisguiseAs)
                 return;
             if (!IsWithinRange(prop))
                 return;
@@ -131,11 +135,12 @@ namespace GuardVsMannequin.Player.Mannequin
 
         /// <summary>
         /// 몸에서 사물 경계까지의 거리가 변신 사거리(+여유) 안인지 확인한다. (먼 사물 번호를 보내는 조작 방지)
+        /// 경계는 사물의 지금 자리 기준이다. (판마다 섞기로 옮겨진 사물도 맞게 잰다)
         /// </summary>
         private bool IsWithinRange(TransformableProp prop)
         {
             float limit = GameTuning.TransformRange + ServerRangeTolerance;
-            return prop.Appearance.WorldBounds.SqrDistance(transform.position) <= limit * limit;
+            return prop.CurrentWorldBounds.SqrDistance(transform.position) <= limit * limit;
         }
 
         /// <summary>
@@ -144,7 +149,7 @@ namespace GuardVsMannequin.Player.Mannequin
         [ServerRpc]
         private void UntransformServerRpc()
         {
-            if (!IsDisguised)
+            if (IsLocked || !IsDisguised)
                 return;
 
             currentPropIndex.Value = TransformableProp.None;
@@ -159,6 +164,9 @@ namespace GuardVsMannequin.Player.Mannequin
         {
             currentPropIndex.Value = TransformableProp.None;
         }
+
+        /// <summary>날아가는 중이라 변신·해제를 할 수 없는지. (<see cref="IActionLock"/>)</summary>
+        private bool IsLocked => actionLock != null && actionLock.IsActionLocked;
 
         /// <summary>
         /// 변신이 가능한 상태인지 확인한다. (탐색/사냥 시간만, 판 시작 준비 중에는 불가)

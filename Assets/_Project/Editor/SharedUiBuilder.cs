@@ -308,7 +308,105 @@ namespace GuardVsMannequin.Editor
                 InsertBeforeOverlays(canvas, CreateStaminaSection(canvas));
                 added++;
             }
+            if (canvas.GetComponent<HudTestRoomPanel>() == null)
+            {
+                InsertBeforeOverlays(canvas, CreateTestRoomSection(canvas));
+                added++;
+            }
+            else if (AddMissingTestRoomButtons(canvas.GetComponent<HudTestRoomPanel>()))
+            {
+                added++;
+            }
             return added;
+        }
+
+        /// <summary>
+        /// 이미 있는 테스트 메뉴에 나중에 생긴 버튼(룸으로 돌아가기)이 없으면 닫기 버튼 위에 더한다.
+        /// </summary>
+        /// <returns>버튼을 더했는지 여부.</returns>
+        private static bool AddMissingTestRoomButtons(HudTestRoomPanel section)
+        {
+            var serialized = new SerializedObject(section);
+            SerializedProperty returnButton = serialized.FindProperty("returnToRoomButton");
+            SerializedProperty closeButton = serialized.FindProperty("closeButton");
+            if (returnButton.objectReferenceValue != null || !(closeButton.objectReferenceValue is Button close))
+                return false;
+
+            returnButton.objectReferenceValue = CreateTestReturnButton(close.transform.parent, close.transform);
+            serialized.ApplyModifiedPropertiesWithoutUndo();
+            return true;
+        }
+
+        /// <summary>
+        /// 테스트 메뉴의 "룸으로 돌아가기" 버튼을 닫기 버튼 바로 위에 만든다.
+        /// </summary>
+        private static Button CreateTestReturnButton(Transform panel, Transform closeButton)
+        {
+            Button button = EditorUiFactory.CreateButton(panel, "ReturnToRoomButton", "test.returnToRoom", EditorUiFactory.ButtonColor);
+            EditorUiFactory.SetHeight(button, 48f);
+            button.transform.SetSiblingIndex(closeButton.GetSiblingIndex());
+            return button;
+        }
+
+        /// <summary>
+        /// 테스트 방 메뉴: 왼쪽 위 "F2 테스트 메뉴" 안내와, 오른쪽의 메뉴(상태, 가드↔마네킹 / 마네킹↔구울 / 1인칭↔3인칭, 게임 설정 줄, 닫기).
+        /// 게임 설정 줄은 맵을 뺀 모든 항목(룸에서 숨긴 이동 속도·공격 범위 포함)을 만든다.
+        /// </summary>
+        private static RectTransform CreateTestRoomSection(Transform canvas)
+        {
+            RectTransform root = EditorUiFactory.CreateRect(canvas, "TestRoomTools");
+            EditorUiFactory.Stretch(root);
+
+            RectTransform hint = EditorUiFactory.CreatePanel(root, "OpenHint", new Vector2(0.01f, 0.93f), new Vector2(0.17f, 0.975f), new Color(0f, 0f, 0f, 0.45f));
+            hint.GetComponent<Image>().raycastTarget = false;
+            Text hintText = EditorUiFactory.CreateText(hint, "Text", "test.openHint", 20, TextAnchor.MiddleCenter, EditorUiFactory.NoticeColor);
+            EditorUiFactory.Stretch(hintText.rectTransform);
+            hintText.raycastTarget = false;
+
+            RectTransform panel = EditorUiFactory.CreatePanel(root, "Panel", new Vector2(0.62f, 0.08f), new Vector2(0.99f, 0.88f), new Color(0.06f, 0.07f, 0.09f, 0.95f));
+            EditorUiFactory.AddVerticalLayout(panel, 8f, 18);
+
+            Text title = EditorUiFactory.CreateText(panel, "Title", "test.title", 28, TextAnchor.MiddleLeft, EditorUiFactory.AccentColor);
+            title.fontStyle = FontStyle.Bold;
+            EditorUiFactory.SetHeight(title, 38f);
+            Text status = EditorUiFactory.CreateText(panel, "Status", string.Empty, 20, TextAnchor.MiddleLeft, EditorUiFactory.TextColor);
+            EditorUiFactory.SetHeight(status, 30f);
+
+            RectTransform switchRow = EditorUiFactory.CreateRow(panel, "SwitchButtons", 48f, 8f);
+            Button swapRole = EditorUiFactory.CreateButton(switchRow, "SwapRoleButton", "test.swapRole", EditorUiFactory.ButtonColor);
+            Button hunt = EditorUiFactory.CreateButton(switchRow, "HuntButton", "test.toggleHunt", EditorUiFactory.ButtonColor);
+            Button perspective = EditorUiFactory.CreateButton(switchRow, "PerspectiveButton", "test.togglePerspective", EditorUiFactory.ButtonColor);
+            foreach (Button button in new[] { swapRole, hunt, perspective })
+                EditorUiFactory.SetFlexibleWidth(button);
+
+            Text settingsHint = EditorUiFactory.CreateText(panel, "SettingsHint", "test.settingsHint", 17, TextAnchor.MiddleLeft, new Color(0.7f, 0.7f, 0.7f));
+            EditorUiFactory.SetHeight(settingsHint, 46f);
+
+            RectTransform list = EditorUiFactory.CreateScrollList(panel, "SettingList", 4f);
+            EditorUiFactory.FillRemainingHeight(list, 200f);
+            SettingRowView[] rows = GuardVsMannequin.Room.GameSettingDefinitions.All
+                .Where(definition => definition.id != GuardVsMannequin.Room.GameSettingId.Map)
+                .Select(definition => MenuSceneBuilder.CreateSettingRow(list, definition.id))
+                .ToArray();
+
+            Button close = EditorUiFactory.CreateButton(panel, "CloseButton", "test.close", EditorUiFactory.AccentColor);
+            EditorUiFactory.SetHeight(close, 48f);
+            Button returnToRoom = CreateTestReturnButton(panel, close.transform);
+
+            HudTestRoomPanel section = canvas.gameObject.AddComponent<HudTestRoomPanel>();
+            TestEnvironmentSetupTool.SetField(section, "returnToRoomButton", returnToRoom);
+            TestEnvironmentSetupTool.SetField(section, "openHint", hint.gameObject);
+            TestEnvironmentSetupTool.SetField(section, "panel", panel.gameObject);
+            TestEnvironmentSetupTool.SetField(section, "statusText", status);
+            TestEnvironmentSetupTool.SetField(section, "swapRoleButton", swapRole);
+            TestEnvironmentSetupTool.SetField(section, "huntButton", hunt);
+            TestEnvironmentSetupTool.SetField(section, "perspectiveButton", perspective);
+            TestEnvironmentSetupTool.SetField(section, "closeButton", close);
+            TestEnvironmentSetupTool.SetArray(section, "settingRows", rows);
+
+            hint.gameObject.SetActive(false);
+            panel.gameObject.SetActive(false);
+            return root;
         }
 
         /// <summary>

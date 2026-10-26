@@ -11,6 +11,7 @@ namespace GuardVsMannequin.Player
     /// | Attack | Trigger | 마네킹 근접 공격 |
     /// | Shoot | Trigger | 가드 사격 |
     /// | Throw | Trigger | 가드 수류탄 투척 |
+    /// | Reload | Trigger | 가드 총 장전 (탄창을 다 쓴 순간) |
     /// | Hit | Trigger | 피격(체력 감소) |
     /// | Emote1 ~ Emote6 | Trigger | 감정 표현 (번호별 트리거) |
     /// | Emote + EmoteId | Trigger + Int | 감정 표현 (트리거 하나 + 번호, 번호별 트리거가 없을 때) |
@@ -26,6 +27,7 @@ namespace GuardVsMannequin.Player
         public const string Attack = "Attack";
         public const string Shoot = "Shoot";
         public const string Throw = "Throw";
+        public const string Reload = "Reload";
         public const string Hit = "Hit";
         public const string Emote = "Emote";
         public const string EmoteId = "EmoteId";

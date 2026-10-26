@@ -44,6 +44,15 @@
             "minPlayers": 0,
             "maxPlayers": 0,
             "settings": []
+        },
+        {
+            "id": "builtin.map_transferstation",
+            "scene": "Map_TransferStation",
+            "nameKey": "map.5",
+            "name": "Transfer Station",
+            "minPlayers": 0,
+            "maxPlayers": 0,
+            "settings": []
         }
     ]
 }

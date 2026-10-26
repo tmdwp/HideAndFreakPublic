@@ -16,7 +16,7 @@ namespace GuardVsMannequin.Network
     /// </summary>
     public class SessionService : MonoBehaviour, ISessionService
     {
-        /// <summary>모드가 달라 입장할 수 없을 때의 안내 key. (Steam 로비 확인도 같은 key로 실패를 알린다)</summary>
+        /// <summary>모드가 달라 입장할 수 없을 때의 안내 key.</summary>
         public const string ModRejectedNoticeKey = "notice.rejected.mods";
 
         [SerializeField] private TransportConnector connector;
@@ -40,11 +40,12 @@ namespace GuardVsMannequin.Network
         public bool IsSteamAvailable => SteamBootstrap.IsInitialized && connector.HasSteamTransport;
         public bool IsBusy { get; private set; }
         public bool IsSteamRoom { get; private set; }
+        public bool IsTestRoom { get; private set; }
         public string Notice => string.IsNullOrEmpty(noticeKey) ? string.Empty : Loc.Format(noticeKey, noticeDetail);
 
         public string RoomCode => IsSteamRoom && steamLobby.CurrentLobbyId != 0
             ? steamLobby.CurrentLobbyId.ToString()
-            : Loc.Get("session.directRoomCode");
+            : Loc.Get(IsTestRoom ? "session.testRoomCode" : "session.directRoomCode");
 
         public string RoomPassword { get; private set; } = string.Empty;
         public string JoinPassword { get; private set; } = string.Empty;
@@ -203,6 +204,20 @@ namespace GuardVsMannequin.Network
         /// </summary>
         public void HostDirectRoom()
         {
+            StartDirectRoom(isTestRoom: false);
+        }
+
+        /// <inheritdoc />
+        public void HostTestRoom()
+        {
+            StartDirectRoom(isTestRoom: true);
+        }
+
+        /// <summary>
+        /// Tugboat만으로 방을 만든다. 테스트 방이면 서버가 시작되기 전에 표시해 방(RoomState)이 읽을 수 있게 한다.
+        /// </summary>
+        private void StartDirectRoom(bool isTestRoom)
+        {
             if (!CanStartNewSession())
                 return;
 
@@ -210,10 +225,14 @@ namespace GuardVsMannequin.Network
             RoomPassword = string.Empty;
             JoinPassword = string.Empty;
             IsSteamRoom = false;
+            IsTestRoom = isTestRoom;
             if (connector.StartServer(withSteam: false))
                 connector.StartLocalClient();
             else
+            {
+                IsTestRoom = false;
                 SetNotice("notice.serverStartFailedPort");
+            }
         }
 
         /// <summary>
@@ -259,6 +278,7 @@ namespace GuardVsMannequin.Network
             connector.StopAll();
             steamLobby.LeaveLobby();
             IsSteamRoom = false;
+            IsTestRoom = false;
             IsBusy = false;
             RoomPassword = string.Empty;
             JoinPassword = string.Empty;
@@ -301,6 +321,7 @@ namespace GuardVsMannequin.Network
             }
 
             isLeaving = false;
+            IsTestRoom = false;
             rejectNoticeKey = null;
             rejectNoticeDetail = null;
             pendingModRejection = null;
@@ -376,13 +397,6 @@ namespace GuardVsMannequin.Network
         {
             IsBusy = false;
             ModService.Instance.ClearSessionMods();
-
-            // Steam 로비에서 모드를 맞출 수 없었으면 detail은 호스트 모드 목록 원문이다. (팝업이 부족한 모드를 계산)
-            if (reasonKey == ModRejectedNoticeKey)
-            {
-                modRejection = detail ?? string.Empty;
-                detail = DescribeMods(detail);
-            }
             SetNotice(reasonKey, detail);
         }
 
@@ -421,7 +435,10 @@ namespace GuardVsMannequin.Network
 
             // 호스트가 아닌 경우에만 여기서 정리한다. (호스트는 Leave에서 서버까지 정리)
             if (!connector.IsServerRunning)
+            {
                 IsSteamRoom = false;
+                IsTestRoom = false;
+            }
             isLeaving = false;
         }
     }

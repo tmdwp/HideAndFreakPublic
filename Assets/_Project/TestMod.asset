@@ -1,0 +1,31 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: a380f4a33d79488484099cc7aff9ead2, type: 3}
+  m_Name: TestMod
+  m_EditorClassIdentifier: GuardVsMannequin.Content.Editor::GuardVsMannequin.Editor.ModProject
+  modId: rabbit.sample
+  modName: SampleMod
+  version: 1.0.0
+  author: Rabbit
+  description: Sample for moding
+  minGameVersion: 0.4.0
+  dependencies: []
+  maps:
+  - scene: {fileID: 102900000, guid: 0c509d02b4bcf94408ca400451fe5252, type: 3}
+    mapKey: samplemap1
+    displayName: SampleMap
+    minPlayers: 0
+    maxPlayers: 5
+    settings: []
+  sharedAssets: []
+  strings: {fileID: 0}
+  copyToModsFolder: 

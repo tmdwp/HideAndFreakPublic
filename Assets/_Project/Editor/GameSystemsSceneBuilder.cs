@@ -33,8 +33,7 @@ namespace GuardVsMannequin.Editor
             Scene scene = EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Single);
             SpectatorController spectator = TestEnvironmentSetupTool.CreateSceneCamera();
 
-            // 가짜 마네킹의 NavMesh는 실행 중에 맵(MapInfo)에서 찾으므로 비워 둔다.
-            TestEnvironmentSetupTool.GameSystemsRefs systems = TestEnvironmentSetupTool.CreateGameSystems(prefabs, null);
+            TestEnvironmentSetupTool.GameSystemsRefs systems = TestEnvironmentSetupTool.CreateGameSystems(prefabs);
             TestEnvironmentSetupTool.CreateUi(systems, spectator);
 
             var lighting = new GameObject("HuntingLighting");

@@ -21,7 +21,7 @@ namespace GuardVsMannequin.Player.Guard
     /// - 1인칭 총: 카메라 기준이라 외형과 무관 → 이 컴포넌트의 값. Play 중 맞춘 뒤 Copy Component → 프리팹에 Paste Component Values.
     /// - 3인칭 총·조준 IK 손 위치: 외형마다 다름 → 외형 에셋(Skin_*.asset)의 Weapon Grip. 에셋이라 Play 중 바꾼 값이 그대로 저장된다.
     /// </summary>
-    public class GuardWeaponView : NetworkBehaviour, IHandIKGoalSource
+    public class GuardWeaponView : NetworkBehaviour, IHandIKGoalSource, IPerspectiveListener
     {
         private const string MuzzleName = "Muzzle";
 
@@ -113,6 +113,24 @@ namespace GuardVsMannequin.Player.Guard
             {
                 foreach (Renderer gunRenderer in thirdPersonGun.GetComponentsInChildren<Renderer>(true))
                     gunRenderer.shadowCastingMode = ShadowCastingMode.ShadowsOnly;
+            }
+        }
+
+        /// <summary>
+        /// 소유자 시점이 바뀌면 1인칭 총과 손에 든 3인칭 총 중 하나만 보이게 한다. (테스트 방 시점 전환)
+        /// </summary>
+        public void OnPerspectiveChanged(bool firstPerson)
+        {
+            if (!IsOwner)
+                return;
+
+            if (firstPersonGun != null)
+                firstPersonGun.gameObject.SetActive(firstPerson);
+            if (thirdPersonGun != null)
+            {
+                ShadowCastingMode mode = firstPerson ? ShadowCastingMode.ShadowsOnly : ShadowCastingMode.On;
+                foreach (Renderer gunRenderer in thirdPersonGun.GetComponentsInChildren<Renderer>(true))
+                    gunRenderer.shadowCastingMode = mode;
             }
         }
 

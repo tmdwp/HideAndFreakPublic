@@ -114,7 +114,9 @@ namespace GuardVsMannequin.Core
             }
 
             int playerCount = ServerManager.Clients.Count;
-            if (!GameSettingsValidator.CanStart(playerCount))
+            // 테스트 방은 혼자서도 시작한다.
+            bool isTestRoom = GameServices.Room?.IsTestRoom ?? false;
+            if (!isTestRoom && !GameSettingsValidator.CanStart(playerCount))
             {
                 failReason = Loc.Format("room.reason.playerCount", GameConstants.MinPlayers, GameConstants.MaxPlayers, playerCount);
                 return false;
@@ -127,6 +129,16 @@ namespace GuardVsMannequin.Core
             ChangeState(GameState.Preparation);
             failReason = null;
             return true;
+        }
+
+        /// <summary>
+        /// 진행 중인 판의 설정을 바꾼다. (테스트 방의 게임 중 설정 변경용, 현재 인원 기준으로 보정)
+        /// 이동 속도·공격 범위·쿨타임처럼 매번 설정을 읽는 값은 바로, 체력처럼 스폰 때 정하는 값은 다음 스폰부터 반영된다.
+        /// </summary>
+        [Server]
+        public void OverrideSettings(GameSettings newSettings)
+        {
+            currentSettings.Value = GameSettingsValidator.Validate(newSettings, Mathf.Max(1, ServerManager.Clients.Count));
         }
 
         /// <summary>

@@ -13,6 +13,8 @@ ObjectiveCount,1,0,12,unit.times
 GeneratorCount,1,1,12,unit.count
 GeneratorDestroyTime,1,3,30,unit.seconds
 GunCooldown,0.5,0.5,10,unit.seconds
+GunMagazineSize,1,1,10,unit.rounds
+GunReloadTime,0.5,1,15,unit.seconds
 GrenadeCooldown,1,5,60,unit.seconds
 GuardMaxHealth,1,1,100,
 MannequinMaxHealth,1,1,500,

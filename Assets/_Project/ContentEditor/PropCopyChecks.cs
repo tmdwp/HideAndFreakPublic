@@ -46,6 +46,11 @@ namespace GuardVsMannequin.Editor
                 message = "정적 배칭이 켜진 조각이 있어 게임에서 모습이 깨집니다. 맵 최적화를 다시 실행하거나 다시 등록하세요.";
                 return true;
             }
+            if (PropPhysicsRules.IsCandidate(prop) && !HasSimulatableColliders(prop))
+            {
+                message = "볼록하지 않은 충돌체가 있어 총에 맞아도 튕겨나가지 않습니다. 맵 최적화를 다시 실행하거나 다시 등록하세요.";
+                return true;
+            }
 
             message = null;
             return false;
@@ -63,6 +68,19 @@ namespace GuardVsMannequin.Editor
                     return true;
             }
             return false;
+        }
+
+        /// <summary>
+        /// 이 사물의 충돌체(트리거 제외)가 모두 움직이는 물체에 쓸 수 있는 모양인지 확인한다.
+        /// </summary>
+        private static bool HasSimulatableColliders(TransformableProp prop)
+        {
+            foreach (Collider collider in prop.GetComponentsInChildren<Collider>(true))
+            {
+                if (!collider.isTrigger && !PropPhysicsRules.IsSimulatable(collider))
+                    return false;
+            }
+            return true;
         }
 
         /// <summary>

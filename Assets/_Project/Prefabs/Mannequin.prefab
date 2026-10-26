@@ -45,6 +45,7 @@ GameObject:
   - component: {fileID: 2273572615940856064}
   - component: {fileID: 2881373125637323731}
   - component: {fileID: 3698923241498591086}
+  - component: {fileID: 3519428585864654902}
   m_Layer: 0
   m_Name: Mannequin
   m_TagString: Untagged
@@ -443,7 +444,6 @@ MonoBehaviour:
   _componentIndexCache: 3
   _addedNetworkObject: {fileID: 5274660207253486401}
   _networkObjectCache: {fileID: 5274660207253486401}
-  character: {fileID: 5878107583903744693}
   playerCamera: {fileID: 8716358739911415403}
   ownerOnlyBehaviours:
   - {fileID: 2863810353114395617}
@@ -523,7 +523,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: fdeb5375e24dafe4a9a2c4af91cd0043, type: 3}
   m_Name: 
   m_EditorClassIdentifier: GuardVsMannequin.Runtime::GuardVsMannequin.Player.Mannequin.PropDisguiseView
-  characterMovement: {fileID: 6404196948991614264}
   bodyRenderers:
   - {fileID: 5027871171780702361}
   - {fileID: 2495850511174593684}
@@ -789,6 +788,21 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: ba221ebe10635a24dbae4b4706509158, type: 3}
   m_Name: 
   m_EditorClassIdentifier: GuardVsMannequin.Runtime::GuardVsMannequin.Player.RevealOutlineView
+--- !u!114 &3519428585864654902
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 569088088292649313}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 4ad49ea32a9146fbaa453dfa9e9d0d87, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: GuardVsMannequin.Runtime::GuardVsMannequin.Player.Mannequin.DisguiseKnockback
+  _componentIndexCache: 255
+  _addedNetworkObject: {fileID: 5274660207253486401}
+  _networkObjectCache: {fileID: 0}
 --- !u!1 &2691206167928112056
 GameObject:
   m_ObjectHideFlags: 0

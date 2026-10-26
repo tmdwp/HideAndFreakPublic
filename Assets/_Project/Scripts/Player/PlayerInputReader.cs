@@ -104,7 +104,10 @@ namespace GuardVsMannequin.Player
                 emote.performed -= OnEmotePerformed;
             OptionsStore.BindingsChanged -= OnBindingsChanged;
 
-            GameCursor.SetLocked(false);
+            // 다시 스폰으로 새 로컬 아바타가 이미 생겼으면 그 아바타의 커서 잠금을 풀지 않는다.
+            PlayerIdentity current = LocalPlayerEvents.Current;
+            if (current == null || current.gameObject == gameObject)
+                GameCursor.SetLocked(false);
         }
 
         /// <summary>

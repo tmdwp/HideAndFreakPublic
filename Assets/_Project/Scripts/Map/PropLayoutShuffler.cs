@@ -14,7 +14,7 @@ namespace GuardVsMannequin.Map
     /// 1. 크기가 비슷한 사물끼리 자리를 바꾼다.
     /// 2. 사물마다 조금 옮기고 돌려 본 뒤, 다른 물체와 겹치거나 받침이 없거나 스폰 지점을 막으면 돌리기만, 그것도 안 되면 자리만 바꾼 상태로 둔다.
     /// 벽 조각으로 변신하는 사물(IsWall)과 너무 커서 변신할 수 없는 사물은 옮기지 않는다.
-    /// 플레이어·전원 장치·가짜 마네킹은 이보다 나중에 스폰되므로 검사에 들어가지 않는다.
+    /// 플레이어·전원 장치는 이보다 나중에 스폰되므로 검사에 들어가지 않는다.
     /// </summary>
     public static class PropLayoutShuffler
     {
@@ -45,24 +45,12 @@ namespace GuardVsMannequin.Map
         }
 
         /// <summary>
-        /// 씬 불러오기 이벤트를 구독한다. (플레이 모드에 들어갈 때마다 한 번)
+        /// 판 중에 맵 씬이 열리면 배치를 섞는다. 룸 없이 맵 씬만 실행하면 섞지 않는다. (맵 씬 준비 순서는 <see cref="MapPropSetup"/>)
         /// </summary>
-        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
-        private static void Install()
-        {
-            SceneManager.sceneLoaded -= OnSceneLoaded;
-            SceneManager.sceneLoaded += OnSceneLoaded;
-        }
-
-        /// <summary>
-        /// 판 중에 맵 씬(MapInfo가 있는 씬)이 열리면 배치를 섞는다. 룸 없이 맵 씬만 실행하면 섞지 않는다.
-        /// </summary>
-        private static void OnSceneLoaded(Scene scene, LoadSceneMode mode)
+        public static void ShuffleForMatch(Scene scene)
         {
             IRoomInfo room = GameServices.Room;
             if (room == null || room.PropLayoutSeed == 0 || !GameTuning.PropShuffleEnabled)
-                return;
-            if (!scene.GetRootGameObjects().Any(root => root.GetComponentInChildren<MapInfo>(true) != null))
                 return;
 
             Shuffle(scene, room.PropLayoutSeed);

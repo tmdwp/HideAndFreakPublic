@@ -14,6 +14,9 @@ namespace GuardVsMannequin.Core
         /// <summary>이번 판의 변신 사물 배치 시드. 모든 PC가 이 값으로 같은 배치를 만든다. 0이면 섞지 않는다.</summary>
         int PropLayoutSeed { get; }
 
+        /// <summary>테스트 방인지 여부. (서버에서만 정확함: 1인 시작, 승패 판정 없음, 테스트 메뉴)</summary>
+        bool IsTestRoom { get; }
+
         /// <summary>
         /// 클라이언트의 표시 이름을 반환한다. 모르면 "Player N".
         /// </summary>

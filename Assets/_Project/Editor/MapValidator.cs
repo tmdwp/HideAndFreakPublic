@@ -60,9 +60,9 @@ namespace GuardVsMannequin.Editor
 
             NavMeshSurface surface = mapInfo.GetComponent<NavMeshSurface>();
             if (surface == null)
-                issues.Add(new Issue(true, "Map에 NavMeshSurface가 없습니다. 가짜 마네킹이 움직이지 못합니다.", mapInfo));
+                issues.Add(new Issue(true, "Map에 NavMeshSurface가 없습니다. 가드 스폰 후보를 맵 안에서 고를 수 없습니다.", mapInfo));
             else if (surface.navMeshData == null)
-                issues.Add(new Issue(false, "NavMesh를 미리 굽지 않았습니다. 빌드에서는 에셋 모델 메시를 실행 중에 구울 수 없어 가짜 마네킹 길이 불완전해집니다. '현재 맵 최적화'를 실행하세요.", mapInfo));
+                issues.Add(new Issue(false, "NavMesh를 미리 굽지 않았습니다. 빌드에서는 에셋 모델 메시를 실행 중에 구울 수 없어 가드 스폰 후보가 불완전해집니다. '현재 맵 최적화'를 실행하세요.", mapInfo));
             if (mapInfo.transform.Find(MapAuthoringTools.EnvironmentName) == null)
                 issues.Add(new Issue(false, "Map/Environment가 없습니다. 맵 최적화와 경계 맞추기는 이 오브젝트 아래 모델을 대상으로 합니다.", mapInfo));
 

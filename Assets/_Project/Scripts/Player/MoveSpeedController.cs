@@ -1,4 +1,3 @@
-using ECM2;
 using GuardVsMannequin.Core;
 using UnityEngine;
 
@@ -12,22 +11,21 @@ namespace GuardVsMannequin.Player
     /// 이동은 소유자 권한이지만 설정은 모든 피어에 동기화되므로 어디서 실행해도 같은 값이 된다.
     /// (달리기 배율은 소유자에서만 1보다 커지며, 서버는 <see cref="MovementValidator"/>가 달리기 거리를 따로 허용한다)
     /// </summary>
-    [RequireComponent(typeof(Character))]
     public class MoveSpeedController : MonoBehaviour
     {
         [Tooltip("속도 설정을 고를 역할. (Guard 또는 Mannequin)")]
         [SerializeField] private PlayerRole role = PlayerRole.Guard;
 
-        private Character character;
+        private ICharacterMotor motor;
         private IMoveSpeedModifier[] modifiers;
         private float appliedSpeed = -1f;
 
         /// <summary>
-        /// 캐릭터와 속도 배율 제공자를 캐시한다.
+        /// 캐릭터 이동 구현과 속도 배율 제공자를 캐시한다.
         /// </summary>
         private void Awake()
         {
-            character = GetComponent<Character>();
+            motor = GetComponent<ICharacterMotor>();
             modifiers = GetComponents<IMoveSpeedModifier>();
         }
 
@@ -37,7 +35,7 @@ namespace GuardVsMannequin.Player
         private void Update()
         {
             IGameStateProvider state = GameServices.State;
-            if (state == null)
+            if (state == null || motor == null)
                 return;
 
             float baseSpeed = RoleDefinitions.Get(role).GetMoveSpeed(state.Settings, state.CurrentState);
@@ -50,8 +48,8 @@ namespace GuardVsMannequin.Player
                 return;
 
             appliedSpeed = speed;
-            character.maxWalkSpeed = speed;
-            character.maxFlySpeed = speed;
+            motor.MaxWalkSpeed = speed;
+            motor.MaxFlySpeed = speed;
         }
 
         /// <summary>

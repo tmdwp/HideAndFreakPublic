@@ -119,7 +119,7 @@ NavMeshSettings:
     debug:
       m_Flags: 0
   m_NavMeshData: {fileID: 0}
---- !u!1 &14887483
+--- !u!1 &11463513
 GameObject:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -127,173 +127,112 @@ GameObject:
   m_PrefabAsset: {fileID: 0}
   serializedVersion: 6
   m_Component:
-  - component: {fileID: 14887484}
-  - component: {fileID: 14887485}
+  - component: {fileID: 11463514}
+  - component: {fileID: 11463516}
+  - component: {fileID: 11463515}
   m_Layer: 0
-  m_Name: Wall_West
-  m_TagString: Untagged
-  m_Icon: {fileID: 0}
-  m_NavMeshLayer: 0
-  m_StaticEditorFlags: 2147483647
-  m_IsActive: 1
---- !u!4 &14887484
-Transform:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 14887483}
-  serializedVersion: 2
-  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: -25.338081, y: 15.431818, z: -26.802437}
-  m_LocalScale: {x: 1, y: 1, z: 1}
-  m_ConstrainProportionsScale: 0
-  m_Children: []
-  m_Father: {fileID: 1577710483}
-  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!65 &14887485
-BoxCollider:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 14887483}
-  m_Material: {fileID: 0}
-  m_IncludeLayers:
-    serializedVersion: 2
-    m_Bits: 0
-  m_ExcludeLayers:
-    serializedVersion: 2
-    m_Bits: 0
-  m_LayerOverridePriority: 0
-  m_IsTrigger: 0
-  m_ProvidesContacts: 0
-  m_Enabled: 1
-  serializedVersion: 3
-  m_Size: {x: 0.5, y: 41.03204, z: 156.33653}
-  m_Center: {x: 0, y: 0, z: 0}
---- !u!1 &21641196
-GameObject:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  serializedVersion: 6
-  m_Component:
-  - component: {fileID: 21641197}
-  - component: {fileID: 21641198}
-  m_Layer: 0
-  m_Name: SpawnPoint_Mannequin
+  m_Name: MapLamp
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
   m_IsActive: 1
---- !u!4 &21641197
+--- !u!4 &11463514
 Transform:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 21641196}
+  m_GameObject: {fileID: 11463513}
   serializedVersion: 2
-  m_LocalRotation: {x: -0, y: -0.75294054, z: -0, w: 0.65808856}
-  m_LocalPosition: {x: 188.77872, y: 4.227524, z: -12.546356}
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 67.41014, y: 5.988959, z: -56.053818}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
-  m_Father: {fileID: 702031950}
+  m_Father: {fileID: 1660779755}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!114 &21641198
+--- !u!114 &11463515
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 21641196}
+  m_GameObject: {fileID: 11463513}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: e4294540393951748bb8466bd902beb2, type: 3}
+  m_Script: {fileID: 11500000, guid: 41c5774d1fae6a34a8455dfc6f4be335, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: GuardVsMannequin.Runtime::GuardVsMannequin.Map.SpawnPoint
-  role: 2
---- !u!1 &44591897
-GameObject:
+  m_EditorClassIdentifier: GuardVsMannequin.Content::GuardVsMannequin.Map.MapLight
+  lights: []
+  bulbRenderer: {fileID: 0}
+  onMaterial: {fileID: 0}
+  offMaterial: {fileID: 0}
+--- !u!108 &11463516
+Light:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  serializedVersion: 6
-  m_Component:
-  - component: {fileID: 44591898}
-  - component: {fileID: 44591899}
-  m_Layer: 0
-  m_Name: SpawnPoint_Mannequin
-  m_TagString: Untagged
-  m_Icon: {fileID: 0}
-  m_NavMeshLayer: 0
-  m_StaticEditorFlags: 0
-  m_IsActive: 1
---- !u!4 &44591898
-Transform:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 44591897}
-  serializedVersion: 2
-  m_LocalRotation: {x: -0, y: 0.8071563, z: -0, w: 0.59033775}
-  m_LocalPosition: {x: -14.17017, y: -0.05835033, z: 4.1628304}
-  m_LocalScale: {x: 1, y: 1, z: 1}
-  m_ConstrainProportionsScale: 0
-  m_Children: []
-  m_Father: {fileID: 702031950}
-  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!114 &44591899
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 44591897}
+  m_GameObject: {fileID: 11463513}
   m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: e4294540393951748bb8466bd902beb2, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: GuardVsMannequin.Runtime::GuardVsMannequin.Map.SpawnPoint
-  role: 2
---- !u!1 &51816390
-GameObject:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  serializedVersion: 6
-  m_Component:
-  - component: {fileID: 51816391}
-  m_Layer: 0
-  m_Name: Environment
-  m_TagString: Untagged
-  m_Icon: {fileID: 0}
-  m_NavMeshLayer: 0
-  m_StaticEditorFlags: 0
-  m_IsActive: 1
---- !u!4 &51816391
-Transform:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 51816390}
-  serializedVersion: 2
-  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0, y: 0, z: 0}
-  m_LocalScale: {x: 2, y: 2, z: 2}
-  m_ConstrainProportionsScale: 0
-  m_Children:
-  - {fileID: 375194868}
-  m_Father: {fileID: 792488439}
-  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+  serializedVersion: 13
+  m_Type: 2
+  m_Color: {r: 1, g: 0.92, b: 0.8, a: 1}
+  m_Intensity: 2.5
+  m_Range: 10
+  m_SpotAngle: 30
+  m_InnerSpotAngle: 21.80208
+  m_CookieSize2D: {x: 0.5, y: 0.5}
+  m_Shadows:
+    m_Type: 0
+    m_Resolution: -1
+    m_CustomResolution: -1
+    m_Strength: 1
+    m_Bias: 0.05
+    m_NormalBias: 0.4
+    m_NearPlane: 0.2
+    m_CullingMatrixOverride:
+      e00: 1
+      e01: 0
+      e02: 0
+      e03: 0
+      e10: 0
+      e11: 1
+      e12: 0
+      e13: 0
+      e20: 0
+      e21: 0
+      e22: 1
+      e23: 0
+      e30: 0
+      e31: 0
+      e32: 0
+      e33: 1
+    m_UseCullingMatrixOverride: 0
+  m_Cookie: {fileID: 0}
+  m_DrawHalo: 0
+  m_Flare: {fileID: 0}
+  m_RenderMode: 0
+  m_CullingMask:
+    serializedVersion: 2
+    m_Bits: 4294967295
+  m_RenderingLayerMask: 1
+  m_Lightmapping: 4
+  m_LightShadowCasterMode: 0
+  m_AreaSize: {x: 1, y: 1}
+  m_BounceIntensity: 1
+  m_ColorTemperature: 6570
+  m_UseColorTemperature: 0
+  m_BoundingSphereOverride: {x: 0, y: 0, z: 0, w: 0}
+  m_UseBoundingSphereOverride: 0
+  m_UseViewFrustumForShadowCasterCull: 1
+  m_ForceVisible: 0
+  m_ShapeRadius: 0.025
+  m_ShadowAngle: 0
+  m_LightUnit: 1
+  m_LuxAtDistance: 1
+  m_EnableSpotReflector: 1
 --- !u!1 &75961679
 GameObject:
   m_ObjectHideFlags: 0
@@ -407,7 +346,7 @@ MeshCollider:
   m_Convex: 0
   m_CookingOptions: 30
   m_Mesh: {fileID: 4300102, guid: c7f7a9ec09a97d144963b6dd16448dc3, type: 3}
---- !u!1 &131803171
+--- !u!1 &202372684
 GameObject:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -415,53 +354,8 @@ GameObject:
   m_PrefabAsset: {fileID: 0}
   serializedVersion: 6
   m_Component:
-  - component: {fileID: 131803172}
-  - component: {fileID: 131803173}
-  m_Layer: 0
-  m_Name: SpawnPoint_Guard
-  m_TagString: Untagged
-  m_Icon: {fileID: 0}
-  m_NavMeshLayer: 0
-  m_StaticEditorFlags: 0
-  m_IsActive: 1
---- !u!4 &131803172
-Transform:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 131803171}
-  serializedVersion: 2
-  m_LocalRotation: {x: -0, y: 0.24523059, z: -0, w: 0.9694648}
-  m_LocalPosition: {x: 67.41014, y: 2.9889588, z: -56.053818}
-  m_LocalScale: {x: 1, y: 1, z: 1}
-  m_ConstrainProportionsScale: 0
-  m_Children: []
-  m_Father: {fileID: 364379040}
-  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!114 &131803173
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 131803171}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: e4294540393951748bb8466bd902beb2, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: GuardVsMannequin.Runtime::GuardVsMannequin.Map.SpawnPoint
-  role: 1
---- !u!1 &141399129
-GameObject:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  serializedVersion: 6
-  m_Component:
-  - component: {fileID: 141399130}
-  - component: {fileID: 141399131}
+  - component: {fileID: 202372685}
+  - component: {fileID: 202372686}
   m_Layer: 0
   m_Name: GeneratorSpawnPoint
   m_TagString: Untagged
@@ -469,34 +363,34 @@ GameObject:
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
   m_IsActive: 1
---- !u!4 &141399130
+--- !u!4 &202372685
 Transform:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 141399129}
+  m_GameObject: {fileID: 202372684}
   serializedVersion: 2
   m_LocalRotation: {x: -0, y: 0.3045979, z: -0, w: 0.95248103}
   m_LocalPosition: {x: 72.111855, y: 3.3108568, z: -42.394363}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
-  m_Father: {fileID: 903762452}
+  m_Father: {fileID: 1224114646}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!114 &141399131
+--- !u!114 &202372686
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 141399129}
+  m_GameObject: {fileID: 202372684}
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 510b108215080d3499db26704f22267b, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: GuardVsMannequin.Runtime::GuardVsMannequin.Objectives.GeneratorSpawnPoint
---- !u!1 &154580693
+  m_EditorClassIdentifier: GuardVsMannequin.Content::GuardVsMannequin.Objectives.GeneratorSpawnPoint
+--- !u!1 &206342831
 GameObject:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -504,44 +398,113 @@ GameObject:
   m_PrefabAsset: {fileID: 0}
   serializedVersion: 6
   m_Component:
-  - component: {fileID: 154580694}
-  - component: {fileID: 154580695}
+  - component: {fileID: 206342832}
+  - component: {fileID: 206342834}
+  - component: {fileID: 206342833}
   m_Layer: 0
-  m_Name: SpawnPoint_Mannequin
+  m_Name: MapLamp
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
   m_IsActive: 1
---- !u!4 &154580694
+--- !u!4 &206342832
 Transform:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 154580693}
+  m_GameObject: {fileID: 206342831}
   serializedVersion: 2
-  m_LocalRotation: {x: -0, y: -0.41448522, z: -0, w: 0.91005605}
-  m_LocalPosition: {x: 163.62889, y: 4.227524, z: -96.76511}
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 188.77872, y: 7.227524, z: -12.546356}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
-  m_Father: {fileID: 702031950}
+  m_Father: {fileID: 1660779755}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!114 &154580695
+--- !u!114 &206342833
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 154580693}
+  m_GameObject: {fileID: 206342831}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: e4294540393951748bb8466bd902beb2, type: 3}
+  m_Script: {fileID: 11500000, guid: 41c5774d1fae6a34a8455dfc6f4be335, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: GuardVsMannequin.Runtime::GuardVsMannequin.Map.SpawnPoint
-  role: 2
---- !u!1 &199653187
+  m_EditorClassIdentifier: GuardVsMannequin.Content::GuardVsMannequin.Map.MapLight
+  lights: []
+  bulbRenderer: {fileID: 0}
+  onMaterial: {fileID: 0}
+  offMaterial: {fileID: 0}
+--- !u!108 &206342834
+Light:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 206342831}
+  m_Enabled: 1
+  serializedVersion: 13
+  m_Type: 2
+  m_Color: {r: 1, g: 0.92, b: 0.8, a: 1}
+  m_Intensity: 2.5
+  m_Range: 10
+  m_SpotAngle: 30
+  m_InnerSpotAngle: 21.80208
+  m_CookieSize2D: {x: 0.5, y: 0.5}
+  m_Shadows:
+    m_Type: 0
+    m_Resolution: -1
+    m_CustomResolution: -1
+    m_Strength: 1
+    m_Bias: 0.05
+    m_NormalBias: 0.4
+    m_NearPlane: 0.2
+    m_CullingMatrixOverride:
+      e00: 1
+      e01: 0
+      e02: 0
+      e03: 0
+      e10: 0
+      e11: 1
+      e12: 0
+      e13: 0
+      e20: 0
+      e21: 0
+      e22: 1
+      e23: 0
+      e30: 0
+      e31: 0
+      e32: 0
+      e33: 1
+    m_UseCullingMatrixOverride: 0
+  m_Cookie: {fileID: 0}
+  m_DrawHalo: 0
+  m_Flare: {fileID: 0}
+  m_RenderMode: 0
+  m_CullingMask:
+    serializedVersion: 2
+    m_Bits: 4294967295
+  m_RenderingLayerMask: 1
+  m_Lightmapping: 4
+  m_LightShadowCasterMode: 0
+  m_AreaSize: {x: 1, y: 1}
+  m_BounceIntensity: 1
+  m_ColorTemperature: 6570
+  m_UseColorTemperature: 0
+  m_BoundingSphereOverride: {x: 0, y: 0, z: 0, w: 0}
+  m_UseBoundingSphereOverride: 0
+  m_UseViewFrustumForShadowCasterCull: 1
+  m_ForceVisible: 0
+  m_ShapeRadius: 0.025
+  m_ShadowAngle: 0
+  m_LightUnit: 1
+  m_LuxAtDistance: 1
+  m_EnableSpotReflector: 1
+--- !u!1 &311314407
 GameObject:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -549,8 +512,8 @@ GameObject:
   m_PrefabAsset: {fileID: 0}
   serializedVersion: 6
   m_Component:
-  - component: {fileID: 199653188}
-  - component: {fileID: 199653189}
+  - component: {fileID: 311314408}
+  - component: {fileID: 311314409}
   m_Layer: 0
   m_Name: SpawnPoint_Guard
   m_TagString: Untagged
@@ -558,33 +521,33 @@ GameObject:
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
   m_IsActive: 1
---- !u!4 &199653188
+--- !u!4 &311314408
 Transform:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 199653187}
+  m_GameObject: {fileID: 311314407}
   serializedVersion: 2
   m_LocalRotation: {x: -0, y: 0.8071563, z: -0, w: 0.59033775}
   m_LocalPosition: {x: -14.17017, y: -0.05835033, z: 4.1628304}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
-  m_Father: {fileID: 364379040}
+  m_Father: {fileID: 851747459}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!114 &199653189
+--- !u!114 &311314409
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 199653187}
+  m_GameObject: {fileID: 311314407}
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: e4294540393951748bb8466bd902beb2, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: GuardVsMannequin.Runtime::GuardVsMannequin.Map.SpawnPoint
+  m_EditorClassIdentifier: GuardVsMannequin.Content::GuardVsMannequin.Map.SpawnPoint
   role: 1
 --- !u!1 &320344003
 GameObject:
@@ -618,42 +581,6 @@ Transform:
   - {fileID: 1851038798}
   m_Father: {fileID: 375194868}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!1 &364379039
-GameObject:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  serializedVersion: 6
-  m_Component:
-  - component: {fileID: 364379040}
-  m_Layer: 0
-  m_Name: GuardSpawnPoints
-  m_TagString: Untagged
-  m_Icon: {fileID: 0}
-  m_NavMeshLayer: 0
-  m_StaticEditorFlags: 0
-  m_IsActive: 1
---- !u!4 &364379040
-Transform:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 364379039}
-  serializedVersion: 2
-  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0, y: 0, z: 0}
-  m_LocalScale: {x: 1, y: 1, z: 1}
-  m_ConstrainProportionsScale: 0
-  m_Children:
-  - {fileID: 131803172}
-  - {fileID: 1205459971}
-  - {fileID: 199653188}
-  - {fileID: 420572667}
-  - {fileID: 1211174517}
-  m_Father: {fileID: 792488439}
-  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &375194867
 GameObject:
   m_ObjectHideFlags: 0
@@ -686,9 +613,9 @@ Transform:
   - {fileID: 535951492}
   - {fileID: 1290436397}
   - {fileID: 320344004}
-  m_Father: {fileID: 51816391}
+  m_Father: {fileID: 1315905699}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!1 &404584885
+--- !u!1 &380592383
 GameObject:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -696,43 +623,113 @@ GameObject:
   m_PrefabAsset: {fileID: 0}
   serializedVersion: 6
   m_Component:
-  - component: {fileID: 404584886}
-  - component: {fileID: 404584887}
+  - component: {fileID: 380592384}
+  - component: {fileID: 380592386}
+  - component: {fileID: 380592385}
   m_Layer: 0
-  m_Name: GeneratorSpawnPoint
+  m_Name: MapLamp
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
   m_IsActive: 1
---- !u!4 &404584886
+--- !u!4 &380592384
 Transform:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 404584885}
+  m_GameObject: {fileID: 380592383}
   serializedVersion: 2
-  m_LocalRotation: {x: -0, y: 0.31747708, z: -0, w: 0.94826597}
-  m_LocalPosition: {x: 29.66133, y: 3.3108568, z: -97.82387}
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 15.891092, y: 6.310857, z: -79.3448}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
-  m_Father: {fileID: 903762452}
+  m_Father: {fileID: 1660779755}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!114 &404584887
+--- !u!114 &380592385
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 404584885}
+  m_GameObject: {fileID: 380592383}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 510b108215080d3499db26704f22267b, type: 3}
+  m_Script: {fileID: 11500000, guid: 41c5774d1fae6a34a8455dfc6f4be335, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: GuardVsMannequin.Runtime::GuardVsMannequin.Objectives.GeneratorSpawnPoint
---- !u!1 &420572666
+  m_EditorClassIdentifier: GuardVsMannequin.Content::GuardVsMannequin.Map.MapLight
+  lights: []
+  bulbRenderer: {fileID: 0}
+  onMaterial: {fileID: 0}
+  offMaterial: {fileID: 0}
+--- !u!108 &380592386
+Light:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 380592383}
+  m_Enabled: 1
+  serializedVersion: 13
+  m_Type: 2
+  m_Color: {r: 1, g: 0.92, b: 0.8, a: 1}
+  m_Intensity: 2.5
+  m_Range: 10
+  m_SpotAngle: 30
+  m_InnerSpotAngle: 21.80208
+  m_CookieSize2D: {x: 0.5, y: 0.5}
+  m_Shadows:
+    m_Type: 0
+    m_Resolution: -1
+    m_CustomResolution: -1
+    m_Strength: 1
+    m_Bias: 0.05
+    m_NormalBias: 0.4
+    m_NearPlane: 0.2
+    m_CullingMatrixOverride:
+      e00: 1
+      e01: 0
+      e02: 0
+      e03: 0
+      e10: 0
+      e11: 1
+      e12: 0
+      e13: 0
+      e20: 0
+      e21: 0
+      e22: 1
+      e23: 0
+      e30: 0
+      e31: 0
+      e32: 0
+      e33: 1
+    m_UseCullingMatrixOverride: 0
+  m_Cookie: {fileID: 0}
+  m_DrawHalo: 0
+  m_Flare: {fileID: 0}
+  m_RenderMode: 0
+  m_CullingMask:
+    serializedVersion: 2
+    m_Bits: 4294967295
+  m_RenderingLayerMask: 1
+  m_Lightmapping: 4
+  m_LightShadowCasterMode: 0
+  m_AreaSize: {x: 1, y: 1}
+  m_BounceIntensity: 1
+  m_ColorTemperature: 6570
+  m_UseColorTemperature: 0
+  m_BoundingSphereOverride: {x: 0, y: 0, z: 0, w: 0}
+  m_UseBoundingSphereOverride: 0
+  m_UseViewFrustumForShadowCasterCull: 1
+  m_ForceVisible: 0
+  m_ShapeRadius: 0.025
+  m_ShadowAngle: 0
+  m_LightUnit: 1
+  m_LuxAtDistance: 1
+  m_EnableSpotReflector: 1
+--- !u!1 &526350835
 GameObject:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -740,74 +737,43 @@ GameObject:
   m_PrefabAsset: {fileID: 0}
   serializedVersion: 6
   m_Component:
-  - component: {fileID: 420572667}
-  - component: {fileID: 420572668}
+  - component: {fileID: 526350836}
+  - component: {fileID: 526350837}
   m_Layer: 0
-  m_Name: SpawnPoint_Guard
+  m_Name: SpawnPoint_Mannequin
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
   m_IsActive: 1
---- !u!4 &420572667
+--- !u!4 &526350836
 Transform:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 420572666}
+  m_GameObject: {fileID: 526350835}
   serializedVersion: 2
-  m_LocalRotation: {x: -0, y: 0.9781495, z: -0, w: -0.20790294}
-  m_LocalPosition: {x: 114.799255, y: 4.227524, z: 44.12844}
+  m_LocalRotation: {x: -0, y: -0.75294054, z: -0, w: 0.65808856}
+  m_LocalPosition: {x: 188.77872, y: 4.227524, z: -12.546356}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
-  m_Father: {fileID: 364379040}
+  m_Father: {fileID: 2112504754}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!114 &420572668
+--- !u!114 &526350837
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 420572666}
+  m_GameObject: {fileID: 526350835}
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: e4294540393951748bb8466bd902beb2, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: GuardVsMannequin.Runtime::GuardVsMannequin.Map.SpawnPoint
-  role: 1
---- !u!1 &467256768
-GameObject:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  serializedVersion: 6
-  m_Component:
-  - component: {fileID: 467256769}
-  m_Layer: 0
-  m_Name: CameraOverview
-  m_TagString: Untagged
-  m_Icon: {fileID: 0}
-  m_NavMeshLayer: 0
-  m_StaticEditorFlags: 0
-  m_IsActive: 1
---- !u!4 &467256769
-Transform:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 467256768}
-  serializedVersion: 2
-  m_LocalRotation: {x: 0.44721362, y: -0, z: -0, w: 0.8944272}
-  m_LocalPosition: {x: 83.220314, y: 113.57773, z: -110.24449}
-  m_LocalScale: {x: 1, y: 1, z: 1}
-  m_ConstrainProportionsScale: 0
-  m_Children: []
-  m_Father: {fileID: 792488439}
-  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+  m_EditorClassIdentifier: GuardVsMannequin.Content::GuardVsMannequin.Map.SpawnPoint
+  role: 2
 --- !u!1 &535951491
 GameObject:
   m_ObjectHideFlags: 0
@@ -1154,7 +1120,7 @@ Transform:
   - {fileID: 4000013193006705}
   m_Father: {fileID: 375194868}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!1 &541480055
+--- !u!1 &547880629
 GameObject:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -1162,52 +1128,44 @@ GameObject:
   m_PrefabAsset: {fileID: 0}
   serializedVersion: 6
   m_Component:
-  - component: {fileID: 541480056}
-  - component: {fileID: 541480057}
+  - component: {fileID: 547880630}
+  - component: {fileID: 547880631}
   m_Layer: 0
-  m_Name: Ceiling
+  m_Name: SpawnPoint_Mannequin
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
-  m_StaticEditorFlags: 2147483647
+  m_StaticEditorFlags: 0
   m_IsActive: 1
---- !u!4 &541480056
+--- !u!4 &547880630
 Transform:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 541480055}
+  m_GameObject: {fileID: 547880629}
   serializedVersion: 2
-  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 83.220314, y: 31.197838, z: -26.802437}
+  m_LocalRotation: {x: -0, y: -0.31077233, z: -0, w: 0.9504844}
+  m_LocalPosition: {x: 116.70593, y: 4.227524, z: -72.53537}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
-  m_Father: {fileID: 1577710483}
+  m_Father: {fileID: 2112504754}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!65 &541480057
-BoxCollider:
+--- !u!114 &547880631
+MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 541480055}
-  m_Material: {fileID: 0}
-  m_IncludeLayers:
-    serializedVersion: 2
-    m_Bits: 0
-  m_ExcludeLayers:
-    serializedVersion: 2
-    m_Bits: 0
-  m_LayerOverridePriority: 0
-  m_IsTrigger: 0
-  m_ProvidesContacts: 0
+  m_GameObject: {fileID: 547880629}
   m_Enabled: 1
-  serializedVersion: 3
-  m_Size: {x: 217.11679, y: 0.5, z: 156.33653}
-  m_Center: {x: 0, y: 0, z: 0}
---- !u!1 &610478689
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: e4294540393951748bb8466bd902beb2, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: GuardVsMannequin.Content::GuardVsMannequin.Map.SpawnPoint
+  role: 2
+--- !u!1 &552508277
 GameObject:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -1215,8 +1173,8 @@ GameObject:
   m_PrefabAsset: {fileID: 0}
   serializedVersion: 6
   m_Component:
-  - component: {fileID: 610478690}
-  - component: {fileID: 610478691}
+  - component: {fileID: 552508278}
+  - component: {fileID: 552508279}
   m_Layer: 0
   m_Name: GeneratorSpawnPoint
   m_TagString: Untagged
@@ -1224,34 +1182,34 @@ GameObject:
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
   m_IsActive: 1
---- !u!4 &610478690
+--- !u!4 &552508278
 Transform:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 610478689}
+  m_GameObject: {fileID: 552508277}
   serializedVersion: 2
-  m_LocalRotation: {x: -0, y: -0.40988323, z: -0, w: 0.912138}
-  m_LocalPosition: {x: 115.4231, y: 4.227524, z: -55.39844}
+  m_LocalRotation: {x: -0, y: -0.75294054, z: -0, w: 0.65808856}
+  m_LocalPosition: {x: 188.77872, y: 4.227524, z: -12.546356}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
-  m_Father: {fileID: 903762452}
+  m_Father: {fileID: 1224114646}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!114 &610478691
+--- !u!114 &552508279
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 610478689}
+  m_GameObject: {fileID: 552508277}
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 510b108215080d3499db26704f22267b, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: GuardVsMannequin.Runtime::GuardVsMannequin.Objectives.GeneratorSpawnPoint
---- !u!1 &623750888
+  m_EditorClassIdentifier: GuardVsMannequin.Content::GuardVsMannequin.Objectives.GeneratorSpawnPoint
+--- !u!1 &571168743
 GameObject:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -1259,113 +1217,44 @@ GameObject:
   m_PrefabAsset: {fileID: 0}
   serializedVersion: 6
   m_Component:
-  - component: {fileID: 623750889}
-  - component: {fileID: 623750891}
-  - component: {fileID: 623750890}
+  - component: {fileID: 571168744}
+  - component: {fileID: 571168745}
   m_Layer: 0
-  m_Name: MapLamp
+  m_Name: SpawnPoint_Guard
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
   m_IsActive: 1
---- !u!4 &623750889
+--- !u!4 &571168744
 Transform:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 623750888}
+  m_GameObject: {fileID: 571168743}
   serializedVersion: 2
-  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 188.77872, y: 7.227524, z: -12.546356}
+  m_LocalRotation: {x: -0, y: -0.41448522, z: -0, w: 0.91005605}
+  m_LocalPosition: {x: 163.62889, y: 4.227524, z: -96.76511}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
-  m_Father: {fileID: 1539435653}
+  m_Father: {fileID: 851747459}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!114 &623750890
+--- !u!114 &571168745
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 623750888}
+  m_GameObject: {fileID: 571168743}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 41c5774d1fae6a34a8455dfc6f4be335, type: 3}
+  m_Script: {fileID: 11500000, guid: e4294540393951748bb8466bd902beb2, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: GuardVsMannequin.Runtime::GuardVsMannequin.Map.MapLight
-  lights: []
-  bulbRenderer: {fileID: 0}
-  onMaterial: {fileID: 0}
-  offMaterial: {fileID: 0}
---- !u!108 &623750891
-Light:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 623750888}
-  m_Enabled: 1
-  serializedVersion: 13
-  m_Type: 2
-  m_Color: {r: 1, g: 0.92, b: 0.8, a: 1}
-  m_Intensity: 2.5
-  m_Range: 10
-  m_SpotAngle: 30
-  m_InnerSpotAngle: 21.80208
-  m_CookieSize2D: {x: 0.5, y: 0.5}
-  m_Shadows:
-    m_Type: 0
-    m_Resolution: -1
-    m_CustomResolution: -1
-    m_Strength: 1
-    m_Bias: 0.05
-    m_NormalBias: 0.4
-    m_NearPlane: 0.2
-    m_CullingMatrixOverride:
-      e00: 1
-      e01: 0
-      e02: 0
-      e03: 0
-      e10: 0
-      e11: 1
-      e12: 0
-      e13: 0
-      e20: 0
-      e21: 0
-      e22: 1
-      e23: 0
-      e30: 0
-      e31: 0
-      e32: 0
-      e33: 1
-    m_UseCullingMatrixOverride: 0
-  m_Cookie: {fileID: 0}
-  m_DrawHalo: 0
-  m_Flare: {fileID: 0}
-  m_RenderMode: 0
-  m_CullingMask:
-    serializedVersion: 2
-    m_Bits: 4294967295
-  m_RenderingLayerMask: 1
-  m_Lightmapping: 4
-  m_LightShadowCasterMode: 0
-  m_AreaSize: {x: 1, y: 1}
-  m_BounceIntensity: 1
-  m_ColorTemperature: 6570
-  m_UseColorTemperature: 0
-  m_BoundingSphereOverride: {x: 0, y: 0, z: 0, w: 0}
-  m_UseBoundingSphereOverride: 0
-  m_UseViewFrustumForShadowCasterCull: 1
-  m_ForceVisible: 0
-  m_ShapeRadius: 0.025
-  m_ShadowAngle: 0
-  m_LightUnit: 1
-  m_LuxAtDistance: 1
-  m_EnableSpotReflector: 1
---- !u!1 &678027391
+  m_EditorClassIdentifier: GuardVsMannequin.Content::GuardVsMannequin.Map.SpawnPoint
+  role: 1
+--- !u!1 &573025984
 GameObject:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -1373,8 +1262,89 @@ GameObject:
   m_PrefabAsset: {fileID: 0}
   serializedVersion: 6
   m_Component:
-  - component: {fileID: 678027392}
-  - component: {fileID: 678027393}
+  - component: {fileID: 573025985}
+  - component: {fileID: 573025986}
+  m_Layer: 0
+  m_Name: GeneratorSpawnPoint
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &573025985
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 573025984}
+  serializedVersion: 2
+  m_LocalRotation: {x: -0, y: -0.7690347, z: -0, w: 0.63920707}
+  m_LocalPosition: {x: 134.56366, y: 4.227524, z: -17.25447}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 1224114646}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &573025986
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 573025984}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 510b108215080d3499db26704f22267b, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: GuardVsMannequin.Content::GuardVsMannequin.Objectives.GeneratorSpawnPoint
+--- !u!1 &625598688
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 625598689}
+  m_Layer: 0
+  m_Name: Boundary (Invisible)
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &625598689
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 625598688}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children:
+  - {fileID: 1904025385}
+  - {fileID: 1118849962}
+  - {fileID: 680849596}
+  - {fileID: 785797620}
+  - {fileID: 2074680038}
+  - {fileID: 1278072469}
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!1 &680849595
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 680849596}
+  - component: {fileID: 680849597}
   m_Layer: 0
   m_Name: Wall_South
   m_TagString: Untagged
@@ -1382,28 +1352,28 @@ GameObject:
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 2147483647
   m_IsActive: 1
---- !u!4 &678027392
+--- !u!4 &680849596
 Transform:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 678027391}
+  m_GameObject: {fileID: 680849595}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
   m_LocalPosition: {x: 83.220314, y: 15.431818, z: -104.9707}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
-  m_Father: {fileID: 1577710483}
+  m_Father: {fileID: 625598689}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!65 &678027393
+--- !u!65 &680849597
 BoxCollider:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 678027391}
+  m_GameObject: {fileID: 680849595}
   m_Material: {fileID: 0}
   m_IncludeLayers:
     serializedVersion: 2
@@ -1418,7 +1388,7 @@ BoxCollider:
   serializedVersion: 3
   m_Size: {x: 217.11679, y: 41.03204, z: 0.5}
   m_Center: {x: 0, y: 0, z: 0}
---- !u!1 &683850126
+--- !u!1 &697615687
 GameObject:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -1426,128 +1396,44 @@ GameObject:
   m_PrefabAsset: {fileID: 0}
   serializedVersion: 6
   m_Component:
-  - component: {fileID: 683850127}
-  - component: {fileID: 683850128}
+  - component: {fileID: 697615688}
+  - component: {fileID: 697615689}
   m_Layer: 0
-  m_Name: GeneratorSpawnPoint
+  m_Name: SpawnPoint_Mannequin
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
   m_IsActive: 1
---- !u!4 &683850127
+--- !u!4 &697615688
 Transform:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 683850126}
-  serializedVersion: 2
-  m_LocalRotation: {x: -0, y: 0.9781495, z: -0, w: -0.20790294}
-  m_LocalPosition: {x: 114.799255, y: 4.227524, z: 44.12844}
-  m_LocalScale: {x: 1, y: 1, z: 1}
-  m_ConstrainProportionsScale: 0
-  m_Children: []
-  m_Father: {fileID: 903762452}
-  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!114 &683850128
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 683850126}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 510b108215080d3499db26704f22267b, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: GuardVsMannequin.Runtime::GuardVsMannequin.Objectives.GeneratorSpawnPoint
---- !u!1 &702031949
-GameObject:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  serializedVersion: 6
-  m_Component:
-  - component: {fileID: 702031950}
-  m_Layer: 0
-  m_Name: MannequinSpawnPoints
-  m_TagString: Untagged
-  m_Icon: {fileID: 0}
-  m_NavMeshLayer: 0
-  m_StaticEditorFlags: 0
-  m_IsActive: 1
---- !u!4 &702031950
-Transform:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 702031949}
-  serializedVersion: 2
-  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0, y: 0, z: 0}
-  m_LocalScale: {x: 1, y: 1, z: 1}
-  m_ConstrainProportionsScale: 0
-  m_Children:
-  - {fileID: 1039575311}
-  - {fileID: 21641197}
-  - {fileID: 44591898}
-  - {fileID: 1368962114}
-  - {fileID: 154580694}
-  - {fileID: 1766671758}
-  - {fileID: 2098581198}
-  - {fileID: 974937432}
-  - {fileID: 1589106053}
-  - {fileID: 2081228859}
-  m_Father: {fileID: 792488439}
-  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!1 &715945668
-GameObject:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  serializedVersion: 6
-  m_Component:
-  - component: {fileID: 715945669}
-  - component: {fileID: 715945670}
-  m_Layer: 0
-  m_Name: GeneratorSpawnPoint
-  m_TagString: Untagged
-  m_Icon: {fileID: 0}
-  m_NavMeshLayer: 0
-  m_StaticEditorFlags: 0
-  m_IsActive: 1
---- !u!4 &715945669
-Transform:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 715945668}
+  m_GameObject: {fileID: 697615687}
   serializedVersion: 2
   m_LocalRotation: {x: -0, y: 0.8071563, z: -0, w: 0.59033775}
   m_LocalPosition: {x: -14.17017, y: -0.05835033, z: 4.1628304}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
-  m_Father: {fileID: 903762452}
+  m_Father: {fileID: 2112504754}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!114 &715945670
+--- !u!114 &697615689
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 715945668}
+  m_GameObject: {fileID: 697615687}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 510b108215080d3499db26704f22267b, type: 3}
+  m_Script: {fileID: 11500000, guid: e4294540393951748bb8466bd902beb2, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: GuardVsMannequin.Runtime::GuardVsMannequin.Objectives.GeneratorSpawnPoint
---- !u!1 &760470021
+  m_EditorClassIdentifier: GuardVsMannequin.Content::GuardVsMannequin.Map.SpawnPoint
+  role: 2
+--- !u!1 &713832308
 GameObject:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -1555,8 +1441,8 @@ GameObject:
   m_PrefabAsset: {fileID: 0}
   serializedVersion: 6
   m_Component:
-  - component: {fileID: 760470022}
-  - component: {fileID: 760470023}
+  - component: {fileID: 713832309}
+  - component: {fileID: 713832310}
   m_Layer: 0
   m_Name: GeneratorSpawnPoint
   m_TagString: Untagged
@@ -1564,34 +1450,34 @@ GameObject:
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
   m_IsActive: 1
---- !u!4 &760470022
+--- !u!4 &713832309
 Transform:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 760470021}
+  m_GameObject: {fileID: 713832308}
   serializedVersion: 2
-  m_LocalRotation: {x: -0, y: 0.6748256, z: -0, w: 0.73797727}
-  m_LocalPosition: {x: -22.338085, y: 3.3108568, z: -36.258156}
+  m_LocalRotation: {x: -0, y: -0.40988323, z: -0, w: 0.912138}
+  m_LocalPosition: {x: 115.4231, y: 4.227524, z: -55.39844}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
-  m_Father: {fileID: 903762452}
+  m_Father: {fileID: 1224114646}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!114 &760470023
+--- !u!114 &713832310
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 760470021}
+  m_GameObject: {fileID: 713832308}
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 510b108215080d3499db26704f22267b, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: GuardVsMannequin.Runtime::GuardVsMannequin.Objectives.GeneratorSpawnPoint
---- !u!1 &792488436
+  m_EditorClassIdentifier: GuardVsMannequin.Content::GuardVsMannequin.Objectives.GeneratorSpawnPoint
+--- !u!1 &785797619
 GameObject:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -1599,97 +1485,8 @@ GameObject:
   m_PrefabAsset: {fileID: 0}
   serializedVersion: 6
   m_Component:
-  - component: {fileID: 792488439}
-  - component: {fileID: 792488437}
-  - component: {fileID: 792488438}
-  m_Layer: 0
-  m_Name: Map
-  m_TagString: Untagged
-  m_Icon: {fileID: 0}
-  m_NavMeshLayer: 0
-  m_StaticEditorFlags: 0
-  m_IsActive: 1
---- !u!114 &792488437
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 792488436}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 7a5ac11cc976e418e8d13136b07e1f52, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Unity.AI.Navigation::Unity.AI.Navigation.NavMeshSurface
-  m_SerializedVersion: 0
-  m_AgentTypeID: 0
-  m_CollectObjects: 2
-  m_Size: {x: 10, y: 10, z: 10}
-  m_Center: {x: 0, y: 2, z: 0}
-  m_LayerMask:
-    serializedVersion: 2
-    m_Bits: 4294967295
-  m_UseGeometry: 1
-  m_DefaultArea: 0
-  m_GenerateLinks: 0
-  m_IgnoreNavMeshAgent: 1
-  m_IgnoreNavMeshObstacle: 1
-  m_OverrideTileSize: 0
-  m_TileSize: 256
-  m_OverrideVoxelSize: 0
-  m_VoxelSize: 0.16666667
-  m_MinRegionArea: 2
-  m_NavMeshData: {fileID: 23800000, guid: 2c9d07dcb3a49ae40bc453910e2390ec, type: 2}
-  m_BuildHeightMesh: 0
---- !u!114 &792488438
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 792488436}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 19068615b6fe63444b2a476572d40a91, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: GuardVsMannequin.Runtime::GuardVsMannequin.Map.MapInfo
-  mapName: Industrial
-  ceilingHeight: 31.03204
-  mannequinSkin: {fileID: 11400000, guid: c27012141a81a7842ad367d626e37925, type: 2}
-  guardSkin: {fileID: 0}
-  mannequinHuntSkin: {fileID: 0}
-  overviewPoint: {fileID: 467256769}
---- !u!4 &792488439
-Transform:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 792488436}
-  serializedVersion: 2
-  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0, y: 0, z: 0}
-  m_LocalScale: {x: 1, y: 1, z: 1}
-  m_ConstrainProportionsScale: 0
-  m_Children:
-  - {fileID: 51816391}
-  - {fileID: 1539435653}
-  - {fileID: 702031950}
-  - {fileID: 903762452}
-  - {fileID: 364379040}
-  - {fileID: 467256769}
-  m_Father: {fileID: 0}
-  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!1 &811070535
-GameObject:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  serializedVersion: 6
-  m_Component:
-  - component: {fileID: 811070536}
-  - component: {fileID: 811070537}
+  - component: {fileID: 785797620}
+  - component: {fileID: 785797621}
   m_Layer: 0
   m_Name: Wall_East
   m_TagString: Untagged
@@ -1697,28 +1494,28 @@ GameObject:
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 2147483647
   m_IsActive: 1
---- !u!4 &811070536
+--- !u!4 &785797620
 Transform:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 811070535}
+  m_GameObject: {fileID: 785797619}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
   m_LocalPosition: {x: 191.77872, y: 15.431818, z: -26.802437}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
-  m_Father: {fileID: 1577710483}
+  m_Father: {fileID: 625598689}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!65 &811070537
+--- !u!65 &785797621
 BoxCollider:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 811070535}
+  m_GameObject: {fileID: 785797619}
   m_Material: {fileID: 0}
   m_IncludeLayers:
     serializedVersion: 2
@@ -1733,7 +1530,7 @@ BoxCollider:
   serializedVersion: 3
   m_Size: {x: 0.5, y: 41.03204, z: 156.33653}
   m_Center: {x: 0, y: 0, z: 0}
---- !u!1 &813347252
+--- !u!1 &795679482
 GameObject:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -1741,113 +1538,44 @@ GameObject:
   m_PrefabAsset: {fileID: 0}
   serializedVersion: 6
   m_Component:
-  - component: {fileID: 813347253}
-  - component: {fileID: 813347255}
-  - component: {fileID: 813347254}
+  - component: {fileID: 795679483}
+  - component: {fileID: 795679484}
   m_Layer: 0
-  m_Name: MapLamp
+  m_Name: SpawnPoint_Mannequin
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
   m_IsActive: 1
---- !u!4 &813347253
+--- !u!4 &795679483
 Transform:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 813347252}
+  m_GameObject: {fileID: 795679482}
   serializedVersion: 2
-  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 163.62889, y: 7.227524, z: -96.76511}
+  m_LocalRotation: {x: -0, y: -0.7690347, z: -0, w: 0.63920707}
+  m_LocalPosition: {x: 134.56366, y: 4.227524, z: -17.25447}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
-  m_Father: {fileID: 1539435653}
+  m_Father: {fileID: 2112504754}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!114 &813347254
+--- !u!114 &795679484
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 813347252}
+  m_GameObject: {fileID: 795679482}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 41c5774d1fae6a34a8455dfc6f4be335, type: 3}
+  m_Script: {fileID: 11500000, guid: e4294540393951748bb8466bd902beb2, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: GuardVsMannequin.Runtime::GuardVsMannequin.Map.MapLight
-  lights: []
-  bulbRenderer: {fileID: 0}
-  onMaterial: {fileID: 0}
-  offMaterial: {fileID: 0}
---- !u!108 &813347255
-Light:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 813347252}
-  m_Enabled: 1
-  serializedVersion: 13
-  m_Type: 2
-  m_Color: {r: 1, g: 0.92, b: 0.8, a: 1}
-  m_Intensity: 2.5
-  m_Range: 10
-  m_SpotAngle: 30
-  m_InnerSpotAngle: 21.80208
-  m_CookieSize2D: {x: 0.5, y: 0.5}
-  m_Shadows:
-    m_Type: 0
-    m_Resolution: -1
-    m_CustomResolution: -1
-    m_Strength: 1
-    m_Bias: 0.05
-    m_NormalBias: 0.4
-    m_NearPlane: 0.2
-    m_CullingMatrixOverride:
-      e00: 1
-      e01: 0
-      e02: 0
-      e03: 0
-      e10: 0
-      e11: 1
-      e12: 0
-      e13: 0
-      e20: 0
-      e21: 0
-      e22: 1
-      e23: 0
-      e30: 0
-      e31: 0
-      e32: 0
-      e33: 1
-    m_UseCullingMatrixOverride: 0
-  m_Cookie: {fileID: 0}
-  m_DrawHalo: 0
-  m_Flare: {fileID: 0}
-  m_RenderMode: 0
-  m_CullingMask:
-    serializedVersion: 2
-    m_Bits: 4294967295
-  m_RenderingLayerMask: 1
-  m_Lightmapping: 4
-  m_LightShadowCasterMode: 0
-  m_AreaSize: {x: 1, y: 1}
-  m_BounceIntensity: 1
-  m_ColorTemperature: 6570
-  m_UseColorTemperature: 0
-  m_BoundingSphereOverride: {x: 0, y: 0, z: 0, w: 0}
-  m_UseBoundingSphereOverride: 0
-  m_UseViewFrustumForShadowCasterCull: 1
-  m_ForceVisible: 0
-  m_ShapeRadius: 0.025
-  m_ShadowAngle: 0
-  m_LightUnit: 1
-  m_LuxAtDistance: 1
-  m_EnableSpotReflector: 1
---- !u!1 &903762451
+  m_EditorClassIdentifier: GuardVsMannequin.Content::GuardVsMannequin.Map.SpawnPoint
+  role: 2
+--- !u!1 &851747458
 GameObject:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -1855,42 +1583,35 @@ GameObject:
   m_PrefabAsset: {fileID: 0}
   serializedVersion: 6
   m_Component:
-  - component: {fileID: 903762452}
+  - component: {fileID: 851747459}
   m_Layer: 0
-  m_Name: GeneratorSpawnPoints
+  m_Name: GuardSpawnPoints
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
   m_IsActive: 1
---- !u!4 &903762452
+--- !u!4 &851747459
 Transform:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 903762451}
+  m_GameObject: {fileID: 851747458}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
   m_LocalPosition: {x: 0, y: 0, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children:
-  - {fileID: 141399130}
-  - {fileID: 1494180598}
-  - {fileID: 715945669}
-  - {fileID: 683850127}
-  - {fileID: 2139473620}
-  - {fileID: 404584886}
-  - {fileID: 1591449317}
-  - {fileID: 1675008222}
-  - {fileID: 1357308727}
-  - {fileID: 2057798911}
-  - {fileID: 610478690}
-  - {fileID: 760470022}
-  m_Father: {fileID: 792488439}
+  - {fileID: 1033594353}
+  - {fileID: 1171760835}
+  - {fileID: 311314408}
+  - {fileID: 991336658}
+  - {fileID: 571168744}
+  m_Father: {fileID: 1840808256}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!1 &944554346
+--- !u!1 &991336657
 GameObject:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -1898,113 +1619,44 @@ GameObject:
   m_PrefabAsset: {fileID: 0}
   serializedVersion: 6
   m_Component:
-  - component: {fileID: 944554347}
-  - component: {fileID: 944554349}
-  - component: {fileID: 944554348}
+  - component: {fileID: 991336658}
+  - component: {fileID: 991336659}
   m_Layer: 0
-  m_Name: MapLamp
+  m_Name: SpawnPoint_Guard
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
   m_IsActive: 1
---- !u!4 &944554347
+--- !u!4 &991336658
 Transform:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 944554346}
+  m_GameObject: {fileID: 991336657}
   serializedVersion: 2
-  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 15.891092, y: 6.310857, z: -79.3448}
+  m_LocalRotation: {x: -0, y: 0.9781495, z: -0, w: -0.20790294}
+  m_LocalPosition: {x: 114.799255, y: 4.227524, z: 44.12844}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
-  m_Father: {fileID: 1539435653}
+  m_Father: {fileID: 851747459}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!114 &944554348
+--- !u!114 &991336659
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 944554346}
+  m_GameObject: {fileID: 991336657}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 41c5774d1fae6a34a8455dfc6f4be335, type: 3}
+  m_Script: {fileID: 11500000, guid: e4294540393951748bb8466bd902beb2, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: GuardVsMannequin.Runtime::GuardVsMannequin.Map.MapLight
-  lights: []
-  bulbRenderer: {fileID: 0}
-  onMaterial: {fileID: 0}
-  offMaterial: {fileID: 0}
---- !u!108 &944554349
-Light:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 944554346}
-  m_Enabled: 1
-  serializedVersion: 13
-  m_Type: 2
-  m_Color: {r: 1, g: 0.92, b: 0.8, a: 1}
-  m_Intensity: 2.5
-  m_Range: 10
-  m_SpotAngle: 30
-  m_InnerSpotAngle: 21.80208
-  m_CookieSize2D: {x: 0.5, y: 0.5}
-  m_Shadows:
-    m_Type: 0
-    m_Resolution: -1
-    m_CustomResolution: -1
-    m_Strength: 1
-    m_Bias: 0.05
-    m_NormalBias: 0.4
-    m_NearPlane: 0.2
-    m_CullingMatrixOverride:
-      e00: 1
-      e01: 0
-      e02: 0
-      e03: 0
-      e10: 0
-      e11: 1
-      e12: 0
-      e13: 0
-      e20: 0
-      e21: 0
-      e22: 1
-      e23: 0
-      e30: 0
-      e31: 0
-      e32: 0
-      e33: 1
-    m_UseCullingMatrixOverride: 0
-  m_Cookie: {fileID: 0}
-  m_DrawHalo: 0
-  m_Flare: {fileID: 0}
-  m_RenderMode: 0
-  m_CullingMask:
-    serializedVersion: 2
-    m_Bits: 4294967295
-  m_RenderingLayerMask: 1
-  m_Lightmapping: 4
-  m_LightShadowCasterMode: 0
-  m_AreaSize: {x: 1, y: 1}
-  m_BounceIntensity: 1
-  m_ColorTemperature: 6570
-  m_UseColorTemperature: 0
-  m_BoundingSphereOverride: {x: 0, y: 0, z: 0, w: 0}
-  m_UseBoundingSphereOverride: 0
-  m_UseViewFrustumForShadowCasterCull: 1
-  m_ForceVisible: 0
-  m_ShapeRadius: 0.025
-  m_ShadowAngle: 0
-  m_LightUnit: 1
-  m_LuxAtDistance: 1
-  m_EnableSpotReflector: 1
---- !u!1 &971838339
+  m_EditorClassIdentifier: GuardVsMannequin.Content::GuardVsMannequin.Map.SpawnPoint
+  role: 1
+--- !u!1 &1033594352
 GameObject:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -2012,8 +1664,53 @@ GameObject:
   m_PrefabAsset: {fileID: 0}
   serializedVersion: 6
   m_Component:
-  - component: {fileID: 971838340}
-  - component: {fileID: 971838341}
+  - component: {fileID: 1033594353}
+  - component: {fileID: 1033594354}
+  m_Layer: 0
+  m_Name: SpawnPoint_Guard
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &1033594353
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1033594352}
+  serializedVersion: 2
+  m_LocalRotation: {x: -0, y: 0.24523059, z: -0, w: 0.9694648}
+  m_LocalPosition: {x: 67.41014, y: 2.9889588, z: -56.053818}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 851747459}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &1033594354
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1033594352}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: e4294540393951748bb8466bd902beb2, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: GuardVsMannequin.Content::GuardVsMannequin.Map.SpawnPoint
+  role: 1
+--- !u!1 &1118849961
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 1118849962}
+  - component: {fileID: 1118849963}
   m_Layer: 0
   m_Name: Wall_North
   m_TagString: Untagged
@@ -2021,28 +1718,28 @@ GameObject:
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 2147483647
   m_IsActive: 1
---- !u!4 &971838340
+--- !u!4 &1118849962
 Transform:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 971838339}
+  m_GameObject: {fileID: 1118849961}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
   m_LocalPosition: {x: 83.220314, y: 15.431818, z: 51.36583}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
-  m_Father: {fileID: 1577710483}
+  m_Father: {fileID: 625598689}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!65 &971838341
+--- !u!65 &1118849963
 BoxCollider:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 971838339}
+  m_GameObject: {fileID: 1118849961}
   m_Material: {fileID: 0}
   m_IncludeLayers:
     serializedVersion: 2
@@ -2057,7 +1754,7 @@ BoxCollider:
   serializedVersion: 3
   m_Size: {x: 217.11679, y: 41.03204, z: 0.5}
   m_Center: {x: 0, y: 0, z: 0}
---- !u!1 &974937431
+--- !u!1 &1164780544
 GameObject:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -2065,44 +1762,43 @@ GameObject:
   m_PrefabAsset: {fileID: 0}
   serializedVersion: 6
   m_Component:
-  - component: {fileID: 974937432}
-  - component: {fileID: 974937433}
+  - component: {fileID: 1164780545}
+  - component: {fileID: 1164780546}
   m_Layer: 0
-  m_Name: SpawnPoint_Mannequin
+  m_Name: GeneratorSpawnPoint
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
   m_IsActive: 1
---- !u!4 &974937432
+--- !u!4 &1164780545
 Transform:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 974937431}
+  m_GameObject: {fileID: 1164780544}
   serializedVersion: 2
-  m_LocalRotation: {x: -0, y: 0.83814806, z: -0, w: 0.5454429}
-  m_LocalPosition: {x: 41.53698, y: 3.3350077, z: -8.339504}
+  m_LocalRotation: {x: -0, y: -0.41448522, z: -0, w: 0.91005605}
+  m_LocalPosition: {x: 163.62889, y: 4.227524, z: -96.76511}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
-  m_Father: {fileID: 702031950}
+  m_Father: {fileID: 1224114646}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!114 &974937433
+--- !u!114 &1164780546
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 974937431}
+  m_GameObject: {fileID: 1164780544}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: e4294540393951748bb8466bd902beb2, type: 3}
+  m_Script: {fileID: 11500000, guid: 510b108215080d3499db26704f22267b, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: GuardVsMannequin.Runtime::GuardVsMannequin.Map.SpawnPoint
-  role: 2
---- !u!1 &1039575310
+  m_EditorClassIdentifier: GuardVsMannequin.Content::GuardVsMannequin.Objectives.GeneratorSpawnPoint
+--- !u!1 &1171760834
 GameObject:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -2110,44 +1806,44 @@ GameObject:
   m_PrefabAsset: {fileID: 0}
   serializedVersion: 6
   m_Component:
-  - component: {fileID: 1039575311}
-  - component: {fileID: 1039575312}
+  - component: {fileID: 1171760835}
+  - component: {fileID: 1171760836}
   m_Layer: 0
-  m_Name: SpawnPoint_Mannequin
+  m_Name: SpawnPoint_Guard
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
   m_IsActive: 1
---- !u!4 &1039575311
+--- !u!4 &1171760835
 Transform:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1039575310}
+  m_GameObject: {fileID: 1171760834}
   serializedVersion: 2
-  m_LocalRotation: {x: -0, y: 0.24523059, z: -0, w: 0.9694648}
-  m_LocalPosition: {x: 67.41014, y: 2.9889588, z: -56.053818}
+  m_LocalRotation: {x: -0, y: -0.75294054, z: -0, w: 0.65808856}
+  m_LocalPosition: {x: 188.77872, y: 4.227524, z: -12.546356}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
-  m_Father: {fileID: 702031950}
+  m_Father: {fileID: 851747459}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!114 &1039575312
+--- !u!114 &1171760836
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1039575310}
+  m_GameObject: {fileID: 1171760834}
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: e4294540393951748bb8466bd902beb2, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: GuardVsMannequin.Runtime::GuardVsMannequin.Map.SpawnPoint
-  role: 2
---- !u!1 &1077894376
+  m_EditorClassIdentifier: GuardVsMannequin.Content::GuardVsMannequin.Map.SpawnPoint
+  role: 1
+--- !u!1 &1224114645
 GameObject:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -2155,9 +1851,52 @@ GameObject:
   m_PrefabAsset: {fileID: 0}
   serializedVersion: 6
   m_Component:
-  - component: {fileID: 1077894377}
-  - component: {fileID: 1077894379}
-  - component: {fileID: 1077894378}
+  - component: {fileID: 1224114646}
+  m_Layer: 0
+  m_Name: GeneratorSpawnPoints
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &1224114646
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1224114645}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children:
+  - {fileID: 202372685}
+  - {fileID: 552508278}
+  - {fileID: 1796924115}
+  - {fileID: 1520681924}
+  - {fileID: 1164780545}
+  - {fileID: 1445176224}
+  - {fileID: 1775966824}
+  - {fileID: 573025985}
+  - {fileID: 1536759964}
+  - {fileID: 1289646897}
+  - {fileID: 713832309}
+  - {fileID: 1377139267}
+  m_Father: {fileID: 1840808256}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!1 &1267017344
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 1267017345}
+  - component: {fileID: 1267017347}
+  - component: {fileID: 1267017346}
   m_Layer: 0
   m_Name: MapLamp
   m_TagString: Untagged
@@ -2165,44 +1904,44 @@ GameObject:
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
   m_IsActive: 1
---- !u!4 &1077894377
+--- !u!4 &1267017345
 Transform:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1077894376}
+  m_GameObject: {fileID: 1267017344}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 67.41014, y: 5.988959, z: -56.053818}
+  m_LocalPosition: {x: 114.799255, y: 7.227524, z: 44.12844}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
-  m_Father: {fileID: 1539435653}
+  m_Father: {fileID: 1660779755}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!114 &1077894378
+--- !u!114 &1267017346
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1077894376}
+  m_GameObject: {fileID: 1267017344}
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 41c5774d1fae6a34a8455dfc6f4be335, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: GuardVsMannequin.Runtime::GuardVsMannequin.Map.MapLight
+  m_EditorClassIdentifier: GuardVsMannequin.Content::GuardVsMannequin.Map.MapLight
   lights: []
   bulbRenderer: {fileID: 0}
   onMaterial: {fileID: 0}
   offMaterial: {fileID: 0}
---- !u!108 &1077894379
+--- !u!108 &1267017347
 Light:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1077894376}
+  m_GameObject: {fileID: 1267017344}
   m_Enabled: 1
   serializedVersion: 13
   m_Type: 2
@@ -2261,7 +2000,7 @@ Light:
   m_LightUnit: 1
   m_LuxAtDistance: 1
   m_EnableSpotReflector: 1
---- !u!1 &1205459970
+--- !u!1 &1278072468
 GameObject:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -2269,44 +2008,42 @@ GameObject:
   m_PrefabAsset: {fileID: 0}
   serializedVersion: 6
   m_Component:
-  - component: {fileID: 1205459971}
-  - component: {fileID: 1205459972}
+  - component: {fileID: 1278072469}
+  - component: {fileID: 1278072470}
   m_Layer: 0
-  m_Name: SpawnPoint_Guard
+  m_Name: OcclusionArea
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
   m_IsActive: 1
---- !u!4 &1205459971
+--- !u!4 &1278072469
 Transform:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1205459970}
+  m_GameObject: {fileID: 1278072468}
   serializedVersion: 2
-  m_LocalRotation: {x: -0, y: -0.75294054, z: -0, w: 0.65808856}
-  m_LocalPosition: {x: 188.77872, y: 4.227524, z: -12.546356}
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
-  m_Father: {fileID: 364379040}
+  m_Father: {fileID: 625598689}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!114 &1205459972
-MonoBehaviour:
+--- !u!192 &1278072470
+OcclusionArea:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1205459970}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: e4294540393951748bb8466bd902beb2, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: GuardVsMannequin.Runtime::GuardVsMannequin.Map.SpawnPoint
-  role: 1
---- !u!1 &1211174516
+  m_GameObject: {fileID: 1278072468}
+  serializedVersion: 2
+  m_Size: {x: 217.61679, y: 41.03204, z: 156.83653}
+  m_Center: {x: 83.220314, y: 15.431818, z: -26.802437}
+  m_IsViewVolume: 1
+--- !u!1 &1289646896
 GameObject:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -2314,43 +2051,42 @@ GameObject:
   m_PrefabAsset: {fileID: 0}
   serializedVersion: 6
   m_Component:
-  - component: {fileID: 1211174517}
-  - component: {fileID: 1211174518}
+  - component: {fileID: 1289646897}
+  - component: {fileID: 1289646898}
   m_Layer: 0
-  m_Name: SpawnPoint_Guard
+  m_Name: GeneratorSpawnPoint
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
   m_IsActive: 1
---- !u!4 &1211174517
+--- !u!4 &1289646897
 Transform:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1211174516}
+  m_GameObject: {fileID: 1289646896}
   serializedVersion: 2
-  m_LocalRotation: {x: -0, y: -0.41448522, z: -0, w: 0.91005605}
-  m_LocalPosition: {x: 163.62889, y: 4.227524, z: -96.76511}
+  m_LocalRotation: {x: -0, y: 0.887426, z: -0, w: -0.46095017}
+  m_LocalPosition: {x: 153.41815, y: 4.227524, z: 22.539154}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
-  m_Father: {fileID: 364379040}
+  m_Father: {fileID: 1224114646}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!114 &1211174518
+--- !u!114 &1289646898
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1211174516}
+  m_GameObject: {fileID: 1289646896}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: e4294540393951748bb8466bd902beb2, type: 3}
+  m_Script: {fileID: 11500000, guid: 510b108215080d3499db26704f22267b, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: GuardVsMannequin.Runtime::GuardVsMannequin.Map.SpawnPoint
-  role: 1
+  m_EditorClassIdentifier: GuardVsMannequin.Content::GuardVsMannequin.Objectives.GeneratorSpawnPoint
 --- !u!1 &1290436396
 GameObject:
   m_ObjectHideFlags: 0
@@ -2387,7 +2123,7 @@ Transform:
   - {fileID: 4000011276728608}
   m_Father: {fileID: 375194868}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!1 &1357308726
+--- !u!1 &1315905698
 GameObject:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -2395,8 +2131,40 @@ GameObject:
   m_PrefabAsset: {fileID: 0}
   serializedVersion: 6
   m_Component:
-  - component: {fileID: 1357308727}
-  - component: {fileID: 1357308728}
+  - component: {fileID: 1315905699}
+  m_Layer: 0
+  m_Name: Environment
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &1315905699
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1315905698}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 2, y: 2, z: 2}
+  m_ConstrainProportionsScale: 0
+  m_Children:
+  - {fileID: 375194868}
+  m_Father: {fileID: 1840808256}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!1 &1377139266
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 1377139267}
+  - component: {fileID: 1377139268}
   m_Layer: 0
   m_Name: GeneratorSpawnPoint
   m_TagString: Untagged
@@ -2404,34 +2172,34 @@ GameObject:
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
   m_IsActive: 1
---- !u!4 &1357308727
+--- !u!4 &1377139267
 Transform:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1357308726}
+  m_GameObject: {fileID: 1377139266}
   serializedVersion: 2
-  m_LocalRotation: {x: -0, y: 0.8075027, z: -0, w: 0.58986396}
-  m_LocalPosition: {x: 33.64254, y: 0.2275235, z: -10.975105}
+  m_LocalRotation: {x: -0, y: 0.6748256, z: -0, w: 0.73797727}
+  m_LocalPosition: {x: -22.338085, y: 3.3108568, z: -36.258156}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
-  m_Father: {fileID: 903762452}
+  m_Father: {fileID: 1224114646}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!114 &1357308728
+--- !u!114 &1377139268
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1357308726}
+  m_GameObject: {fileID: 1377139266}
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 510b108215080d3499db26704f22267b, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: GuardVsMannequin.Runtime::GuardVsMannequin.Objectives.GeneratorSpawnPoint
---- !u!1 &1368962113
+  m_EditorClassIdentifier: GuardVsMannequin.Content::GuardVsMannequin.Objectives.GeneratorSpawnPoint
+--- !u!1 &1407828347
 GameObject:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -2439,8 +2207,8 @@ GameObject:
   m_PrefabAsset: {fileID: 0}
   serializedVersion: 6
   m_Component:
-  - component: {fileID: 1368962114}
-  - component: {fileID: 1368962115}
+  - component: {fileID: 1407828348}
+  - component: {fileID: 1407828349}
   m_Layer: 0
   m_Name: SpawnPoint_Mannequin
   m_TagString: Untagged
@@ -2448,35 +2216,35 @@ GameObject:
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
   m_IsActive: 1
---- !u!4 &1368962114
+--- !u!4 &1407828348
 Transform:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1368962113}
+  m_GameObject: {fileID: 1407828347}
   serializedVersion: 2
-  m_LocalRotation: {x: -0, y: 0.9781495, z: -0, w: -0.20790294}
-  m_LocalPosition: {x: 114.799255, y: 4.227524, z: 44.12844}
+  m_LocalRotation: {x: -0, y: 0.83814806, z: -0, w: 0.5454429}
+  m_LocalPosition: {x: 41.53698, y: 3.3350077, z: -8.339504}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
-  m_Father: {fileID: 702031950}
+  m_Father: {fileID: 2112504754}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!114 &1368962115
+--- !u!114 &1407828349
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1368962113}
+  m_GameObject: {fileID: 1407828347}
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: e4294540393951748bb8466bd902beb2, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: GuardVsMannequin.Runtime::GuardVsMannequin.Map.SpawnPoint
+  m_EditorClassIdentifier: GuardVsMannequin.Content::GuardVsMannequin.Map.SpawnPoint
   role: 2
---- !u!1 &1476947382
+--- !u!1 &1445176223
 GameObject:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -2484,9 +2252,186 @@ GameObject:
   m_PrefabAsset: {fileID: 0}
   serializedVersion: 6
   m_Component:
-  - component: {fileID: 1476947383}
-  - component: {fileID: 1476947385}
-  - component: {fileID: 1476947384}
+  - component: {fileID: 1445176224}
+  - component: {fileID: 1445176225}
+  m_Layer: 0
+  m_Name: GeneratorSpawnPoint
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &1445176224
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1445176223}
+  serializedVersion: 2
+  m_LocalRotation: {x: -0, y: 0.31747708, z: -0, w: 0.94826597}
+  m_LocalPosition: {x: 29.66133, y: 3.3108568, z: -97.82387}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 1224114646}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &1445176225
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1445176223}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 510b108215080d3499db26704f22267b, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: GuardVsMannequin.Content::GuardVsMannequin.Objectives.GeneratorSpawnPoint
+--- !u!1 &1520681923
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 1520681924}
+  - component: {fileID: 1520681925}
+  m_Layer: 0
+  m_Name: GeneratorSpawnPoint
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &1520681924
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1520681923}
+  serializedVersion: 2
+  m_LocalRotation: {x: -0, y: 0.9781495, z: -0, w: -0.20790294}
+  m_LocalPosition: {x: 114.799255, y: 4.227524, z: 44.12844}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 1224114646}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &1520681925
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1520681923}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 510b108215080d3499db26704f22267b, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: GuardVsMannequin.Content::GuardVsMannequin.Objectives.GeneratorSpawnPoint
+--- !u!1 &1536759963
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 1536759964}
+  - component: {fileID: 1536759965}
+  m_Layer: 0
+  m_Name: GeneratorSpawnPoint
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &1536759964
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1536759963}
+  serializedVersion: 2
+  m_LocalRotation: {x: -0, y: 0.8075027, z: -0, w: 0.58986396}
+  m_LocalPosition: {x: 33.64254, y: 0.2275235, z: -10.975105}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 1224114646}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &1536759965
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1536759963}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 510b108215080d3499db26704f22267b, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: GuardVsMannequin.Content::GuardVsMannequin.Objectives.GeneratorSpawnPoint
+--- !u!1 &1583717551
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 1583717552}
+  - component: {fileID: 1583717553}
+  m_Layer: 0
+  m_Name: SpawnPoint_Mannequin
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &1583717552
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1583717551}
+  serializedVersion: 2
+  m_LocalRotation: {x: -0, y: 0.24523059, z: -0, w: 0.9694648}
+  m_LocalPosition: {x: 67.41014, y: 2.9889588, z: -56.053818}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 2112504754}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &1583717553
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1583717551}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: e4294540393951748bb8466bd902beb2, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: GuardVsMannequin.Content::GuardVsMannequin.Map.SpawnPoint
+  role: 2
+--- !u!1 &1628026601
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 1628026602}
+  - component: {fileID: 1628026604}
+  - component: {fileID: 1628026603}
   m_Layer: 0
   m_Name: MapLamp
   m_TagString: Untagged
@@ -2494,44 +2439,44 @@ GameObject:
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
   m_IsActive: 1
---- !u!4 &1476947383
+--- !u!4 &1628026602
 Transform:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1476947382}
+  m_GameObject: {fileID: 1628026601}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 114.799255, y: 7.227524, z: 44.12844}
+  m_LocalPosition: {x: -14.17017, y: 2.9416497, z: 4.1628304}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
-  m_Father: {fileID: 1539435653}
+  m_Father: {fileID: 1660779755}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!114 &1476947384
+--- !u!114 &1628026603
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1476947382}
+  m_GameObject: {fileID: 1628026601}
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 41c5774d1fae6a34a8455dfc6f4be335, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: GuardVsMannequin.Runtime::GuardVsMannequin.Map.MapLight
+  m_EditorClassIdentifier: GuardVsMannequin.Content::GuardVsMannequin.Map.MapLight
   lights: []
   bulbRenderer: {fileID: 0}
   onMaterial: {fileID: 0}
   offMaterial: {fileID: 0}
---- !u!108 &1476947385
+--- !u!108 &1628026604
 Light:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1476947382}
+  m_GameObject: {fileID: 1628026601}
   m_Enabled: 1
   serializedVersion: 13
   m_Type: 2
@@ -2590,7 +2535,7 @@ Light:
   m_LightUnit: 1
   m_LuxAtDistance: 1
   m_EnableSpotReflector: 1
---- !u!1 &1494180597
+--- !u!1 &1655088409
 GameObject:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -2598,43 +2543,30 @@ GameObject:
   m_PrefabAsset: {fileID: 0}
   serializedVersion: 6
   m_Component:
-  - component: {fileID: 1494180598}
-  - component: {fileID: 1494180599}
+  - component: {fileID: 1655088410}
   m_Layer: 0
-  m_Name: GeneratorSpawnPoint
+  m_Name: CameraOverview
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
   m_IsActive: 1
---- !u!4 &1494180598
+--- !u!4 &1655088410
 Transform:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1494180597}
+  m_GameObject: {fileID: 1655088409}
   serializedVersion: 2
-  m_LocalRotation: {x: -0, y: -0.75294054, z: -0, w: 0.65808856}
-  m_LocalPosition: {x: 188.77872, y: 4.227524, z: -12.546356}
+  m_LocalRotation: {x: 0.44721362, y: -0, z: -0, w: 0.8944272}
+  m_LocalPosition: {x: 83.220314, y: 113.57773, z: -110.24449}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
-  m_Father: {fileID: 903762452}
+  m_Father: {fileID: 1840808256}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!114 &1494180599
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1494180597}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 510b108215080d3499db26704f22267b, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: GuardVsMannequin.Runtime::GuardVsMannequin.Objectives.GeneratorSpawnPoint
---- !u!1 &1539435652
+--- !u!1 &1660779754
 GameObject:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -2642,7 +2574,7 @@ GameObject:
   m_PrefabAsset: {fileID: 0}
   serializedVersion: 6
   m_Component:
-  - component: {fileID: 1539435653}
+  - component: {fileID: 1660779755}
   m_Layer: 0
   m_Name: Lights
   m_TagString: Untagged
@@ -2650,29 +2582,29 @@ GameObject:
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
   m_IsActive: 1
---- !u!4 &1539435653
+--- !u!4 &1660779755
 Transform:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1539435652}
+  m_GameObject: {fileID: 1660779754}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
   m_LocalPosition: {x: 0, y: 0, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children:
-  - {fileID: 1077894377}
-  - {fileID: 623750889}
-  - {fileID: 2075424614}
-  - {fileID: 1476947383}
-  - {fileID: 813347253}
-  - {fileID: 944554347}
-  - {fileID: 1760132813}
-  m_Father: {fileID: 792488439}
+  - {fileID: 11463514}
+  - {fileID: 206342832}
+  - {fileID: 1628026602}
+  - {fileID: 1267017345}
+  - {fileID: 1692210786}
+  - {fileID: 380592384}
+  - {fileID: 1926963127}
+  m_Father: {fileID: 1840808256}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!1 &1577710482
+--- !u!1 &1692210785
 GameObject:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -2680,179 +2612,9 @@ GameObject:
   m_PrefabAsset: {fileID: 0}
   serializedVersion: 6
   m_Component:
-  - component: {fileID: 1577710483}
-  m_Layer: 0
-  m_Name: Boundary (Invisible)
-  m_TagString: Untagged
-  m_Icon: {fileID: 0}
-  m_NavMeshLayer: 0
-  m_StaticEditorFlags: 0
-  m_IsActive: 1
---- !u!4 &1577710483
-Transform:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1577710482}
-  serializedVersion: 2
-  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0, y: 0, z: 0}
-  m_LocalScale: {x: 1, y: 1, z: 1}
-  m_ConstrainProportionsScale: 0
-  m_Children:
-  - {fileID: 541480056}
-  - {fileID: 971838340}
-  - {fileID: 678027392}
-  - {fileID: 811070536}
-  - {fileID: 14887484}
-  - {fileID: 2071721393}
-  m_Father: {fileID: 0}
-  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!1 &1589106052
-GameObject:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  serializedVersion: 6
-  m_Component:
-  - component: {fileID: 1589106053}
-  - component: {fileID: 1589106054}
-  m_Layer: 0
-  m_Name: SpawnPoint_Mannequin
-  m_TagString: Untagged
-  m_Icon: {fileID: 0}
-  m_NavMeshLayer: 0
-  m_StaticEditorFlags: 0
-  m_IsActive: 1
---- !u!4 &1589106053
-Transform:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1589106052}
-  serializedVersion: 2
-  m_LocalRotation: {x: -0, y: -0.31077233, z: -0, w: 0.9504844}
-  m_LocalPosition: {x: 116.70593, y: 4.227524, z: -72.53537}
-  m_LocalScale: {x: 1, y: 1, z: 1}
-  m_ConstrainProportionsScale: 0
-  m_Children: []
-  m_Father: {fileID: 702031950}
-  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!114 &1589106054
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1589106052}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: e4294540393951748bb8466bd902beb2, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: GuardVsMannequin.Runtime::GuardVsMannequin.Map.SpawnPoint
-  role: 2
---- !u!1 &1591449316
-GameObject:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  serializedVersion: 6
-  m_Component:
-  - component: {fileID: 1591449317}
-  - component: {fileID: 1591449318}
-  m_Layer: 0
-  m_Name: GeneratorSpawnPoint
-  m_TagString: Untagged
-  m_Icon: {fileID: 0}
-  m_NavMeshLayer: 0
-  m_StaticEditorFlags: 0
-  m_IsActive: 1
---- !u!4 &1591449317
-Transform:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1591449316}
-  serializedVersion: 2
-  m_LocalRotation: {x: -0, y: -0.07543721, z: -0, w: 0.9971506}
-  m_LocalPosition: {x: 93.66509, y: 4.227524, z: -95.438385}
-  m_LocalScale: {x: 1, y: 1, z: 1}
-  m_ConstrainProportionsScale: 0
-  m_Children: []
-  m_Father: {fileID: 903762452}
-  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!114 &1591449318
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1591449316}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 510b108215080d3499db26704f22267b, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: GuardVsMannequin.Runtime::GuardVsMannequin.Objectives.GeneratorSpawnPoint
---- !u!1 &1675008221
-GameObject:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  serializedVersion: 6
-  m_Component:
-  - component: {fileID: 1675008222}
-  - component: {fileID: 1675008223}
-  m_Layer: 0
-  m_Name: GeneratorSpawnPoint
-  m_TagString: Untagged
-  m_Icon: {fileID: 0}
-  m_NavMeshLayer: 0
-  m_StaticEditorFlags: 0
-  m_IsActive: 1
---- !u!4 &1675008222
-Transform:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1675008221}
-  serializedVersion: 2
-  m_LocalRotation: {x: -0, y: -0.7690347, z: -0, w: 0.63920707}
-  m_LocalPosition: {x: 134.56366, y: 4.227524, z: -17.25447}
-  m_LocalScale: {x: 1, y: 1, z: 1}
-  m_ConstrainProportionsScale: 0
-  m_Children: []
-  m_Father: {fileID: 903762452}
-  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!114 &1675008223
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1675008221}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 510b108215080d3499db26704f22267b, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: GuardVsMannequin.Runtime::GuardVsMannequin.Objectives.GeneratorSpawnPoint
---- !u!1 &1760132812
-GameObject:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  serializedVersion: 6
-  m_Component:
-  - component: {fileID: 1760132813}
-  - component: {fileID: 1760132815}
-  - component: {fileID: 1760132814}
+  - component: {fileID: 1692210786}
+  - component: {fileID: 1692210788}
+  - component: {fileID: 1692210787}
   m_Layer: 0
   m_Name: MapLamp
   m_TagString: Untagged
@@ -2860,44 +2622,44 @@ GameObject:
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
   m_IsActive: 1
---- !u!4 &1760132813
+--- !u!4 &1692210786
 Transform:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1760132812}
+  m_GameObject: {fileID: 1692210785}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 134.56366, y: 7.227524, z: -17.25447}
+  m_LocalPosition: {x: 163.62889, y: 7.227524, z: -96.76511}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
-  m_Father: {fileID: 1539435653}
+  m_Father: {fileID: 1660779755}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!114 &1760132814
+--- !u!114 &1692210787
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1760132812}
+  m_GameObject: {fileID: 1692210785}
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 41c5774d1fae6a34a8455dfc6f4be335, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: GuardVsMannequin.Runtime::GuardVsMannequin.Map.MapLight
+  m_EditorClassIdentifier: GuardVsMannequin.Content::GuardVsMannequin.Map.MapLight
   lights: []
   bulbRenderer: {fileID: 0}
   onMaterial: {fileID: 0}
   offMaterial: {fileID: 0}
---- !u!108 &1760132815
+--- !u!108 &1692210788
 Light:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1760132812}
+  m_GameObject: {fileID: 1692210785}
   m_Enabled: 1
   serializedVersion: 13
   m_Type: 2
@@ -2956,7 +2718,7 @@ Light:
   m_LightUnit: 1
   m_LuxAtDistance: 1
   m_EnableSpotReflector: 1
---- !u!1 &1766671757
+--- !u!1 &1775966823
 GameObject:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -2964,8 +2726,96 @@ GameObject:
   m_PrefabAsset: {fileID: 0}
   serializedVersion: 6
   m_Component:
-  - component: {fileID: 1766671758}
-  - component: {fileID: 1766671759}
+  - component: {fileID: 1775966824}
+  - component: {fileID: 1775966825}
+  m_Layer: 0
+  m_Name: GeneratorSpawnPoint
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &1775966824
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1775966823}
+  serializedVersion: 2
+  m_LocalRotation: {x: -0, y: -0.07543721, z: -0, w: 0.9971506}
+  m_LocalPosition: {x: 93.66509, y: 4.227524, z: -95.438385}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 1224114646}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &1775966825
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1775966823}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 510b108215080d3499db26704f22267b, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: GuardVsMannequin.Content::GuardVsMannequin.Objectives.GeneratorSpawnPoint
+--- !u!1 &1796924114
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 1796924115}
+  - component: {fileID: 1796924116}
+  m_Layer: 0
+  m_Name: GeneratorSpawnPoint
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &1796924115
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1796924114}
+  serializedVersion: 2
+  m_LocalRotation: {x: -0, y: 0.8071563, z: -0, w: 0.59033775}
+  m_LocalPosition: {x: -14.17017, y: -0.05835033, z: 4.1628304}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 1224114646}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &1796924116
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1796924114}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 510b108215080d3499db26704f22267b, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: GuardVsMannequin.Content::GuardVsMannequin.Objectives.GeneratorSpawnPoint
+--- !u!1 &1817924802
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 1817924803}
+  - component: {fileID: 1817924804}
   m_Layer: 0
   m_Name: SpawnPoint_Mannequin
   m_TagString: Untagged
@@ -2973,34 +2823,123 @@ GameObject:
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
   m_IsActive: 1
---- !u!4 &1766671758
+--- !u!4 &1817924803
 Transform:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1766671757}
+  m_GameObject: {fileID: 1817924802}
   serializedVersion: 2
   m_LocalRotation: {x: -0, y: 0.43862405, z: -0, w: 0.8986707}
   m_LocalPosition: {x: 15.891092, y: 3.3108568, z: -79.3448}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
-  m_Father: {fileID: 702031950}
+  m_Father: {fileID: 2112504754}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!114 &1766671759
+--- !u!114 &1817924804
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1766671757}
+  m_GameObject: {fileID: 1817924802}
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: e4294540393951748bb8466bd902beb2, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: GuardVsMannequin.Runtime::GuardVsMannequin.Map.SpawnPoint
+  m_EditorClassIdentifier: GuardVsMannequin.Content::GuardVsMannequin.Map.SpawnPoint
   role: 2
+--- !u!1 &1840808253
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 1840808256}
+  - component: {fileID: 1840808255}
+  - component: {fileID: 1840808254}
+  m_Layer: 0
+  m_Name: Map
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!114 &1840808254
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1840808253}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 19068615b6fe63444b2a476572d40a91, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: GuardVsMannequin.Content::GuardVsMannequin.Map.MapInfo
+  mapName: Industrial
+  ceilingHeight: 31.03204
+  mannequinSkin: {fileID: 11400000, guid: c27012141a81a7842ad367d626e37925, type: 2}
+  guardSkin: {fileID: 0}
+  mannequinHuntSkin: {fileID: 0}
+  overviewPoint: {fileID: 1655088410}
+--- !u!114 &1840808255
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1840808253}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 7a5ac11cc976e418e8d13136b07e1f52, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Unity.AI.Navigation::Unity.AI.Navigation.NavMeshSurface
+  m_SerializedVersion: 0
+  m_AgentTypeID: 0
+  m_CollectObjects: 2
+  m_Size: {x: 10, y: 10, z: 10}
+  m_Center: {x: 0, y: 2, z: 0}
+  m_LayerMask:
+    serializedVersion: 2
+    m_Bits: 4294967295
+  m_UseGeometry: 1
+  m_DefaultArea: 0
+  m_GenerateLinks: 0
+  m_IgnoreNavMeshAgent: 1
+  m_IgnoreNavMeshObstacle: 1
+  m_OverrideTileSize: 0
+  m_TileSize: 256
+  m_OverrideVoxelSize: 0
+  m_VoxelSize: 0.16666667
+  m_MinRegionArea: 2
+  m_NavMeshData: {fileID: 23800000, guid: 2c9d07dcb3a49ae40bc453910e2390ec, type: 2}
+  m_BuildHeightMesh: 0
+--- !u!4 &1840808256
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1840808253}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children:
+  - {fileID: 1315905699}
+  - {fileID: 1660779755}
+  - {fileID: 2112504754}
+  - {fileID: 1224114646}
+  - {fileID: 851747459}
+  - {fileID: 1655088410}
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &1851038796
 GameObject:
   m_ObjectHideFlags: 0
@@ -3110,12 +3049,12 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 41c5774d1fae6a34a8455dfc6f4be335, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: GuardVsMannequin.Runtime::GuardVsMannequin.Map.MapLight
+  m_EditorClassIdentifier: GuardVsMannequin.Content::GuardVsMannequin.Map.MapLight
   lights: []
   bulbRenderer: {fileID: 0}
   onMaterial: {fileID: 0}
   offMaterial: {fileID: 0}
---- !u!1 &2057798910
+--- !u!1 &1852422330
 GameObject:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -3123,43 +3062,44 @@ GameObject:
   m_PrefabAsset: {fileID: 0}
   serializedVersion: 6
   m_Component:
-  - component: {fileID: 2057798911}
-  - component: {fileID: 2057798912}
+  - component: {fileID: 1852422331}
+  - component: {fileID: 1852422332}
   m_Layer: 0
-  m_Name: GeneratorSpawnPoint
+  m_Name: SpawnPoint_Mannequin
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
   m_IsActive: 1
---- !u!4 &2057798911
+--- !u!4 &1852422331
 Transform:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 2057798910}
+  m_GameObject: {fileID: 1852422330}
   serializedVersion: 2
-  m_LocalRotation: {x: -0, y: 0.887426, z: -0, w: -0.46095017}
-  m_LocalPosition: {x: 153.41815, y: 4.227524, z: 22.539154}
+  m_LocalRotation: {x: -0, y: 0.9781495, z: -0, w: -0.20790294}
+  m_LocalPosition: {x: 114.799255, y: 4.227524, z: 44.12844}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
-  m_Father: {fileID: 903762452}
+  m_Father: {fileID: 2112504754}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!114 &2057798912
+--- !u!114 &1852422332
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 2057798910}
+  m_GameObject: {fileID: 1852422330}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 510b108215080d3499db26704f22267b, type: 3}
+  m_Script: {fileID: 11500000, guid: e4294540393951748bb8466bd902beb2, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: GuardVsMannequin.Runtime::GuardVsMannequin.Objectives.GeneratorSpawnPoint
---- !u!1 &2071721392
+  m_EditorClassIdentifier: GuardVsMannequin.Content::GuardVsMannequin.Map.SpawnPoint
+  role: 2
+--- !u!1 &1904025384
 GameObject:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -3167,42 +3107,52 @@ GameObject:
   m_PrefabAsset: {fileID: 0}
   serializedVersion: 6
   m_Component:
-  - component: {fileID: 2071721393}
-  - component: {fileID: 2071721394}
+  - component: {fileID: 1904025385}
+  - component: {fileID: 1904025386}
   m_Layer: 0
-  m_Name: OcclusionArea
+  m_Name: Ceiling
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
-  m_StaticEditorFlags: 0
+  m_StaticEditorFlags: 2147483647
   m_IsActive: 1
---- !u!4 &2071721393
+--- !u!4 &1904025385
 Transform:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 2071721392}
+  m_GameObject: {fileID: 1904025384}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalPosition: {x: 83.220314, y: 31.197838, z: -26.802437}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
-  m_Father: {fileID: 1577710483}
+  m_Father: {fileID: 625598689}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!192 &2071721394
-OcclusionArea:
+--- !u!65 &1904025386
+BoxCollider:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 2071721392}
-  serializedVersion: 2
-  m_Size: {x: 217.61679, y: 41.03204, z: 156.83653}
-  m_Center: {x: 83.220314, y: 15.431818, z: -26.802437}
-  m_IsViewVolume: 1
---- !u!1 &2075424613
+  m_GameObject: {fileID: 1904025384}
+  m_Material: {fileID: 0}
+  m_IncludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_ExcludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_LayerOverridePriority: 0
+  m_IsTrigger: 0
+  m_ProvidesContacts: 0
+  m_Enabled: 1
+  serializedVersion: 3
+  m_Size: {x: 217.11679, y: 0.5, z: 156.33653}
+  m_Center: {x: 0, y: 0, z: 0}
+--- !u!1 &1926963126
 GameObject:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -3210,9 +3160,9 @@ GameObject:
   m_PrefabAsset: {fileID: 0}
   serializedVersion: 6
   m_Component:
-  - component: {fileID: 2075424614}
-  - component: {fileID: 2075424616}
-  - component: {fileID: 2075424615}
+  - component: {fileID: 1926963127}
+  - component: {fileID: 1926963129}
+  - component: {fileID: 1926963128}
   m_Layer: 0
   m_Name: MapLamp
   m_TagString: Untagged
@@ -3220,44 +3170,44 @@ GameObject:
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
   m_IsActive: 1
---- !u!4 &2075424614
+--- !u!4 &1926963127
 Transform:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 2075424613}
+  m_GameObject: {fileID: 1926963126}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: -14.17017, y: 2.9416497, z: 4.1628304}
+  m_LocalPosition: {x: 134.56366, y: 7.227524, z: -17.25447}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
-  m_Father: {fileID: 1539435653}
+  m_Father: {fileID: 1660779755}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!114 &2075424615
+--- !u!114 &1926963128
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 2075424613}
+  m_GameObject: {fileID: 1926963126}
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 41c5774d1fae6a34a8455dfc6f4be335, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: GuardVsMannequin.Runtime::GuardVsMannequin.Map.MapLight
+  m_EditorClassIdentifier: GuardVsMannequin.Content::GuardVsMannequin.Map.MapLight
   lights: []
   bulbRenderer: {fileID: 0}
   onMaterial: {fileID: 0}
   offMaterial: {fileID: 0}
---- !u!108 &2075424616
+--- !u!108 &1926963129
 Light:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 2075424613}
+  m_GameObject: {fileID: 1926963126}
   m_Enabled: 1
   serializedVersion: 13
   m_Type: 2
@@ -3316,7 +3266,7 @@ Light:
   m_LightUnit: 1
   m_LuxAtDistance: 1
   m_EnableSpotReflector: 1
---- !u!1 &2081228858
+--- !u!1 &1939230122
 GameObject:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -3324,8 +3274,8 @@ GameObject:
   m_PrefabAsset: {fileID: 0}
   serializedVersion: 6
   m_Component:
-  - component: {fileID: 2081228859}
-  - component: {fileID: 2081228860}
+  - component: {fileID: 1939230123}
+  - component: {fileID: 1939230124}
   m_Layer: 0
   m_Name: SpawnPoint_Mannequin
   m_TagString: Untagged
@@ -3333,123 +3283,173 @@ GameObject:
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
   m_IsActive: 1
---- !u!4 &2081228859
+--- !u!4 &1939230123
 Transform:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 2081228858}
-  serializedVersion: 2
-  m_LocalRotation: {x: -0, y: 0.065957464, z: -0, w: 0.99782246}
-  m_LocalPosition: {x: 73.25659, y: 3.9425426, z: -101.84009}
-  m_LocalScale: {x: 1, y: 1, z: 1}
-  m_ConstrainProportionsScale: 0
-  m_Children: []
-  m_Father: {fileID: 702031950}
-  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!114 &2081228860
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 2081228858}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: e4294540393951748bb8466bd902beb2, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: GuardVsMannequin.Runtime::GuardVsMannequin.Map.SpawnPoint
-  role: 2
---- !u!1 &2098581197
-GameObject:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  serializedVersion: 6
-  m_Component:
-  - component: {fileID: 2098581198}
-  - component: {fileID: 2098581199}
-  m_Layer: 0
-  m_Name: SpawnPoint_Mannequin
-  m_TagString: Untagged
-  m_Icon: {fileID: 0}
-  m_NavMeshLayer: 0
-  m_StaticEditorFlags: 0
-  m_IsActive: 1
---- !u!4 &2098581198
-Transform:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 2098581197}
-  serializedVersion: 2
-  m_LocalRotation: {x: -0, y: -0.7690347, z: -0, w: 0.63920707}
-  m_LocalPosition: {x: 134.56366, y: 4.227524, z: -17.25447}
-  m_LocalScale: {x: 1, y: 1, z: 1}
-  m_ConstrainProportionsScale: 0
-  m_Children: []
-  m_Father: {fileID: 702031950}
-  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!114 &2098581199
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 2098581197}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: e4294540393951748bb8466bd902beb2, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: GuardVsMannequin.Runtime::GuardVsMannequin.Map.SpawnPoint
-  role: 2
---- !u!1 &2139473619
-GameObject:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  serializedVersion: 6
-  m_Component:
-  - component: {fileID: 2139473620}
-  - component: {fileID: 2139473621}
-  m_Layer: 0
-  m_Name: GeneratorSpawnPoint
-  m_TagString: Untagged
-  m_Icon: {fileID: 0}
-  m_NavMeshLayer: 0
-  m_StaticEditorFlags: 0
-  m_IsActive: 1
---- !u!4 &2139473620
-Transform:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 2139473619}
+  m_GameObject: {fileID: 1939230122}
   serializedVersion: 2
   m_LocalRotation: {x: -0, y: -0.41448522, z: -0, w: 0.91005605}
   m_LocalPosition: {x: 163.62889, y: 4.227524, z: -96.76511}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
-  m_Father: {fileID: 903762452}
+  m_Father: {fileID: 2112504754}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!114 &2139473621
+--- !u!114 &1939230124
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 2139473619}
+  m_GameObject: {fileID: 1939230122}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 510b108215080d3499db26704f22267b, type: 3}
+  m_Script: {fileID: 11500000, guid: e4294540393951748bb8466bd902beb2, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: GuardVsMannequin.Runtime::GuardVsMannequin.Objectives.GeneratorSpawnPoint
+  m_EditorClassIdentifier: GuardVsMannequin.Content::GuardVsMannequin.Map.SpawnPoint
+  role: 2
+--- !u!1 &1959192171
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 1959192172}
+  - component: {fileID: 1959192173}
+  m_Layer: 0
+  m_Name: SpawnPoint_Mannequin
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &1959192172
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1959192171}
+  serializedVersion: 2
+  m_LocalRotation: {x: -0, y: 0.065957464, z: -0, w: 0.99782246}
+  m_LocalPosition: {x: 73.25659, y: 3.9425426, z: -101.84009}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 2112504754}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &1959192173
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1959192171}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: e4294540393951748bb8466bd902beb2, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: GuardVsMannequin.Content::GuardVsMannequin.Map.SpawnPoint
+  role: 2
+--- !u!1 &2074680037
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 2074680038}
+  - component: {fileID: 2074680039}
+  m_Layer: 0
+  m_Name: Wall_West
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 2147483647
+  m_IsActive: 1
+--- !u!4 &2074680038
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2074680037}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: -25.338081, y: 15.431818, z: -26.802437}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 625598689}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!65 &2074680039
+BoxCollider:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2074680037}
+  m_Material: {fileID: 0}
+  m_IncludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_ExcludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_LayerOverridePriority: 0
+  m_IsTrigger: 0
+  m_ProvidesContacts: 0
+  m_Enabled: 1
+  serializedVersion: 3
+  m_Size: {x: 0.5, y: 41.03204, z: 156.33653}
+  m_Center: {x: 0, y: 0, z: 0}
+--- !u!1 &2112504753
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 2112504754}
+  m_Layer: 0
+  m_Name: MannequinSpawnPoints
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &2112504754
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2112504753}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children:
+  - {fileID: 1583717552}
+  - {fileID: 526350836}
+  - {fileID: 697615688}
+  - {fileID: 1852422331}
+  - {fileID: 1939230123}
+  - {fileID: 1817924803}
+  - {fileID: 795679483}
+  - {fileID: 1407828348}
+  - {fileID: 547880630}
+  - {fileID: 1959192172}
+  m_Father: {fileID: 1840808256}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &1000008011791499
 GameObject:
   m_ObjectHideFlags: 0
@@ -41898,7 +41898,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 9333f459f261e274691ac12c3ee3ed97, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: GuardVsMannequin.Runtime::GuardVsMannequin.Props.TransformableProp
+  m_EditorClassIdentifier: GuardVsMannequin.Content::GuardVsMannequin.Props.TransformableProp
   index: 49
   isWall: 0
 --- !u!64 &64000012443507847
@@ -41934,7 +41934,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 9333f459f261e274691ac12c3ee3ed97, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: GuardVsMannequin.Runtime::GuardVsMannequin.Props.TransformableProp
+  m_EditorClassIdentifier: GuardVsMannequin.Content::GuardVsMannequin.Props.TransformableProp
   index: 34
   isWall: 0
 --- !u!64 &64000012473950887
@@ -42168,7 +42168,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 9333f459f261e274691ac12c3ee3ed97, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: GuardVsMannequin.Runtime::GuardVsMannequin.Props.TransformableProp
+  m_EditorClassIdentifier: GuardVsMannequin.Content::GuardVsMannequin.Props.TransformableProp
   index: 52
   isWall: 0
 --- !u!64 &64000012787210936
@@ -42270,7 +42270,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 9333f459f261e274691ac12c3ee3ed97, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: GuardVsMannequin.Runtime::GuardVsMannequin.Props.TransformableProp
+  m_EditorClassIdentifier: GuardVsMannequin.Content::GuardVsMannequin.Props.TransformableProp
   index: 16
   isWall: 1
 --- !u!64 &64000012966693453
@@ -42372,7 +42372,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 9333f459f261e274691ac12c3ee3ed97, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: GuardVsMannequin.Runtime::GuardVsMannequin.Props.TransformableProp
+  m_EditorClassIdentifier: GuardVsMannequin.Content::GuardVsMannequin.Props.TransformableProp
   index: 30
   isWall: 1
 --- !u!64 &64000013128223874
@@ -42474,7 +42474,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 9333f459f261e274691ac12c3ee3ed97, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: GuardVsMannequin.Runtime::GuardVsMannequin.Props.TransformableProp
+  m_EditorClassIdentifier: GuardVsMannequin.Content::GuardVsMannequin.Props.TransformableProp
   index: 17
   isWall: 1
 --- !u!64 &64000013267560573
@@ -42576,7 +42576,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 9333f459f261e274691ac12c3ee3ed97, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: GuardVsMannequin.Runtime::GuardVsMannequin.Props.TransformableProp
+  m_EditorClassIdentifier: GuardVsMannequin.Content::GuardVsMannequin.Props.TransformableProp
   index: 50
   isWall: 0
 --- !u!64 &64000013533378013
@@ -42876,7 +42876,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 9333f459f261e274691ac12c3ee3ed97, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: GuardVsMannequin.Runtime::GuardVsMannequin.Props.TransformableProp
+  m_EditorClassIdentifier: GuardVsMannequin.Content::GuardVsMannequin.Props.TransformableProp
   index: 33
   isWall: 0
 --- !u!64 &64000014121335006
@@ -42912,7 +42912,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 9333f459f261e274691ac12c3ee3ed97, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: GuardVsMannequin.Runtime::GuardVsMannequin.Props.TransformableProp
+  m_EditorClassIdentifier: GuardVsMannequin.Content::GuardVsMannequin.Props.TransformableProp
   index: 51
   isWall: 0
 --- !u!64 &64000014126108596
@@ -43101,7 +43101,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 9333f459f261e274691ac12c3ee3ed97, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: GuardVsMannequin.Runtime::GuardVsMannequin.Props.TransformableProp
+  m_EditorClassIdentifier: GuardVsMannequin.Content::GuardVsMannequin.Props.TransformableProp
   index: 35
   isWall: 0
 --- !u!65 &65000009297776954
@@ -43157,7 +43157,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 9333f459f261e274691ac12c3ee3ed97, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: GuardVsMannequin.Runtime::GuardVsMannequin.Props.TransformableProp
+  m_EditorClassIdentifier: GuardVsMannequin.Content::GuardVsMannequin.Props.TransformableProp
   index: 14
   isWall: 1
 --- !u!65 &65000009306745337
@@ -43318,7 +43318,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 9333f459f261e274691ac12c3ee3ed97, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: GuardVsMannequin.Runtime::GuardVsMannequin.Props.TransformableProp
+  m_EditorClassIdentifier: GuardVsMannequin.Content::GuardVsMannequin.Props.TransformableProp
   index: 10
   isWall: 1
 --- !u!65 &65000009489979883
@@ -43416,7 +43416,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 9333f459f261e274691ac12c3ee3ed97, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: GuardVsMannequin.Runtime::GuardVsMannequin.Props.TransformableProp
+  m_EditorClassIdentifier: GuardVsMannequin.Content::GuardVsMannequin.Props.TransformableProp
   index: 38
   isWall: 1
 --- !u!65 &65000009575030905
@@ -43451,7 +43451,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 9333f459f261e274691ac12c3ee3ed97, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: GuardVsMannequin.Runtime::GuardVsMannequin.Props.TransformableProp
+  m_EditorClassIdentifier: GuardVsMannequin.Content::GuardVsMannequin.Props.TransformableProp
   index: 7
   isWall: 1
 --- !u!65 &65000009583705994
@@ -43507,7 +43507,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 9333f459f261e274691ac12c3ee3ed97, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: GuardVsMannequin.Runtime::GuardVsMannequin.Props.TransformableProp
+  m_EditorClassIdentifier: GuardVsMannequin.Content::GuardVsMannequin.Props.TransformableProp
   index: 11
   isWall: 1
 --- !u!65 &65000009589071288
@@ -43542,7 +43542,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 9333f459f261e274691ac12c3ee3ed97, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: GuardVsMannequin.Runtime::GuardVsMannequin.Props.TransformableProp
+  m_EditorClassIdentifier: GuardVsMannequin.Content::GuardVsMannequin.Props.TransformableProp
   index: 32
   isWall: 0
 --- !u!65 &65000009634814867
@@ -43577,7 +43577,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 9333f459f261e274691ac12c3ee3ed97, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: GuardVsMannequin.Runtime::GuardVsMannequin.Props.TransformableProp
+  m_EditorClassIdentifier: GuardVsMannequin.Content::GuardVsMannequin.Props.TransformableProp
   index: 53
   isWall: 0
 --- !u!65 &65000009644729407
@@ -43612,7 +43612,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 9333f459f261e274691ac12c3ee3ed97, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: GuardVsMannequin.Runtime::GuardVsMannequin.Props.TransformableProp
+  m_EditorClassIdentifier: GuardVsMannequin.Content::GuardVsMannequin.Props.TransformableProp
   index: 40
   isWall: 0
 --- !u!65 &65000009652319356
@@ -43647,7 +43647,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 9333f459f261e274691ac12c3ee3ed97, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: GuardVsMannequin.Runtime::GuardVsMannequin.Props.TransformableProp
+  m_EditorClassIdentifier: GuardVsMannequin.Content::GuardVsMannequin.Props.TransformableProp
   index: 23
   isWall: 1
 --- !u!65 &65000009674498777
@@ -43682,7 +43682,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 9333f459f261e274691ac12c3ee3ed97, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: GuardVsMannequin.Runtime::GuardVsMannequin.Props.TransformableProp
+  m_EditorClassIdentifier: GuardVsMannequin.Content::GuardVsMannequin.Props.TransformableProp
   index: 24
   isWall: 1
 --- !u!65 &65000009715754735
@@ -43801,7 +43801,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 9333f459f261e274691ac12c3ee3ed97, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: GuardVsMannequin.Runtime::GuardVsMannequin.Props.TransformableProp
+  m_EditorClassIdentifier: GuardVsMannequin.Content::GuardVsMannequin.Props.TransformableProp
   index: 45
   isWall: 0
 --- !u!65 &65000009798363373
@@ -43836,7 +43836,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 9333f459f261e274691ac12c3ee3ed97, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: GuardVsMannequin.Runtime::GuardVsMannequin.Props.TransformableProp
+  m_EditorClassIdentifier: GuardVsMannequin.Content::GuardVsMannequin.Props.TransformableProp
   index: 3
   isWall: 1
 --- !u!65 &65000009851761336
@@ -43871,7 +43871,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 9333f459f261e274691ac12c3ee3ed97, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: GuardVsMannequin.Runtime::GuardVsMannequin.Props.TransformableProp
+  m_EditorClassIdentifier: GuardVsMannequin.Content::GuardVsMannequin.Props.TransformableProp
   index: 29
   isWall: 0
 --- !u!65 &65000009877631422
@@ -43927,7 +43927,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 9333f459f261e274691ac12c3ee3ed97, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: GuardVsMannequin.Runtime::GuardVsMannequin.Props.TransformableProp
+  m_EditorClassIdentifier: GuardVsMannequin.Content::GuardVsMannequin.Props.TransformableProp
   index: 5
   isWall: 1
 --- !u!65 &65000009893519859
@@ -43962,7 +43962,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 9333f459f261e274691ac12c3ee3ed97, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: GuardVsMannequin.Runtime::GuardVsMannequin.Props.TransformableProp
+  m_EditorClassIdentifier: GuardVsMannequin.Content::GuardVsMannequin.Props.TransformableProp
   index: 1
   isWall: 1
 --- !u!65 &65000009894156168
@@ -43997,7 +43997,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 9333f459f261e274691ac12c3ee3ed97, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: GuardVsMannequin.Runtime::GuardVsMannequin.Props.TransformableProp
+  m_EditorClassIdentifier: GuardVsMannequin.Content::GuardVsMannequin.Props.TransformableProp
   index: 26
   isWall: 1
 --- !u!65 &65000009972772328
@@ -44032,7 +44032,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 9333f459f261e274691ac12c3ee3ed97, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: GuardVsMannequin.Runtime::GuardVsMannequin.Props.TransformableProp
+  m_EditorClassIdentifier: GuardVsMannequin.Content::GuardVsMannequin.Props.TransformableProp
   index: 43
   isWall: 0
 --- !u!65 &65000010017793326
@@ -44109,7 +44109,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 9333f459f261e274691ac12c3ee3ed97, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: GuardVsMannequin.Runtime::GuardVsMannequin.Props.TransformableProp
+  m_EditorClassIdentifier: GuardVsMannequin.Content::GuardVsMannequin.Props.TransformableProp
   index: 39
   isWall: 1
 --- !u!65 &65000010040275756
@@ -44144,7 +44144,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 9333f459f261e274691ac12c3ee3ed97, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: GuardVsMannequin.Runtime::GuardVsMannequin.Props.TransformableProp
+  m_EditorClassIdentifier: GuardVsMannequin.Content::GuardVsMannequin.Props.TransformableProp
   index: 44
   isWall: 0
 --- !u!65 &65000010044355875
@@ -44200,7 +44200,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 9333f459f261e274691ac12c3ee3ed97, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: GuardVsMannequin.Runtime::GuardVsMannequin.Props.TransformableProp
+  m_EditorClassIdentifier: GuardVsMannequin.Content::GuardVsMannequin.Props.TransformableProp
   index: 0
   isWall: 1
 --- !u!65 &65000010137422558
@@ -44235,7 +44235,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 9333f459f261e274691ac12c3ee3ed97, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: GuardVsMannequin.Runtime::GuardVsMannequin.Props.TransformableProp
+  m_EditorClassIdentifier: GuardVsMannequin.Content::GuardVsMannequin.Props.TransformableProp
   index: 41
   isWall: 0
 --- !u!65 &65000010146800757
@@ -44270,7 +44270,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 9333f459f261e274691ac12c3ee3ed97, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: GuardVsMannequin.Runtime::GuardVsMannequin.Props.TransformableProp
+  m_EditorClassIdentifier: GuardVsMannequin.Content::GuardVsMannequin.Props.TransformableProp
   index: 21
   isWall: 1
 --- !u!65 &65000010179511435
@@ -44368,7 +44368,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 9333f459f261e274691ac12c3ee3ed97, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: GuardVsMannequin.Runtime::GuardVsMannequin.Props.TransformableProp
+  m_EditorClassIdentifier: GuardVsMannequin.Content::GuardVsMannequin.Props.TransformableProp
   index: 25
   isWall: 1
 --- !u!65 &65000010209768605
@@ -44403,7 +44403,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 9333f459f261e274691ac12c3ee3ed97, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: GuardVsMannequin.Runtime::GuardVsMannequin.Props.TransformableProp
+  m_EditorClassIdentifier: GuardVsMannequin.Content::GuardVsMannequin.Props.TransformableProp
   index: 4
   isWall: 1
 --- !u!65 &65000010254365633
@@ -44501,7 +44501,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 9333f459f261e274691ac12c3ee3ed97, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: GuardVsMannequin.Runtime::GuardVsMannequin.Props.TransformableProp
+  m_EditorClassIdentifier: GuardVsMannequin.Content::GuardVsMannequin.Props.TransformableProp
   index: 48
   isWall: 0
 --- !u!65 &65000010416199348
@@ -44557,7 +44557,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 9333f459f261e274691ac12c3ee3ed97, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: GuardVsMannequin.Runtime::GuardVsMannequin.Props.TransformableProp
+  m_EditorClassIdentifier: GuardVsMannequin.Content::GuardVsMannequin.Props.TransformableProp
   index: 9
   isWall: 1
 --- !u!65 &65000010492870564
@@ -44592,7 +44592,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 9333f459f261e274691ac12c3ee3ed97, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: GuardVsMannequin.Runtime::GuardVsMannequin.Props.TransformableProp
+  m_EditorClassIdentifier: GuardVsMannequin.Content::GuardVsMannequin.Props.TransformableProp
   index: 28
   isWall: 0
 --- !u!65 &65000010568514487
@@ -44627,7 +44627,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 9333f459f261e274691ac12c3ee3ed97, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: GuardVsMannequin.Runtime::GuardVsMannequin.Props.TransformableProp
+  m_EditorClassIdentifier: GuardVsMannequin.Content::GuardVsMannequin.Props.TransformableProp
   index: 37
   isWall: 1
 --- !u!65 &65000010576088919
@@ -44683,7 +44683,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 9333f459f261e274691ac12c3ee3ed97, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: GuardVsMannequin.Runtime::GuardVsMannequin.Props.TransformableProp
+  m_EditorClassIdentifier: GuardVsMannequin.Content::GuardVsMannequin.Props.TransformableProp
   index: 56
   isWall: 0
 --- !u!65 &65000010643243036
@@ -44718,7 +44718,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 9333f459f261e274691ac12c3ee3ed97, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: GuardVsMannequin.Runtime::GuardVsMannequin.Props.TransformableProp
+  m_EditorClassIdentifier: GuardVsMannequin.Content::GuardVsMannequin.Props.TransformableProp
   index: 55
   isWall: 0
 --- !u!65 &65000010644537024
@@ -44753,7 +44753,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 9333f459f261e274691ac12c3ee3ed97, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: GuardVsMannequin.Runtime::GuardVsMannequin.Props.TransformableProp
+  m_EditorClassIdentifier: GuardVsMannequin.Content::GuardVsMannequin.Props.TransformableProp
   index: 13
   isWall: 1
 --- !u!65 &65000010669643795
@@ -44830,7 +44830,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 9333f459f261e274691ac12c3ee3ed97, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: GuardVsMannequin.Runtime::GuardVsMannequin.Props.TransformableProp
+  m_EditorClassIdentifier: GuardVsMannequin.Content::GuardVsMannequin.Props.TransformableProp
   index: 59
   isWall: 0
 --- !u!65 &65000010690660986
@@ -44949,7 +44949,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 9333f459f261e274691ac12c3ee3ed97, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: GuardVsMannequin.Runtime::GuardVsMannequin.Props.TransformableProp
+  m_EditorClassIdentifier: GuardVsMannequin.Content::GuardVsMannequin.Props.TransformableProp
   index: 31
   isWall: 0
 --- !u!65 &65000010793952174
@@ -45005,7 +45005,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 9333f459f261e274691ac12c3ee3ed97, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: GuardVsMannequin.Runtime::GuardVsMannequin.Props.TransformableProp
+  m_EditorClassIdentifier: GuardVsMannequin.Content::GuardVsMannequin.Props.TransformableProp
   index: 36
   isWall: 0
 --- !u!65 &65000010809294555
@@ -45082,7 +45082,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 9333f459f261e274691ac12c3ee3ed97, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: GuardVsMannequin.Runtime::GuardVsMannequin.Props.TransformableProp
+  m_EditorClassIdentifier: GuardVsMannequin.Content::GuardVsMannequin.Props.TransformableProp
   index: 15
   isWall: 1
 --- !u!65 &65000010878769728
@@ -45117,7 +45117,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 9333f459f261e274691ac12c3ee3ed97, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: GuardVsMannequin.Runtime::GuardVsMannequin.Props.TransformableProp
+  m_EditorClassIdentifier: GuardVsMannequin.Content::GuardVsMannequin.Props.TransformableProp
   index: 54
   isWall: 0
 --- !u!65 &65000010902777808
@@ -45152,7 +45152,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 9333f459f261e274691ac12c3ee3ed97, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: GuardVsMannequin.Runtime::GuardVsMannequin.Props.TransformableProp
+  m_EditorClassIdentifier: GuardVsMannequin.Content::GuardVsMannequin.Props.TransformableProp
   index: 12
   isWall: 1
 --- !u!65 &65000010933669348
@@ -45229,7 +45229,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 9333f459f261e274691ac12c3ee3ed97, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: GuardVsMannequin.Runtime::GuardVsMannequin.Props.TransformableProp
+  m_EditorClassIdentifier: GuardVsMannequin.Content::GuardVsMannequin.Props.TransformableProp
   index: 18
   isWall: 1
 --- !u!65 &65000010987427539
@@ -45327,7 +45327,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 9333f459f261e274691ac12c3ee3ed97, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: GuardVsMannequin.Runtime::GuardVsMannequin.Props.TransformableProp
+  m_EditorClassIdentifier: GuardVsMannequin.Content::GuardVsMannequin.Props.TransformableProp
   index: 42
   isWall: 0
 --- !u!65 &65000011032803696
@@ -45383,7 +45383,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 9333f459f261e274691ac12c3ee3ed97, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: GuardVsMannequin.Runtime::GuardVsMannequin.Props.TransformableProp
+  m_EditorClassIdentifier: GuardVsMannequin.Content::GuardVsMannequin.Props.TransformableProp
   index: 58
   isWall: 0
 --- !u!65 &65000011059848053
@@ -45418,7 +45418,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 9333f459f261e274691ac12c3ee3ed97, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: GuardVsMannequin.Runtime::GuardVsMannequin.Props.TransformableProp
+  m_EditorClassIdentifier: GuardVsMannequin.Content::GuardVsMannequin.Props.TransformableProp
   index: 19
   isWall: 1
 --- !u!65 &65000011062021229
@@ -45474,7 +45474,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 9333f459f261e274691ac12c3ee3ed97, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: GuardVsMannequin.Runtime::GuardVsMannequin.Props.TransformableProp
+  m_EditorClassIdentifier: GuardVsMannequin.Content::GuardVsMannequin.Props.TransformableProp
   index: 27
   isWall: 1
 --- !u!65 &65000011097817809
@@ -45509,7 +45509,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 9333f459f261e274691ac12c3ee3ed97, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: GuardVsMannequin.Runtime::GuardVsMannequin.Props.TransformableProp
+  m_EditorClassIdentifier: GuardVsMannequin.Content::GuardVsMannequin.Props.TransformableProp
   index: 2
   isWall: 1
 --- !u!65 &65000011170766158
@@ -45544,7 +45544,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 9333f459f261e274691ac12c3ee3ed97, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: GuardVsMannequin.Runtime::GuardVsMannequin.Props.TransformableProp
+  m_EditorClassIdentifier: GuardVsMannequin.Content::GuardVsMannequin.Props.TransformableProp
   index: 46
   isWall: 0
 --- !u!65 &65000011172647704
@@ -45579,7 +45579,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 9333f459f261e274691ac12c3ee3ed97, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: GuardVsMannequin.Runtime::GuardVsMannequin.Props.TransformableProp
+  m_EditorClassIdentifier: GuardVsMannequin.Content::GuardVsMannequin.Props.TransformableProp
   index: 57
   isWall: 0
 --- !u!65 &65000011194312526
@@ -45656,7 +45656,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 9333f459f261e274691ac12c3ee3ed97, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: GuardVsMannequin.Runtime::GuardVsMannequin.Props.TransformableProp
+  m_EditorClassIdentifier: GuardVsMannequin.Content::GuardVsMannequin.Props.TransformableProp
   index: 6
   isWall: 1
 --- !u!65 &65000011268116203
@@ -45712,7 +45712,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 9333f459f261e274691ac12c3ee3ed97, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: GuardVsMannequin.Runtime::GuardVsMannequin.Props.TransformableProp
+  m_EditorClassIdentifier: GuardVsMannequin.Content::GuardVsMannequin.Props.TransformableProp
   index: 20
   isWall: 1
 --- !u!65 &65000011384519652
@@ -45747,7 +45747,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 9333f459f261e274691ac12c3ee3ed97, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: GuardVsMannequin.Runtime::GuardVsMannequin.Props.TransformableProp
+  m_EditorClassIdentifier: GuardVsMannequin.Content::GuardVsMannequin.Props.TransformableProp
   index: 8
   isWall: 1
 --- !u!65 &65000011387749938
@@ -45803,7 +45803,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 9333f459f261e274691ac12c3ee3ed97, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: GuardVsMannequin.Runtime::GuardVsMannequin.Props.TransformableProp
+  m_EditorClassIdentifier: GuardVsMannequin.Content::GuardVsMannequin.Props.TransformableProp
   index: 22
   isWall: 1
 --- !u!65 &65000011399860184
@@ -45838,7 +45838,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 9333f459f261e274691ac12c3ee3ed97, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: GuardVsMannequin.Runtime::GuardVsMannequin.Props.TransformableProp
+  m_EditorClassIdentifier: GuardVsMannequin.Content::GuardVsMannequin.Props.TransformableProp
   index: 47
   isWall: 0
 --- !u!65 &65000011444984251
@@ -71672,5 +71672,5 @@ ParticleSystemRenderer:
 SceneRoots:
   m_ObjectHideFlags: 0
   m_Roots:
-  - {fileID: 792488439}
-  - {fileID: 1577710483}
+  - {fileID: 1840808256}
+  - {fileID: 625598689}

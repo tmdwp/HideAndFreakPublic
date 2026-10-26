@@ -57,7 +57,7 @@ namespace GuardVsMannequin.Editor
 
             NavMeshSurface surface = mapInfo.GetComponentInChildren<NavMeshSurface>(true);
             if (surface == null || surface.navMeshData == null)
-                issues.Add(new Issue(true, "MapInfo 오브젝트(또는 자식)에 NavMeshSurface가 없거나 굽지 않았습니다. NavMeshSurface의 Bake를 누르세요. (가짜 마네킹이 다닐 길)", mapInfo));
+                issues.Add(new Issue(true, "MapInfo 오브젝트(또는 자식)에 NavMeshSurface가 없거나 굽지 않았습니다. NavMeshSurface의 Bake를 누르세요. (가드 스폰 후보)", mapInfo));
 
             List<SpawnPoint> spawns = Find<SpawnPoint>();
             int mannequins = spawns.Count(s => s.Role == PlayerRole.Mannequin);

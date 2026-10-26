@@ -14,6 +14,9 @@ namespace GuardVsMannequin.Network
         /// <summary>현재 방이 Steam 방인지 여부. (아니면 직접 접속 방)</summary>
         bool IsSteamRoom { get; }
 
+        /// <summary>내가 만든 방이 테스트 방인지 여부. (1인 시작, 승패 판정 없음, 게임 중 테스트 메뉴)</summary>
+        bool IsTestRoom { get; }
+
         /// <summary>다른 사람이 참가할 때 쓰는 방 코드. Steam 방이면 로비 ID, 직접 접속이면 안내 문구.</summary>
         string RoomCode { get; }
 
@@ -47,6 +50,11 @@ namespace GuardVsMannequin.Network
 
         /// <summary>직접 접속 방을 만든다. (개발/LAN용)</summary>
         void HostDirectRoom();
+
+        /// <summary>
+        /// 직접 접속 방을 테스트 방으로 만든다. 혼자 시작할 수 있고, 게임 중 테스트 메뉴로 설정·역할·시점을 바꿀 수 있다.
+        /// </summary>
+        void HostTestRoom();
 
         /// <summary>IP 주소로 직접 접속 방에 참가한다. (개발/LAN용)</summary>
         void JoinDirectRoom(string address);

@@ -94,6 +94,7 @@ namespace GuardVsMannequin.Map
             var rawCandidates = new List<Vector3>();
             foreach (SpawnPoint point in GetPoints(role))
                 rawCandidates.Add(point.transform.position);
+            MapNavMesh.EnsureBuilt();
             rawCandidates.AddRange(NavMeshPointSampler.Sample(NavMeshCandidateCount, out _));
 
             List<Vector3> candidates = SpawnCandidateFilter.FilterStandable(rawCandidates, mannequinSpawns);

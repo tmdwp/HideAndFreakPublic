@@ -157,11 +157,27 @@ namespace GuardVsMannequin.Network
             SteamMatchmaking.SetLobbyData(lobby, HostAddressKey, SteamUser.GetSteamID().m_SteamID.ToString());
             // 참가자가 호스트에 접속하기 전에 버전을 비교할 수 있게 적어 둔다.
             SteamMatchmaking.SetLobbyData(lobby, VersionKey, GameVersion.Current);
-            // 켜진 모드 지문과 목록 (모드가 다르면 입장 전에 걸러 필요한 모드를 안내한다)
+            // 켜진 모드 지문과 모드 ID 목록 (참가자가 접속 전에 호스트 구성에 맞춰 둘 수 있게 한다)
+            // 로비 값은 크기 제한이 있으므로 ID만 넣고, 넘치면 비운다. (버전·파일 비교와 안내는 접속 후 서버가 한다)
             SteamMatchmaking.SetLobbyData(lobby, ModsKey, ModService.Instance.ModSetHash);
-            SteamMatchmaking.SetLobbyData(lobby, ModListKey, ModService.Instance.ModSetDescription);
+            SteamMatchmaking.SetLobbyData(lobby, ModListKey, FitLobbyValue(ModService.Instance.ModSetIds));
             SteamMatchmaking.SetLobbyData(lobby, HasPasswordKey, creatingWithPassword ? "1" : "0");
             LobbyCreated?.Invoke(CurrentLobbyId);
+        }
+
+        // Steam 로비 데이터 값 하나의 최대 크기(바이트, Steamworks k_cubChatMetadataMax 8192)보다 조금 작게 둔다.
+        private const int MaxLobbyValueBytes = 8000;
+
+        /// <summary>
+        /// 로비 값 크기 제한을 넘으면 빈 문자열로 바꾼다. (잘린 목록은 잘못된 모드 구성으로 맞추게 하므로 넣지 않는다)
+        /// </summary>
+        private static string FitLobbyValue(string value)
+        {
+            if (string.IsNullOrEmpty(value) || System.Text.Encoding.UTF8.GetByteCount(value) <= MaxLobbyValueBytes)
+                return value ?? string.Empty;
+
+            Debug.LogWarning($"[SteamLobby] 켜진 모드 목록이 로비 데이터 크기 제한을 넘어 넣지 않습니다. 참가자는 접속 후 호스트와 모드를 맞춥니다.");
+            return string.Empty;
         }
 
         /// <summary>
@@ -192,15 +208,12 @@ namespace GuardVsMannequin.Network
                 return;
             }
 
-            // 켜진 모드가 다르면 이번 접속 동안 호스트 구성에 맞춘다. 호스트 모드가 없거나 달라 맞출 수 없으면 접속하지 않고 나온다.
-            string hostMods = SteamMatchmaking.GetLobbyData(lobby, ModListKey);
-            if (!ModService.Instance.TryMatchHost(hostMods, SteamMatchmaking.GetLobbyData(lobby, ModsKey)))
-            {
-                // 원문 목록을 넘긴다. (SessionService가 안내 문구로 바꾸고, 로비 팝업이 부족한 모드를 계산)
-                Failed?.Invoke(SessionService.ModRejectedNoticeKey, hostMods ?? string.Empty);
-                LeaveLobby();
-                return;
-            }
+            // 켜진 모드가 다르면 접속 전에 호스트 구성(모드 ID)에 맞춰 둔다.
+            // 맞추지 못해도 여기서 거절하지 않고 접속한다. 서버가 전체 모드 정보로 다시 맞추게 하고,
+            // 그래도 다르면 부족한 모드(버전·파일 차이 포함)와 함께 거절한다. (RoomAuthenticator)
+            string hostModIds = SteamMatchmaking.GetLobbyData(lobby, ModListKey);
+            if (!ModService.Instance.TryMatchHost(hostModIds, SteamMatchmaking.GetLobbyData(lobby, ModsKey)))
+                Debug.Log("[SteamLobby] 접속 전 모드 맞추기에 실패했습니다. 접속 후 호스트와 다시 확인합니다.");
 
             string hostAddress = SteamMatchmaking.GetLobbyData(lobby, HostAddressKey);
             if (!ulong.TryParse(hostAddress, out ulong hostSteamId))

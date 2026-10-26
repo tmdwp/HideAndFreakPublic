@@ -37,6 +37,9 @@ namespace GuardVsMannequin.Room
         // 판을 시작할 때 정한다. 서버는 맵을 다 불러온 뒤에야 게스트에게 로딩을 지시하므로, 게스트는 맵보다 이 값을 먼저 받는다.
         private readonly SyncVar<int> propLayoutSeed = new();
 
+        // 서버: 테스트 방 여부 (방을 만들 때 세션에서 읽음, 게스트에게는 동기화하지 않음)
+        private bool isTestRoom;
+
         // 서버: 클라이언트별 "로딩 중" 알림 기록
         private readonly LoadingReportTracker loadingReports = new(LoadingReportTimeout);
         // 클라이언트: 다음 "로딩 중" 알림 시각
@@ -60,6 +63,9 @@ namespace GuardVsMannequin.Room
         /// <inheritdoc />
         public int PropLayoutSeed => propLayoutSeed.Value;
 
+        /// <inheritdoc />
+        public bool IsTestRoom => isTestRoom;
+
         /// <summary>
         /// 이 클라이언트가 아직 목표 씬(게임 중이면 맵, 아니면 룸)에 도착하지 못했는지 여부. (로딩 화면 표시용)
         /// 게임 시작 직후에는 호스트가 맵을 다 불러올 때까지 게스트에게 로딩 지시가 오지 않으므로, 그 시간도 포함된다.
@@ -72,6 +78,7 @@ namespace GuardVsMannequin.Room
         public override void OnStartServer()
         {
             base.OnStartServer();
+            isTestRoom = SessionServices.Session?.IsTestRoom ?? false;
             // 방의 초기 설정은 Resources/Data/default_game_settings.json을 따른다.
             // 고른 맵(기본 맵)이 정한 기본값·범위도 적용한다. (map.json)
             ApplySettings(MapSettingRules.ApplyDefaults(DefaultGameSettings.Load()));
@@ -131,16 +138,16 @@ namespace GuardVsMannequin.Room
         }
 
         /// <summary>
-        /// 게임을 시작할 수 있는지와 그 이유를 반환한다. (호스트 제외 전원 준비 + 인원 조건)
+        /// 게임을 시작할 수 있는지와 그 이유를 반환한다. (호스트 제외 전원 준비 + 인원 조건, 테스트 방은 인원 조건 없음)
         /// </summary>
         public bool CanStartGame(out string reason)
         {
-            if (!GameSettingsValidator.CanStart(members.Count))
+            if (!isTestRoom && !GameSettingsValidator.CanStart(members.Count))
             {
                 reason = Loc.Format("room.reason.playerCount", GameConstants.MinPlayers, GameConstants.MaxPlayers, members.Count);
                 return false;
             }
-            if (!MapSettingRules.AllowsPlayerCount(settings.Value, members.Count, out int mapMinPlayers, out int mapMaxPlayers))
+            if (!isTestRoom && !MapSettingRules.AllowsPlayerCount(settings.Value, members.Count, out int mapMinPlayers, out int mapMaxPlayers))
             {
                 reason = Loc.Format("room.reason.mapPlayerCount", mapMinPlayers, mapMaxPlayers, members.Count);
                 return false;

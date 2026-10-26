@@ -38,6 +38,8 @@ namespace GuardVsMannequin.Core
             settings.generatorDestroyTime = Mathf.Max(0.1f, settings.generatorDestroyTime);
 
             settings.gunCooldown = Mathf.Max(0f, settings.gunCooldown);
+            settings.gunMagazineSize = Mathf.Max(1, settings.gunMagazineSize);
+            settings.gunReloadTime = Mathf.Max(0f, settings.gunReloadTime);
             settings.grenadeCooldown = Mathf.Max(0f, settings.grenadeCooldown);
             settings.guardMaxHealth = Mathf.Max(1, settings.guardMaxHealth);
             settings.mannequinMaxHealth = Mathf.Max(1, settings.mannequinMaxHealth);

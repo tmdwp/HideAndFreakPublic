@@ -11,7 +11,7 @@ namespace GuardVsMannequin.Player.Mannequin
     /// 사냥 시간 마네킹의 근접 공격. 좌클릭 시 공격 동작을 시작하고, 외형의 맞는 순간에 서버가 공격 범위(호스트 설정) 안의 가드를 판정한다.
     /// 탐색 단계의 좌클릭(전원 장치 파괴)과는 게임 상태로 구분된다. 변신 중에는 공격할 수 없다.
     /// </summary>
-    [RequireComponent(typeof(CameraAimProvider), typeof(NoiseEmitter), typeof(MannequinTransformer))]
+    [RequireComponent(typeof(NoiseEmitter), typeof(MannequinTransformer))]
     public class MannequinAttackTool : NetworkBehaviour, ITool
     {
         /// <summary>비정상 원점을 대체할 눈 높이(m).</summary>
@@ -94,12 +94,14 @@ namespace GuardVsMannequin.Player.Mannequin
         [ServerRpc]
         private void AttackServerRpc(Vector3 origin, Vector3 direction)
         {
+            if (!AimRaycaster.IsValidAim(origin, direction))
+                return;
             if (!CanAttackNow)
                 return;
             if (!cooldown.TryStartServer(GameTuning.MannequinAttackCooldown))
                 return;
 
-            origin = AimRaycaster.SanitizeOrigin(origin, transform, EyeHeight);
+            origin = AimRaycaster.SanitizeOrigin(origin, direction, transform, EyeHeight);
             AttackObserversRpc();
 
             float hitDelay = skinView != null ? skinView.AttackHitDelay : 0f;

@@ -17,6 +17,7 @@ namespace GuardVsMannequin.Editor
     /// 1. 플레이어가 갈 수 없는 곳(투명 경계 밖 + 여유 거리)에 있는 환경 오브젝트와 꺼져 있는 오브젝트를 지운다.
     /// 2. 남은 환경에 정적 플래그를 준다: 가려질 수 있음(Occludee), 큰 불투명 메시는 가리개(Occluder), 정적 배칭.
     /// 3. 플레이 영역에 Occlusion Area를 두고 오클루전 컬링을 굽는다. (보이지 않는 오브젝트를 실행 중에 그리지 않음)
+    /// 4. 총에 맞으면 튕겨나갈 변신 사물의 충돌체를 볼록으로 바꾼다(<see cref="PropColliderBaker"/>).
     /// </summary>
     public static class MapOptimizer
     {
@@ -112,13 +113,14 @@ namespace GuardVsMannequin.Editor
             int areaLights = RemoveAreaLights(mapRoot);
             int shadowLights = LimitLightShadows(mapRoot);
             int occluders = SetStaticFlags(environment);
+            int physicsColliders = PropColliderBaker.BakeScene(scene);
 
             bool navMeshBaked = BakeNavMesh(scene, mapRoot);
             EnsureOcclusionArea(boundaryObject.transform, playArea);
             BakeOcclusion(scene);
 
             Debug.Log($"[MapOptimizer] {scene.name}: 꺼진 오브젝트 {inactive}개, 경계 밖 {outside}개, 빈 오브젝트 {empty}개 제거. " +
-                      $"음수 크기 상자 충돌체 {fixedBoxes}개 교체, 영역 조명 {areaLights}개 제거, 그림자 끈 조명 {shadowLights}개. " +
+                      $"음수 크기 상자 충돌체 {fixedBoxes}개 교체, 튕겨나갈 사물 충돌체 {physicsColliders}개 볼록화, 영역 조명 {areaLights}개 제거, 그림자 끈 조명 {shadowLights}개. " +
                       $"NavMesh {(navMeshBaked ? "저장" : "실패")}, 가리개 {occluders}개로 오클루전 컬링을 구웠습니다.");
         }
 

@@ -10,7 +10,7 @@ namespace GuardVsMannequin.Player.Mannequin
     /// 누르면 조준한 대상과 상호작용을 시작하고, 떼면 끝낸다. 판정은 서버가 한다.
     /// 상호작용 중인지는 모든 클라이언트에 동기화한다. (상호작용 애니메이션 표시용, <see cref="IInteractionState"/>)
     /// </summary>
-    [RequireComponent(typeof(MannequinTransformer), typeof(PlayerHealth), typeof(CameraAimProvider))]
+    [RequireComponent(typeof(MannequinTransformer), typeof(PlayerHealth))]
     public class MannequinInteractor : NetworkBehaviour, IInteractor, IInteractionState
     {
         private readonly SyncVar<bool> isInteracting = new();

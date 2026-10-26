@@ -51,7 +51,7 @@ Assets/_Project/
 │  ├─ Tools/         # 총, 수류탄, 손전등
 │  ├─ Props/         # 변신 가능 사물(TransformableProp), 외형 복사(PropAppearance), 번호 조회(PropRegistry)
 │  ├─ Objectives/    # 전원 장치
-│  ├─ AI/            # 가짜 마네킹
+│  ├─ PropPhysics/   # 총에 맞은 변신 사물 물리(서버 시뮬레이션·동기화)
 │  ├─ Map/           # 스폰 지점·가드 스폰 선택, 조명 제어
 │  ├─ Audio/         # 소음 시스템
 │  ├─ Cameras/       # UnityEngine.Camera와 이름 충돌을 피하기 위해 복수형 사용
@@ -82,7 +82,7 @@ Waiting ─▶ Preparation ─▶ Playing ─▶ Hunting ─▶ Ended
 | 1 | **공동 전원 장치 파괴 속도** | 참여 인원 `n`일 때 **총 속도 = 1.4^(n−1)** (1인 = 1.0, 2인 = 1.4, 3인 = 1.96, 4인 = 2.744). 초당 진행도 = `1.4^(n−1) / 파괴 소요 시간`. 개인 기여분 = 총 속도 / n. 한 명이라도 상호작용이 끊기면 **그 사람은 이탈**하고, **참여자가 0명이 되면 진행도 초기화** |
 | 2 | **목표 수행 횟수 0회** | `Playing` 단계 진입 후 **룸 설정 `huntDelay`(기본 35초) 뒤 자동으로 사냥 시간** 시작 (가드 보호 목적). HUD의 목표 칸에 **가드 보호 시간과 사냥 시간 시작까지 남은 시간**을 표시한다 (`HuntTiming`) |
 | 3 | **판 시작 준비** | 모두 스폰된 뒤 **3초 카운트다운** 동안 아무도 움직일 수 없음. 가드는 마네킹 스폰 지점에서 먼 **무작위 위치**에서 시작하고, 탐색 시작 후 **10초 동안 도구를 쓸 수 없음**(출발 보호). (Phase 7-A에서 가드 대기실을 대체) |
-| 4 | **사냥 시간 중 가드 무기** | 사냥 시간에도 **총 사용 가능** (쿨타임 동일). 마네킹 체력 배율은 **호스트 설정값 `huntHealthMultiplier`** (기본값 10) |
+| 4 | **사냥 시간 중 가드 무기** | 사냥 시간에도 **총 사용 가능** (발사 간격·탄창·장전 동일). 마네킹 체력 배율은 **호스트 설정값 `huntHealthMultiplier`** (기본값 10) |
 | 5 | **변신 불가 사물** | 천장, 바닥, **조명 기구**, **전원 장치**, **전원 장치 주변 구조물** |
 | 6 | **조명 방식** | **실시간 조명** + URP **Forward+** 렌더러. 전구는 Emission 머티리얼과 Light 컴포넌트를 함께 끄고 켬 |
 
@@ -101,7 +101,9 @@ Waiting ─▶ Preparation ─▶ Playing ─▶ Hunting ─▶ Ended
 | `objectiveCount` | int | 3 | 0 ~ (마네킹 수 + 2) |
 | `generatorCount` | int | 5 | 반드시 `objectiveCount`보다 많아야 함 |
 | `generatorDestroyTime` | float | 10 | 1인 기준 파괴 소요 시간 |
-| `gunCooldown` | float | 3 | |
+| `gunCooldown` | float | 1 | 발사 간격(초). 탄창 안에서 다음 발까지 |
+| `gunMagazineSize` | int | 4 | 탄창 크기(1~10발). 다 쓰면 자동 장전 (Phase 8) |
+| `gunReloadTime` | float | 5 | 장전 시간(1~15초) (Phase 8) |
 | `detectorCooldown` | float | 10 | |
 | `guardMaxHealth` | int | 3 | |
 | `mannequinMaxHealth` | int | 1 | |
@@ -605,6 +607,176 @@ Phase 7은 **A. 게임플레이 개편**(7-A1~7-A5)을 먼저 하고 **B. 모드
 - 셰이더: 모드는 URP Lit 등 게임에 포함된 셰이더만 쓰도록 검사 도구가 제한한다(번들에 셰이더가 중복으로 들어가 빌드 크기·변형 증가 방지). 빌드에서 제외된 셰이더 변형은 모드에서 분홍색으로 보일 수 있어, 필요한 변형 목록을 `BuildOptimizationSettings`와 맞춘다.
 - AssetBundle은 Unity 버전·빌드 대상(Windows)이 같아야 한다. 게임 Unity 버전을 올리면 모드도 다시 빌드해야 하므로 `mod.json`의 Unity 버전으로 걸러낸다.
 - 신뢰할 수 없는 번들 로드는 코드 실행은 없지만 비정상 파일로 인한 크래시 가능성이 있다. 직접 설치한 모드만 로드한다(호스트에게서 자동 다운로드하지 않음).
+
+### 테스트 방 (2026-10-20)
+
+로비 "방 만들기 → 직접 방 만들기 → 테스트 방 만들기"로 만든다. (`ISessionService.HostTestRoom`, 직접 접속 방 + 테스트 표시)
+- 혼자 시작: `RoomState.CanStartGame`·`GameStateMachine.TryStartMatch`가 테스트 방이면 인원 조건을 보지 않는다. 테스트 표시는 서버만 알고 동기화하지 않는다(`IRoomInfo.IsTestRoom`).
+- 승패 없음: `MatchRules`가 테스트 방이면 단계를 넘기지 않는다. (사냥 시간은 테스트 메뉴로만 켜고 끔)
+- 게임 중 테스트 메뉴(`HudTestRoomPanel`, 호스트 전용, F2): 가드/마네킹 전환(그 자리 재스폰), 마네킹/구울 전환(사냥 시간 켜고 끄기, 끌 때 마네킹 재스폰), 1인칭/3인칭(F3, `PerspectiveSwitcher` + `IPerspectiveCamera`/`IPerspectiveListener`), 게임 설정 변경(`GameStateMachine.OverrideSettings`, 맵 제외 전 항목).
+- 서버 조작은 `ITestRoomActions`(`TestRoomActions`, `PlayerSpawner`가 테스트 방에서만 `GameServices.TestRoom`에 등록). 호스트가 서버라 RPC 없이 직접 호출한다.
+- 기존 프리팹은 "UI > 빠진 UI 영역·키 줄 추가"로 로비의 직접 방 만들기 화면과 HUD 테스트 메뉴를 더한다.
+
+### 위험 요소 점검 목록 (2026-10-20, 0.5.0-p7 기준)
+
+프로젝트 전체(Scripts 210개·Content 16개·Editor 44개 파일)를 점검해 문제가 생길 수 있는 부분을 모았다. 우선순위: 🔴 출시 전 필수 / 🟠 곧 처리 / 🟡 여유 있을 때.
+
+**배포·저장소**
+- [ ] 🔴 Steam AppID가 480(Spacewar, 공용 테스트 ID)이다. 출시 전에 자체 AppID를 받아 `steam_appid.txt`를 바꾸고, 로비 공개 범위 안내(`SteamLobbyService`)도 고친다. (공용 ID라 로비 목록이 다른 게임과 섞이고, 초대·오버레이가 불안정할 수 있음)
+- [ ] 🔴 공개 저장소의 `feature/phase6` 원격 기록에 유료 에셋(ECM2 등)이 이미 올라가 있다. 저장소를 비공개로 바꾸거나 기록을 정리한다. 미푸시 로컬 커밋에도 에셋 스토어 팩(Low Poly Character Series 1_SWAT)·Ghoul.fbx가 있어 푸시를 보류 중이다.
+- [x] 🟠 (2026-10-21 처리: 이동 코드를 인터페이스로 분리) `public` 브랜치는 ECM2를 빼지만 Runtime 어셈블리가 ECM2를 참조하므로 그대로는 컴파일되지 않는다.
+  - Runtime·Editor 어셈블리는 ECM2를 참조하지 않는다. 게임 코드는 `ICharacterMotor`(속도·캡슐·카메라·순간이동·소유자 설정)만 쓴다.
+  - ECM2 구현은 `Scripts/MovementEcm2`(`GuardVsMannequin.Movement.ECM2`: `PlayerCharacter`, `GuardCharacter`, `MannequinCharacter`, `WallClimbAbility`, `DisguiseRotationAbility`, `PlayerMovementDriver`, `CameraAimProvider`, `PendingLookYaw`)와 `Editor/MovementEcm2`(`Ecm2AvatarMovementRig`)로 옮겼다. 파일 GUID는 그대로라 프리팹 연결은 유지된다.
+  - 두 이동 어셈블리는 `GVM_ECM2` 기호가 있을 때만 컴파일된다. `Ecm2DefineSync`가 ECM2 유무를 보고 Standalone 기호를 맞춘다. **public 브랜치의 ProjectSettings에는 `GVM_ECM2`를 넣지 않는다.** (ECM2 없이 기호가 있으면 이동 어셈블리 컴파일 오류로 동기화 코드가 실행되지 못함)
+  - 프리팹 생성 도구는 `IAvatarMovementRig`(`AvatarMovementRigs`)로 이동 컴포넌트를 붙이며, 이동 구현이 없으면 아바타 프리팹을 만들지 않고 오류를 남긴다.
+  - public 브랜치(ECM2 없음)는 컴파일되지만 아바타가 움직이지 않는다. ECM2를 설치하면 기호가 켜져 동작한다.
+- [ ] 🔴 (출시 전 처리, 2026-10-20 결정) 회사 이름이 아직 정해지지 않았다(현재 임시 `HornRabbit`). 회사 이름은 `Application.persistentDataPath`와 PlayerPrefs 위치를 정하므로, 바뀔 때마다 기존 테스터의 설정·키 설정·끈 모드 목록·사용자 폴더 모드(`AppData/LocalLow/<회사>/<제품>/Mods`)가 초기화된 것처럼 보인다. 출시 전에 회사 이름을 확정하고, 필요하면 첫 실행 때 예전 경로에서 옮기는 처리를 넣거나 배포 공지에 적는다. (그 전까지 테스트 빌드에서는 초기화될 수 있음을 감안)
+
+**네트워크·보안**
+- [x] 🟠 (2026-10-20 처리: `AimRaycaster.IsValidAim`, 시선은 `PlayerViewSync`에서 거부) 조준 RPC(`GunTool`·`GrenadeTool`·`MannequinAttackTool`)가 받은 방향 벡터가 0이거나 NaN인지 검사하지 않는다. NaN이 들어오면 사격 궤적·수류탄 위치가 NaN이 되어 모든 클라이언트에서 경고·오동작이 날 수 있다. `direction`이 유한하고 길이가 0이 아닌지 확인해 거부한다. (`PlayerViewSync.SetViewServerRpc`의 시선 값도 같음)
+- [x] 🟡 (2026-10-21 처리: `GameTuning.FlashlightToggleCooldown` 0.2초, 소유자·서버 양쪽. `ToolCooldown`의 서버 허용 오차를 쿨타임의 절반 이하로 제한해 짧은 쿨타임도 서버에서 지켜지게 함) 손전등 켜기/끄기 RPC(`FlashlightTool.ToggleServerRpc`)에 간격 제한이 없어 연타하면 동기화·스위치 소리가 계속 난다.
+- [x] 🟡 (2026-10-21 처리: `MovementValidator`가 마지막 정상 위치와 지금 위치의 몸 중심을 잇는 선으로 맵 충돌체 통과를 검사. 리지드바디가 붙은 충돌체·트리거·자기 몸은 제외. 한쪽 면만 있는 메시 벽을 뒷면에서 뚫는 경우는 잡지 못함) 이동은 소유자 권한이고 `MovementValidator`는 이동 거리만 본다. 거리 예산 안에서 벽을 통과하는 이동은 막지 못한다.
+- [x] 🟡 (2026-10-21 처리: 로비에는 모드 ID 목록(`ModService.ModSetIds`)만 넣고, 크기 제한을 넘으면 비움. 로비에서 미리 맞추지 못해도 접속은 진행하고, 서버가 전체 정보로 다시 맞춘 뒤 안 되면 부족한 모드와 함께 거절) Steam 로비 데이터 `ModList`는 켜진 모드 설명을 그대로 넣는다. 로비 값 한도(8KB)를 넘으면 잘려 모드 맞추기가 실패한다.
+
+**게임 흐름**
+- [x] 🟠 (2026-10-20 처리: 테스트 메뉴 "룸으로 돌아가기", `ITestRoomActions.ReturnToRoom`) 테스트 방은 판이 끝나지 않으므로 맵을 바꾸려면 방을 나가야 한다. 테스트 메뉴에 "룸으로 돌아가기"(`IMatchControl.ReturnToRoom`)를 넣는다.
+- [ ] 🟡 테스트 방에 다른 사람이 IP로 들어오면 그 사람도 끝나지 않는 판에 갇힌다. 테스트 방은 접속을 막거나(`RoomAuthenticator`) 안내한다.
+- [ ] 🟡 사냥 모습(구울)은 한 번 바뀌면 되돌리지 않는 설계라, 사냥 시간 → 탐색으로 돌아갈 때는 재스폰에 의존한다. 이후 단계 흐름을 바꿀 때 주의한다.
+
+**외부 의존성**
+- [ ] 🟠 FishNet에 로컬 수정이 있다(`SceneLookupData.cs`, "[Hide&Freak 수정]", 모드 맵 씬 이름). FishNet을 업데이트하면 사라진다. 빈 이름은 FishNet 씬 로딩 내부(`SceneManager` 서버 로딩 후 클라이언트에 보낼 씬 목록 생성)에서 만들어져 게임 코드에서 끼어들 수 없다. → 2026-10-20 `FishNetPatchCheck` 추가: 에디터 시작 때 수정이 빠졌으면 오류 로그와 알림 창, 빌드 전에는 빌드를 멈춘다. 남은 일: FishNet 쪽에 이슈·PR을 내서 원본에 반영되면 로컬 수정과 검사를 없앤다. 수정 없이 하려면 맵 씬을 FishNet 밖에서 불러오는 구조 변경이 필요한데(스폰 씬 이동·로딩 순서·활성 씬·맵 로딩 완료 RPC 등), 비용이 커서 **문제가 생길 때 검토**하기로 함(2026-10-20).
+- [ ] 🟡 모드 번들은 Unity 버전·빌드 대상이 같아야 한다. 게임 Unity 버전(현재 6000.4.2f1)을 올리면 `UnityVersionRules` 허용 범위와 모드 SDK를 함께 갱신한다.
+
+**성능·품질**
+- [ ] 🟡 HUD·룸 UI가 매 프레임 `Loc.Format`으로 문자열을 새로 만든다(약 10곳). 값이 바뀔 때만 갱신해 GC 할당을 줄인다.
+- [ ] 🟡 자동 테스트가 없다. 순수 로직(`MatchJudge`, `RoleAssigner`, `GameSettingsValidator`, `PropLayoutPlanner`, `ModSetComparer`, `UnityVersionRules`)부터 EditMode 테스트를 만든다.
+- [ ] 🟡 Unity가 업그레이드한 `ProjectSettings`(`DynamicsManager`·`Physics2DSettings` 형식 변경, 빌드 목록의 없는 씬 `Map_Map_Laboratory` 정리)를 커밋해 PC마다 설정이 달라지지 않게 한다.
+
+### Phase 8 — 사물 물리 반응 + 총 탄창 (계획, 2026-10-21)
+
+**목표:** 총에 맞은 변신 사물이 튕겨나가는 손맛을 넣는다. 변신한 마네킹도 **진짜 사물과 똑같이** 날아가게 해서 반응 차이로 들키지 않게 한다. 가짜 마네킹은 없앤다. 총은 쿨타임 대신 **4발 사격 후 5초 장전**으로 바꾼다.
+
+**확정한 방향 (2026-10-21)**
+- 가짜 마네킹(`FakeMannequin*`)을 제거한다.
+- **총에 맞으면** 변신 사물과 변신한 마네킹이 튕겨나간다. **수류탄에는 물리력이 없다**(지금처럼 외곽선·감속만).
+- 총: **탄창 4발, 다 쓰면 5초 장전.** 발사 간격은 지금의 `gunCooldown`을 그대로 쓴다.
+- NavMesh는 판 시작 때만 쓰므로(가드 스폰 후보·전원 장치 배치) 사물이 움직여도 다시 굽지 않는다.
+- 성능 목표: GTX 1050~1650급 PC에서 체감 차이가 없을 것. → 평소에는 키네마틱, 동시에 움직이는 수에 상한, 움직이는 사물만 번호로 묶어 동기화.
+
+**규모 (맵 씬의 `TransformableProp` 수, 벽 조각 포함)**: AlchemistHouse 1266, Asylum 406, Laboratory 118, Industrial 60, Hospital 28. 연금술사 집은 선반 위 작은 사물이 촘촘해 연쇄 충돌 제한이 꼭 필요하다.
+
+**8-1. 가짜 마네킹 제거**
+- 지울 것: `FakeMannequin`, `FakeMannequinBrain`, `FakeMannequinSpawner`, `Prefabs/FakeMannequin.prefab`(+ FishNet 프리팹 목록), `TestEnvironmentSetupTool`의 프리팹 생성·`Game_Systems` 부착, `GameTuning`·`game_tuning.csv`의 `FakeMannequinMinCount/MaxCount/PurgeTime`, 0.3 폴더 구조의 `AI/` 줄, `Game_Systems.unity`의 컴포넌트(일회용 메뉴 또는 씬 재생성).
+- **옮길 것 — 실행 중 NavMesh 굽기:** 미리 구운 NavMesh가 없을 때 서버에서 굽는 처리(`EnsureNavMesh`)가 지금은 `FakeMannequinSpawner`에만 있다. 가드 스폰 후보(`SpawnCandidateFilter`)가 NavMesh에 의존하므로, 이 처리를 `NavMeshPointSampler` 쪽(또는 새 `NavMeshProvider`)으로 옮겨 가드 스폰 선택 전에 부른다. 모드 맵에 미리 구운 NavMesh가 없는 경우도 지금처럼 동작해야 한다.
+- 문구 정리: 수류탄 설명의 "가짜 마네킹은 영향 없음", 가드 스폰 최소 거리 설명의 "가짜 마네킹 흩뿌리기 4m 포함"(값은 유지).
+- **검토: 사람 모습으로 걷는 마네킹의 엄폐가 사라진다.** 탐색 단계에서 걷는 마네킹은 곧바로 진짜로 판별된다. 출발 보호 10초 동안 변신을 마치는 흐름이 되므로 밸런스 테스트에서 확인한다. 부족하면 출발 보호 시간이나 변신 쿨타임을 조정한다.
+
+**8-2. 변신 사물 물리 (서버 시뮬레이션)**
+- 대상: `TransformableProp` 중 벽 조각(`IsWall`)이 아니고, 가장 긴 변이 `PropPhysicsMaxSize`(권장 2m) 이하인 사물. 큰 가구는 통로를 막을 수 있어 움직이지 않는다. (변신은 지금처럼 3m까지 가능)
+- 질량: 겉모습 경계 부피 × `PropDensity`를 `PropMassMin~Max`로 자른다. 순수 계산은 `PropPhysicsRules`(값만 반환)에 둔다.
+- 상태
+  1. **평소 — 키네마틱.** 모든 PC에서 Rigidbody `isKinematic = true`. 물리 비용이 거의 없다.
+  2. **깨어남 (서버만):** 총에 직접 맞은 사물, 또는 움직이는 사물에 `PropWakeImpulse` 이상의 세기로 부딪힌 사물을 다이나믹으로 바꾸고 충격을 준다(`AddForceAtPosition` — 맞은 위치에 따라 회전). 클라이언트는 계속 키네마틱이고 서버가 보낸 위치를 따라간다.
+  3. **멈춤:** 속도가 `PropSettleSpeed` 이하로 `PropSettleTime` 동안 유지되면(또는 Rigidbody가 잠들면) 서버가 최종 위치를 한 번 보내고 다시 키네마틱으로 돌린다. 새 위치는 그대로 유지한다(판이 끝날 때까지).
+  4. **상한:** 동시에 다이나믹인 사물이 `PropPhysicsMaxActive`(권장 40)를 넘으면 가장 오래 움직인 사물부터 그 자리에서 멈춘다.
+  5. **맵 밖 추락:** 맵 경계(`MapInfo`) 아래 `PropKillDepth`보다 떨어지면 판 시작 때 위치로 되돌린다.
+- 동기화: 사물별 NetworkObject를 쓰지 않는다. `Game_Systems`의 `PropPhysicsSync`(NetworkBehaviour, 서버)가 `PropSyncRate`(권장 20Hz)로 **움직이는 사물만** `번호(ushort) + 위치 + 압축 회전`을 묶어 보낸다(비신뢰 채널, 한 개 약 18바이트). 멈춤 위치는 신뢰 채널로 한 번 보낸다. 클라이언트는 `PropPoseInterpolator`가 약 0.1초 버퍼로 보간한다. 게임 중 난입은 막혀 있어 전체 상태 전송은 필요 없다.
+- 움직이는 동안 충돌 레이어를 `MovingProp`으로 바꿔 **플레이어와 충돌하지 않게** 한다(클라이언트 위치 지연으로 인한 끼임·밀림 방지). 조준 광선·변신 대상 찾기는 이 레이어도 맞힌다.
+- 충돌체: 다이나믹 Rigidbody에는 볼록(convex)이 아닌 `MeshCollider`를 쓸 수 없다. 에디터 도구 `PropColliderBaker`(ContentEditor — 모드 SDK에서도 쓰도록)가 사물마다 **상자/캡슐 근사 또는 미리 만든 볼록 메시**를 붙인다. 실행 중 볼록 메시 계산(로딩 지연)은 하지 않는다. `PropRegistrar`(변신 사물 등록)와 맵 최적화가 이 도구를 부르고, `MapValidator`·`ModMapValidator`가 "물리 대상인데 충돌체가 볼록이 아님"을 경고한다. 맵 생성 도구(`MapSceneBuilder`)가 이미 Rigidbody를 키네마틱으로 바꾸는 처리와 겹치지 않게 정리한다.
+- 수류탄: 폭발은 사물을 깨우지 않는다. 궤적 판정은 서버가 하므로 옮겨진 사물에 맞아 폭발 지점이 바뀌어도 모든 PC가 같은 결과를 본다.
+
+**8-3. 변신한 마네킹 날아가기 ("사물 모드")**
+- 목표: 진짜 사물과 **같은 물리, 같은 시점, 같은 동기화 경로**. 서버가 직접 시뮬레이션한다.
+- 흐름 (서버 권한)
+  1. 총이 변신 중인 마네킹을 맞히면 지금처럼 피해를 주고, 같은 충격을 `DisguiseKnockback`에 전달한다. (사람 모습·구울은 날아가지 않는다)
+  2. 서버가 대리 물체(`PropProxyPool`의 Rigidbody, 변신 외형 경계로 만든 충돌체, 사물과 같은 질량 규칙)를 마네킹 자리에 놓고 다이나믹으로 시뮬레이션한다. 대리 물체도 `PropPhysicsSync`로 같이 보낸다(번호 영역을 나눔).
+  3. 그동안 마네킹은 입력·도구·변신 해제가 잠기고, 캐릭터 이동이 꺼진다. 모든 PC에서 아바타가 대리 물체 위치를 따라가고, 변신 외형(`PropDisguiseView`)은 대리 물체의 기울기·회전을 그대로 보여준다. 이동 검증(`MovementValidator`)은 잠시 멈춘다.
+  4. 날아가는 동안 맞는 판정은 대리 물체 충돌체가 받고, `IDamageable`을 그 마네킹의 `PlayerHealth`로 넘긴다(캡슐 판정은 끈다 — 이중 피격 방지).
+  5. 멈추면 서버가 `MovementValidator.ServerTeleport`로 그 자리에 옮기고 조작을 돌려준다. 넘어진 기울기는 SyncVar(`restTilt`)로 남겨 **움직이기 전까지 넘어진 모습을 유지**한다(움직이거나 돌면 바로 선다 — 들킬지 말지는 플레이어 선택).
+  6. 안전장치: `DisguiseKnockbackMaxTime`(권장 4초)이 지나면 강제로 멈춘다. 날아가는 중에 죽으면 대리 물체를 거두고 평소 사망 처리로 넘어간다. 사냥 시간 진입·판 종료 때도 강제로 멈춘다.
+- 소유자 카메라는 날아가는 동안 대리 물체를 따라간다(조작 잠금 표시는 HUD 하단 문구).
+
+**8-4. 총 탄창·장전**
+- 규칙: 탄창 `gunMagazineSize`(기본 4발), 발사 간격 `gunCooldown`(기존 설정, 0.5초 권장), 탄창이 비면 자동 장전 `gunReloadTime`(기본 5초) 후 가득 찬다. 수동 장전(R)은 1차에서 넣지 않는다(검토 항목).
+- 두 값은 룸 설정(`GameSettings`, `game_settings.csv`, `default_game_settings.json`, `strings.csv`, `GameSettingsValidator`, 맵별 스탯 범위)에 추가한다. 권장 범위: 탄창 1~10발, 장전 1~15초. 빌드 폴더의 옛 json에 키가 없으면 0 → 코드 기본값으로 채우는 기존 처리(`DefaultGameSettings`)를 따른다.
+- 구조
+  - `GunMagazine`(순수 클래스, `ToolCooldown`처럼 소유자 예측 + 서버 검증): 남은 탄, 장전 끝 시각, `TryConsume`. 서버 판정이 최종이다.
+  - 서버의 남은 탄·장전 끝 시각을 **소유자에게만** 동기화한다(SyncVar 읽기 권한 소유자). 서버가 사격을 거부하면 소유자 예측이 다음 동기화로 바로잡힌다.
+  - HUD: `ITool`은 그대로 두고, 탄약 표시용 작은 인터페이스 `IAmmoSource`(`Ammo`, `MagazineSize`, `IsReloading`)를 추가한다. `HudBottomPanel`은 "총 3/4" / "장전 중 4.2초"로 표시한다. `CooldownRemaining`은 장전 중이면 장전 남은 시간을 돌려준다.
+  - 연출: 장전 소리(`NoiseType.GunReload`, 새 번호), 애니메이션 규칙에 `Reload`(Trigger)를 추가해 있으면 쓰고 없으면 건너뛴다.
+- 출발 보호·사냥 시간: 판 시작 때 탄창은 가득. 사냥 시간에도 같은 규칙. → 1장 확정 규칙 4번("쿨타임 동일")을 "탄창·장전 동일"로 고친다.
+
+**8-5. 기존 기능과의 충돌 점검 (구현 시 같이 고칠 것)**
+
+| 대상 | 문제 | 처리 |
+|---|---|---|
+| `PropAppearance` 지연 복사 (`TransformableProp.Appearance`) | 처음 쓸 때 복사하고 **기울기까지 복사**한다. 넘어진 뒤에 처음 복사한 PC는 기울어진 외형이 되어 PC마다 달라진다 | 섞기(`PropLayoutShuffler`)가 끝난 직후 모든 변신 사물의 외형을 한 번에 복사해 둔다 |
+| `WallClimbAbility.IsClimbable` | `attachedRigidbody != null`이면 못 오른다 → Rigidbody가 붙은 사물은 키네마틱이어도 못 오르게 된다 | "다이나믹 Rigidbody만 제외"로 바꾼다 |
+| `MovementValidator` 벽 통과 검사 | Rigidbody가 붙은 충돌체를 무시한다 → 사물을 통과하는 이동은 잡지 못한다 | 사물은 벽이 아니므로 그대로 둔다(알려진 한계로 기록) |
+| `TransformableProp.CurrentWorldBounds` (변신 거리 검증) | 지금 위치 기준이라 문제없다. 서버 위치가 기준이고 클라이언트는 보간 지연만 있다 | 변신 거리 여유(+1.5m)로 흡수, 테스트로 확인 |
+| `PropLayoutShuffler` | 맵 로딩 때만 동작 | 영향 없음. 섞기 뒤 판 시작 위치를 "추락 시 복귀 위치"로 저장 |
+| 정적 배칭·오클루전 | 변신 사물은 이미 제외 | 영향 없음 |
+| 조명 | GI를 쓰지 않음(실시간) | 영향 없음 |
+
+**8-6. 조정 수치 (`game_tuning.csv` 추가)**
+
+| id | 권장값 | 설명 |
+|---|---|---|
+| `PropPhysicsEnabled` | 1 | 0이면 물리 반응을 끈다 (문제 시 빠른 차단) |
+| `PropPhysicsMaxSize` | 2 | 움직이는 사물의 최대 크기(가장 긴 변, m) |
+| `PropPhysicsMaxActive` | 40 | 동시에 움직이는 사물 상한 (변신한 마네킹 대리 물체 포함) |
+| `PropDensity` | 40 | 질량 = 경계 부피 × 밀도(kg/m³) |
+| `PropMassMin` / `PropMassMax` | 1 / 40 | 질량 범위(kg) |
+| `GunKnockback` | 12 | 총에 맞은 사물의 날아가는 세기. 충격량 = 값 × √질량, 속도 = 값 ÷ √질량 (1kg 12m/s, 10kg 3.8m/s, 40kg 1.9m/s) |
+| `PropWakeImpulse` | 5 | 움직이는 사물이 다른 사물을 깨우는 최소 충격량 |
+
+(2026-10-21 첫 플레이 확인 후 변경: 처음엔 충격량 6 N·s 고정 + 밀도 150·최대 60kg이라 대부분 사물이 60kg에 걸려 초속 0.1m로 거의 움직이지 않았다. 충격량을 √질량에 비례하게 바꾸고 질량 규칙을 낮췄다. `IImpactReceiver.ImpactMass`로 맞은 대상의 질량을 받는다.)
+| `PropSettleSpeed` / `PropSettleTime` | 0.05 / 0.5 | 이 속도 이하로 이 시간 유지되면 멈춤 |
+| `PropSyncRate` | 20 | 움직이는 사물 위치 전송 횟수(Hz) |
+| `PropKillDepth` | 10 | 맵 경계 아래로 이만큼 떨어지면 시작 위치로 복귀(m) |
+| `DisguiseKnockbackMaxTime` | 4 | 변신한 마네킹 사물 모드 최대 시간(초) |
+
+**새 타입과 책임 (SOLID)**
+- `Scripts/PropPhysics/` (`GuardVsMannequin.PropPhysics` — `UnityEngine.Physics`와 이름이 겹치지 않게): `PropPhysicsRules`(대상·질량·충격 계산, 값만 반환), `PropPhysicsService`(서버: 깨우기·상한·멈춤, `IPropPhysicsService`로 `GameServices`에 등록), `PropPhysicsSync`(전송·수신), `PropPoseInterpolator`(클라이언트 보간), `PropProxyPool`(마네킹 대리 물체).
+- 충격 전달은 `IImpactReceiver.ReceiveImpact(point, impulse)`로 통일한다. `GunTool`은 맞은 대상의 `IDamageable`·`IImpactReceiver`만 찾고, 사물인지 마네킹인지 모른다(개방-폐쇄).
+- `Player/Mannequin/DisguiseKnockback`: 사물 모드 진입·종료와 입력 잠금. 외형 기울기 표시는 `PropDisguiseView`에 "외형 회전 덮어쓰기" 한 가지만 추가한다.
+- `Player/Guard/GunMagazine` + `IAmmoSource`: 탄창 규칙. `GunTool`은 사격 판정만 한다.
+- `ContentEditor/PropColliderBaker`: 물리용 충돌체 생성(모드 SDK 포함).
+
+**구현 단계** (앞선 미커밋 작업과 파일이 섞여 단계별 커밋 대신 Unity 확인 후 한꺼번에 커밋)
+- [x] 8-1. 가짜 마네킹 제거 + NavMesh 굽기 이전.
+- [x] 8-2a. `PropColliderBaker` + 맵 최적화·등록·검사 연결.
+- [x] 8-2b. 서버 물리 + 동기화 + 외형 일괄 복사 + `WallClimbAbility`·`MovementValidator` 조건 수정. `GunTool`이 `IImpactReceiver`로 충격 전달.
+- [x] 8-3. 변신한 마네킹 사물 모드(`DisguiseKnockback`, `KnockbackProxy`).
+- [x] 8-4. 총 탄창·장전(룸 설정 2개, `GunMagazine`, HUD).
+- [ ] 8-5. 테스트 방에서 확인 → 2PC 확인 → 수치 조정. RPC·`GameSettings`가 바뀌므로 **`GameVersion.Protocol` +1**, Player Settings Version은 마이너 버전 올림.
+
+**구현 결과 (2026-10-21, Unity 확인 전, dotnet 컴파일 확인)** — 계획과 달라진 점
+- 가짜 마네킹: 스크립트 3개·프리팹·`Game_Systems`의 컴포넌트·FishNet 프리팹 목록 항목·조정 수치 3개를 지웠다. 실행 중 NavMesh 굽기는 `Map/MapNavMesh.EnsureBuilt()`로 옮겨 가드 스폰 후보를 뽑기 직전(`SpawnPointRegistry`)에 부른다.
+- 맵 씬 준비 순서는 `Map/MapPropSetup`(sceneLoaded) 한곳에서 정한다: 섞기(`PropLayoutShuffler.ShuffleForMatch`) → 모든 변신 사물 외형 복사 → 물리 대상에 `PropBody` 부착. 섞기의 자체 sceneLoaded 구독은 없앴다.
+- 서비스 이름: `PropPhysicsService` 대신 `PropPhysicsSync`(NetworkBehaviour, `IPropPhysics`로 `GameServices.PropPhysics`에 등록) + 순수 진행 규칙 `PropPhysicsSimulation`. 클라이언트 보간은 `PropPoseInterpolator`(+ 공용 `PoseSnapshotBuffer`, `ServerClockEstimate`). 서버 시각은 FishNet Tick.
+- 대상 규칙은 Content의 `PropPhysicsRules`(모드 SDK와 공유): 벽 조각·`PropPhysicsMaxSize` 초과·다른 변신 사물을 품거나 그 안에 든 사물·자식에 Rigidbody가 있는 사물은 제외. 충돌체가 모두 기본 도형이거나 볼록이어야 움직인다(아니면 움직이지 않고 맵 검사가 경고).
+- 날아가는 사물과 플레이어의 충돌: 새 레이어 대신 **클라이언트에서 날아가는 동안 그 사물의 충돌체를 끈다**(멈춘 위치를 받으면 다시 켬). 서버에서는 그대로 부딪힌다.
+- 연쇄: `ImpactRelay` — 날아가는 몸체(사물·마네킹 대리 물체)가 멈춘 사물이나 변신한 마네킹에 `PropWakeImpulse` 이상으로 부딪히면 같은 세기로 깨운다.
+- 멈춘(키네마틱) 변신 사물은 `PropPhysicsRules.IsRestingProp`으로 맵 지형처럼 다룬다: 벽타기 가능, 이동 검증의 벽 통과 검사 대상.
+- 사물 모드: 대리 물체는 서버에만 있는 `KnockbackProxy`(외형 경계 상자, 같은 질량 규칙, 자기 충돌체와 충돌 무시, 맞으면 피해·충격을 마네킹에 넘김). 자세는 `DisguiseKnockback`이 직접 비신뢰 RPC로 보낸다. 날아가는 동안 `ICharacterMotor.SetFrozen`(ECM2 MovementMode.None), `MovementValidator.SetSuspended`, 변신·해제 잠금(`IActionLock`). 멈추면 바닥 위치로 `ServerTeleport`하고 넘어진 모습은 수평 0.15m·2° 이상 움직이거나 돌 때까지 유지한다. 대리 물체는 동시에 움직이는 사물 상한에 넣지 않았다(플레이어 수만큼만 생김).
+- 총: `GunMagazine`(소유자 예측 + 서버 검증, 서버가 거부하면 `TargetRpc`로 소유자 탄창을 맞춤), HUD는 `IAmmoSource`로 "총 3/4: 준비" / "장전 4.2초". 장전 애니메이션은 `Reload` 트리거가 있는 외형에서만. 장전 소리는 넣지 않았다(사운드 에셋 필요). `gunCooldown` 코드 기본값도 json과 같은 1초로 맞췄고 문구는 "총 발사 간격".
+- 기존 에셋 적용: 메뉴 **"GameSettingTools/Phase 8/사물 물리 적용"**(`Phase8Migration`, 일회용 — 실행 완료 후 삭제) — Mannequin 프리팹에 `DisguiseKnockback` 추가(FishNet 네트워크 컴포넌트 목록 때문에 YAML 대신 Unity로), `Game_Systems`에 `PropPhysicsSync` 확인, 맵 목록 전체의 사물 충돌체 볼록화. 룸·HUD 테스트 메뉴의 새 설정 줄은 **"UI/빠진 UI 영역·키 줄 추가"**가 더한다(`MenuSceneBuilder.AddMissingSettingRows`).
+- **`GameVersion.Protocol` +1 필요** (`GameSettings` 필드·RPC 추가).
+
+**확인 체크리스트**
+- 같은 사물을 쏘았을 때 두 PC에서 날아가는 궤적·멈춘 위치가 같은가.
+- 변신한 마네킹과 진짜 사물을 나란히 놓고 쏘았을 때 반응(시점·거리·회전)을 눈으로 구별할 수 없는가.
+- 연금술사 집 선반을 연속 사격해도 동시에 움직이는 수가 상한을 넘지 않고, 호스트 프레임이 유지되는가(Profiler: Physics.Simulate, 네트워크 송신량).
+- 날아간 사물이 문·복도를 막아 이동이 불가능해지는 곳이 없는가.
+- 날아가는 중 사망·사냥 시간 진입·판 종료 때 마네킹이 정상으로 돌아오는가.
+- 탄창 4발 → 장전 5초가 HUD와 서버 판정에서 일치하는가(연타·지연 상황 포함).
+
+**검토가 필요한 위험**
+- **난사 전략:** 빗맞힘 벌칙이 없어 "날려서 확인"이 쉬운 전략이 될 수 있다. 탄창·장전으로 1차 완화하고, 부족하면 빗맞힘 벌칙을 검토한다.
+- **사물이 혼자 움직이는 단서:** 움직이는 사물은 플레이어와 충돌하지 않지만, 멈춘(키네마틱) 사물은 마네킹이 밀 수 없다. 마네킹이 사물을 미는 기능은 넣지 않는다.
+- **호스트 부담:** 서버 시뮬레이션과 렌더링을 함께 하므로 호스트 PC 기준으로 상한을 정한다.
+- **모드 맵:** 기존 모드는 물리용 충돌체가 없다. 충돌체가 볼록이 아닌 사물은 물리 대상에서 빼고(움직이지 않음) 경고만 남겨 호환성을 지킨다.
 
 ---
 

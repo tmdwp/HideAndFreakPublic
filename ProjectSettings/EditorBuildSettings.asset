@@ -30,8 +30,8 @@ EditorBuildSettings:
     path: Assets/_Project/Scenes/Custom/Map_Laboratory.unity
     guid: 82eea225332b66d46bbab65ffa52afb3
   - enabled: 1
-    path: Assets/_Project/Scenes/Custom/Map_Map_Laboratory.unity
-    guid: 53fab40bc3117804aa66164c47fb76c4
+    path: Assets/_Project/Scenes/Custom/Map_TransferStation.unity
+    guid: 75a8e4486a85cd44a8a0967195e6625a
   m_configObjects:
     com.unity.dt.app-ui: {fileID: 11400000, guid: 1b1c20d82303e4b5781c3ef50ac1449f, type: 2}
     com.unity.input.settings.actions: {fileID: -944628639613478452, guid: 052faaac586de48259a63d0c4782560b, type: 3}

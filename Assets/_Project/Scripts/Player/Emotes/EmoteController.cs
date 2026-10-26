@@ -6,8 +6,7 @@ namespace GuardVsMannequin.Player.Emotes
 {
     /// <summary>
     /// 감정 표현을 네트워크로 동기화한다.
-    /// 실제 마네킹은 1~6번 키 입력으로, 가짜 마네킹은 서버 AI가 <see cref="ServerPlay"/>로 재생한다.
-    /// 두 경우 모두 같은 RPC와 같은 뷰를 거치므로 겉보기로 구분할 수 없다.
+    /// 마네킹이 1~6번 키를 누르면 서버가 검증한 뒤 <see cref="ServerPlay"/>로 모든 클라이언트에 재생한다.
     /// </summary>
     public class EmoteController : NetworkBehaviour
     {
@@ -17,7 +16,7 @@ namespace GuardVsMannequin.Player.Emotes
         private float serverEmoteEndTime;
 
         /// <summary>
-        /// 뷰, 입력, 차단 조건 구현을 캐시한다. (가짜 마네킹은 입력과 차단 조건이 없다)
+        /// 뷰, 입력, 차단 조건 구현을 캐시한다.
         /// </summary>
         private void Awake()
         {
