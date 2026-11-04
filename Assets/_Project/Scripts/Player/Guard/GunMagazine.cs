@@ -3,7 +3,8 @@ using UnityEngine;
 namespace GuardVsMannequin.Player.Guard
 {
     /// <summary>
-    /// 총 탄창 규칙: 탄창을 다 쓰면 정해진 시간 동안 자동으로 장전한다. (시간 한 줄기 — 소유자 예측용과 서버 검증용을 따로 만든다)
+    /// 총 탄창 규칙: 탄창을 다 쓰면 자동으로, 한 발이라도 쓴 뒤 요청하면(R) 바로 장전한다.
+    /// 장전 시간은 채울 탄 수 × 발당 장전 시간이다. (시간 한 줄기 — 소유자 예측용과 서버 검증용을 따로 만든다)
     /// 서버용은 네트워크 지연으로 요청이 조금 일찍 도착할 수 있어 장전 끝을 <c>earlyTolerance</c>만큼 앞당겨 본다(<see cref="ToolCooldown"/>와 같은 방식).
     /// </summary>
     public sealed class GunMagazine
@@ -43,8 +44,9 @@ namespace GuardVsMannequin.Player.Guard
         /// <summary>
         /// 한 발을 쓴다. 장전 중이거나 탄이 없으면 false. 마지막 발이면 장전을 시작한다.
         /// </summary>
+        /// <param name="reloadTimePerRound">한 발을 채우는 데 걸리는 시간(초).</param>
         /// <param name="startedReload">이번 발로 장전을 시작했는지.</param>
-        public bool TryFire(int magazineSize, float reloadTime, float now, out bool startedReload)
+        public bool TryFire(int magazineSize, float reloadTimePerRound, float now, out bool startedReload)
         {
             startedReload = false;
             FinishReloadIfDue(now);
@@ -54,10 +56,38 @@ namespace GuardVsMannequin.Player.Guard
             roundsFired++;
             if (roundsFired >= magazineSize)
             {
-                reloadEndTime = now + reloadTime - Mathf.Min(earlyTolerance, reloadTime * 0.5f);
+                BeginReload(reloadTimePerRound, now);
                 startedReload = true;
             }
             return true;
+        }
+
+        /// <summary>
+        /// 수동 장전을 시작한다. 이미 장전 중이거나 쓴 탄이 없으면 false.
+        /// </summary>
+        /// <param name="reloadTimePerRound">한 발을 채우는 데 걸리는 시간(초).</param>
+        public bool TryStartReload(int magazineSize, float reloadTimePerRound, float now)
+        {
+            FinishReloadIfDue(now);
+            if (reloadEndTime >= 0f)
+                return false;
+
+            // 탄창 크기가 줄어 쓴 탄 수가 넘친 경우도 탄창 크기만큼만 채운다.
+            roundsFired = Mathf.Min(roundsFired, magazineSize);
+            if (roundsFired <= 0)
+                return false;
+
+            BeginReload(reloadTimePerRound, now);
+            return true;
+        }
+
+        /// <summary>
+        /// 쓴 탄 수 × 발당 시간만큼 장전을 시작한다.
+        /// </summary>
+        private void BeginReload(float reloadTimePerRound, float now)
+        {
+            float reloadTime = roundsFired * reloadTimePerRound;
+            reloadEndTime = now + reloadTime - Mathf.Min(earlyTolerance, reloadTime * 0.5f);
         }
 
         /// <summary>

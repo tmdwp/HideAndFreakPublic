@@ -71,68 +71,20 @@ namespace GuardVsMannequin.Editor
             public const string AirHandler = Root + "SM_Sub_AirHandler.fbx";
         }
 
-        /// <summary>Abandoned Asylum 팩.</summary>
-        internal static class Asylum
+        /// <summary>
+        /// 숲 맵 자연물 (Art/MapKit/Models/Nature, Source~/generate_trees.py · generate_bushes.py). 피벗은 밑동 중앙.
+        /// 덤불은 변신 크기 제한(3m) 안이라 변신 사물로 쓴다.
+        /// </summary>
+        internal static class Nature
         {
-            private const string Root = "Assets/Abandoned_Asylum/Prefabs/";
-            public const string SurgeryTable = Root + "SurgeryTable.prefab";
-            public const string SurgeryBed = Root + "SurgeryWheelBad.prefab";
-            public const string MedRack2 = Root + "MedRack_V2.prefab";
-            public const string MorgueBed = Root + "MorgueWheelBed.prefab";
-            public const string MetalCase = Root + "CaseMetallic.prefab";
-            public const string Monitor = Root + "PC_Monitor.prefab";
-            public const string OfficeTable = Root + "TableOffice.prefab";
-            public const string OfficeChair = Root + "ChairOffice.prefab";
-            public const string WhiteTable = Root + "TableWhite.prefab";
-            public const string WhiteChair = Root + "ChairWhite.prefab";
-            public const string KitchenTable = Root + "TableKitchen.prefab";
-            public const string Fridge = Root + "Fridge.prefab";
-            public const string Boiler = Root + "BigBoiler.prefab";
-            public const string Cupboard = Root + "Cupboard.prefab";
-            public const string WheelChair = Root + "WheelChair.prefab";
-            public const string Sink = Root + "Sink_V1.prefab";
-            public const string Toilet = Root + "Toilet.prefab";
-            public const string Bench = Root + "Bench.prefab";
-            public const string Sofa = Root + "Sofa.prefab";
-            public const string Elevator = Root + "Elevator.prefab";
-            public const string StockShelf = Root + "BigShelf_Stock.prefab";
+            private const string Root = "Assets/_Project/Art/MapKit/Models/Nature/";
+            public const string BushRound = Root + "SM_Bush_Round_A.fbx";
+            public const string BushWide = Root + "SM_Bush_Wide_A.fbx";
+            public const string BushTall = Root + "SM_Bush_Tall_A.fbx";
+            public const string BushBerry = Root + "SM_Bush_Berry_A.fbx";
         }
 
-        /// <summary>Horror Hospital 팩.</summary>
-        internal static class Hospital
-        {
-            private const string Root = "Assets/Horror Hospital Pack/Prefabs/";
-            public const string Stretcher = Root + "Stretcher.prefab";
-            public const string Trolley = Root + "Trolley.prefab";
-            public const string Bed = Root + "Bad.prefab";
-        }
-
-        /// <summary>RPG FPS 산업 팩.</summary>
-        internal static class Industrial
-        {
-            private const string Root = "Assets/RPG_FPS_game_assets_industrial/";
-            public const string ElectricBox1 = Root + "Other_props/Electric_box/Electric_box_v1/Electric_box_v1.prefab";
-            public const string ElectricBox2 = Root + "Other_props/Electric_box/Electric_box_v2/Electric_box_v2.prefab";
-            public const string Conditioner = Root + "Other_props/Conditioners/Conditioner_v1/Conditioner_v1.prefab";
-            public const string Barrel = Root + "Barrels/Barrel_v2/Barrel_v2_single.prefab";
-            public const string Barrel3 = Root + "Barrels/Barrel_v3/Barrel_v3_single.prefab";
-            public const string WoodBox = Root + "Boxes/Wooden_box_v1/Wooden_box_v1_LD1.prefab";
-            public const string BagsPallet = Root + "Other_props/Palets/Bags_on_pallet_v1/Bags_on_pallet_v1_1.prefab";
-        }
-
-        /// <summary>BK Alchemist House 팩.</summary>
-        internal static class Alchemy
-        {
-            private const string Root = "Assets/BK_AlchemistHouse/Prefabs/Items/";
-            public const string LabSetup1 = Root + "Lab/LabSetup01.prefab";
-            public const string LabSetup2 = Root + "Lab/LabSetup02.prefab";
-            public const string LabSetup3 = Root + "Lab/LabSetup03.prefab";
-            public const string Flask1 = Root + "Bottles/Flask01.prefab";
-            public const string Flask2 = Root + "Bottles/Flask03.prefab";
-            public const string JarBrain = Root + "Organic/JarBrain.prefab";
-            public const string JarBaby = Root + "Organic/JarBaby01.prefab";
-        }
-
+        /// <summary>Modern Vending Machine 팩. (환승역 맵이 쓴다)</summary>
         public const string VendingMachine = "Assets/Modern Vending Machine/Modern Vending Machine.prefab";
     }
 }

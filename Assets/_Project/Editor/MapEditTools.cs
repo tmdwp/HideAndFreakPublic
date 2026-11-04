@@ -69,10 +69,8 @@ namespace GuardVsMannequin.Editor
             GeneratorSpawnPoint[] existing = group.GetComponentsInChildren<GeneratorSpawnPoint>(true);
             int count = Mathf.Max(MapSceneBuilder.GeneratorCandidateCount, existing.Length);
 
-            MapCatalog.Entry entry = MapCatalog.FindByScenePath(scene.path);
-            bool indoor = entry != null && entry.indoor;
-
-            List<Vector3> floor = MapSceneBuilder.SampleFloorPoints(surface, indoor);
+            // 천장 조건 없이 걸을 수 있는 바닥 전체에서 고른다.
+            List<Vector3> floor = MapSceneBuilder.SampleFloorPoints(surface, indoor: false);
             List<Vector3> picked = MapSceneBuilder.PickSpread(floor, count, MapSceneBuilder.GeneratorEdgeClearance);
             surface.RemoveData();
             surface.navMeshData = null;

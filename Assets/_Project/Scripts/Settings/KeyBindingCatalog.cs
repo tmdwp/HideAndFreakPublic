@@ -40,6 +40,7 @@ namespace GuardVsMannequin.Settings
             new Entry("Primary", null, "key.primary"),
             new Entry("Secondary", null, "key.secondary"),
             new Entry("Flashlight", null, "key.flashlight"),
+            new Entry("Reload", null, "key.reload"),
             new Entry("Rotate", "negative", "key.rotateLeft"),
             new Entry("Rotate", "positive", "key.rotateRight"),
             new Entry("Emote1", null, "key.emote1"),

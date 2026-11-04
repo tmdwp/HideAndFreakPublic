@@ -52,6 +52,9 @@ namespace GuardVsMannequin.Editor
         public string author = "";
         [TextArea] public string description = "";
 
+        [Tooltip("모드를 받을 수 있는 주소. 모드가 없는 플레이어에게 안내한다. https://github.com/... 또는 Steam 창작마당 주소만 열 수 있다. (비워도 된다)")]
+        public string downloadUrl = "";
+
         [Tooltip("필요한 최소 게임 버전(로비 왼쪽 아래 v 뒤의 앞부분, 예: 0.6.0).")]
         public string minGameVersion = "0.6.0";
 

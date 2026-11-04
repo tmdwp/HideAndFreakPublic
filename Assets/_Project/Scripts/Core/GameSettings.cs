@@ -9,6 +9,7 @@ namespace GuardVsMannequin.Core
     [Serializable]
     public struct GameSettings
     {
+        /// <summary>호스트 맵 목록의 번호. 게스트마다 목록이 다르므로 게스트는 쓰지 않는다. (RoomState의 맵 정보를 쓴다)</summary>
         public int mapId;
 
         /// <summary>목표 0회 판에서 탐색 시작부터 헌트 타임까지의 가드 보호 시간(초).</summary>
@@ -23,10 +24,10 @@ namespace GuardVsMannequin.Core
         /// <summary>총 발사 간격(초). 탄창 안에서 한 발을 쏜 뒤 다음 발까지 기다리는 시간.</summary>
         public float gunCooldown;
 
-        /// <summary>총 탄창 크기(발). 다 쏘면 <see cref="gunReloadTime"/> 동안 장전한다.</summary>
+        /// <summary>총 탄창 크기(발). 다 쏘면 자동으로, 장전 키(R)를 누르면 한 발이라도 쓴 경우 바로 장전한다.</summary>
         public int gunMagazineSize;
 
-        /// <summary>총 장전 시간(초). 탄창을 다 쓰면 자동으로 장전한다.</summary>
+        /// <summary>총 발당 장전 시간(초). 장전 시간 = 채울 탄 수 × 이 값.</summary>
         public float gunReloadTime;
 
         /// <summary>가드 수류탄 쿨타임(초).</summary>
@@ -68,7 +69,7 @@ namespace GuardVsMannequin.Core
                 generatorDestroyTime = 10f,
                 gunCooldown = 1f,
                 gunMagazineSize = 4,
-                gunReloadTime = 5f,
+                gunReloadTime = 2f,
                 grenadeCooldown = 15f,
                 guardMaxHealth = 3,
                 mannequinMaxHealth = 1,

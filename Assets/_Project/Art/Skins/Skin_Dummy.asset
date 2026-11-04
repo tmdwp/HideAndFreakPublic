@@ -12,7 +12,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: dd23bf99f60e25f42829f5743ee426ed, type: 3}
   m_Name: Skin_Dummy
   m_EditorClassIdentifier: GuardVsMannequin.Runtime::GuardVsMannequin.Player.CharacterSkin
-  displayName: Dummy
+  displayName: Mannequin
   modelPrefab: {fileID: 3721765056273789593, guid: ba53515737dc8df43920c99226f7463b, type: 3}
   animatorController: {fileID: 9100000, guid: c687299a8047ddd428e2d372cfee0e4b, type: 2}
   yawOffset: 0
@@ -26,3 +26,11 @@ MonoBehaviour:
     handRotationOffset: {x: 0, y: 0, z: 0}
     gunScale: 1
     ikHandPosition: {x: 0.18, y: -0.15, z: 0.45}
+    holdPivot: {x: 0.05, y: 1.4, z: 0.05}
+    holdOffset: {x: 0.1, y: -0.1, z: 0.4}
+    holdPitchLimit: 60
+    rightElbowHint: {x: 0.35, y: -0.35, z: -0.1}
+    leftElbowHint: {x: -0.3, y: -0.4, z: 0.15}
+    lockHandRotation: 1
+    rightHandRotationOffset: {x: 0, y: 0, z: 0}
+    leftHandRotationOffset: {x: 0, y: 0, z: 0}

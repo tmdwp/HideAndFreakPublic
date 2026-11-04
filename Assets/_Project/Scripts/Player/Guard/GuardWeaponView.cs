@@ -6,9 +6,11 @@ namespace GuardVsMannequin.Player.Guard
 {
     /// <summary>
     /// 가드의 총 외형을 관리한다.
-    /// - 소유자: 카메라 앞의 1인칭 총을 보여준다. (손에 든 3인칭 총은 그림자만)
+    /// - 소유자: 기본은 1인칭에서도 손에 든 3인칭 총을 보여준다(<c>useHandGunInFirstPerson</c>, 팔다리만 보이는 1인칭 몸과 함께).
+    ///   끄면 예전처럼 카메라 앞의 1인칭 총을 보여주고 손에 든 총은 그림자만 남긴다.
     /// - 다른 플레이어: 외형의 손에 3인칭 총을 들려 조준 방향으로 향하게 한다.
     /// 사격 연출은 <see cref="Muzzle"/>(보는 사람 기준 총구)에서 시작한다.
+    /// 1인칭 총과 양손 3인칭 총은 몸 흔들림(<see cref="CharacterSway"/>)을 따라 같이 출렁인다. (한 손 총은 손 뼈를 따라가므로 이미 흔들린다)
     /// 총 모델 프리팹은 "캐릭터·무기 에셋 생성" 도구가 총구가 +Z를 향하고 Muzzle 자식을 갖도록 만든다.
     ///
     /// 손잡이 지점(<see cref="GunGripSpots"/>)
@@ -25,8 +27,11 @@ namespace GuardVsMannequin.Player.Guard
     {
         private const string MuzzleName = "Muzzle";
 
-        [Tooltip("카메라 피벗 아래의 1인칭 총. 소유자에게만 보인다.")]
+        [Tooltip("카메라 피벗 아래의 1인칭 총. 소유자에게만 보인다. (손에 든 총을 쓰면 숨긴다)")]
         [SerializeField] private Transform firstPersonGun;
+
+        [Tooltip("켜면 소유자 1인칭에서도 카메라 앞 총 대신 손에 든 3인칭 총을 보여준다. (1인칭 몸 표시 FirstPersonBodyView와 함께 쓴다)")]
+        [SerializeField] private bool useHandGunInFirstPerson = true;
 
         [Tooltip("다른 플레이어에게 보일 3인칭 총 프리팹. (Muzzle 자식 필요, 손잡이는 Right Hand / Left Hand 자식)")]
         [SerializeField] private GameObject thirdPersonGunPrefab;
@@ -39,11 +44,15 @@ namespace GuardVsMannequin.Player.Guard
         [SerializeField] private Vector3 firstPersonRotation = Vector3.zero;
         [SerializeField] private float firstPersonScale = 1f;
 
+        [Tooltip("몸 흔들림(CharacterSway)을 1인칭 총에 더하는 배율. 카메라가 흔들리는 만큼은 자동으로 따라가고, 그 위에 화면 안에서 보이는 흔들림을 이만큼 더한다. 0이면 화면 안에서 고정.")]
+        [SerializeField] private float firstPersonSwayScale = 1f;
+
         [Header("3인칭 총 위치 (외형이 없을 때만 사용)")]
         [Tooltip("손 위치는 외형마다 다르므로 보통 외형 에셋(Skin_*.asset)의 Weapon Grip을 쓴다. 외형이 없을 때만 이 값을 쓴다.")]
         [SerializeField] private WeaponGrip fallbackGrip = new WeaponGrip();
 
         private CharacterSkinView skinView;
+        private CharacterSway sway;
         private Transform firstPersonMuzzle;
         private Transform thirdPersonGun;
         private Transform thirdPersonMuzzle;
@@ -55,8 +64,11 @@ namespace GuardVsMannequin.Player.Guard
         // 양손 총을 이번 프레임 IK 직전에 이미 놓았는지. (애니메이터가 꺼져 IK가 불리지 않은 프레임은 LateUpdate에서 놓는다)
         private int twoHandedPlacedFrame = -1;
 
-        /// <summary>보는 사람 기준 총구. (소유자는 1인칭 총, 다른 플레이어는 3인칭 총)</summary>
-        public Transform Muzzle => IsOwner || thirdPersonMuzzle == null ? firstPersonMuzzle : thirdPersonMuzzle;
+        // 소유자 화면에 카메라 앞 1인칭 총을 보여주는 중인지. (아니면 손에 든 총이 보인다)
+        private bool isFirstPersonGunShown;
+
+        /// <summary>보는 사람 기준 총구. (소유자가 카메라 앞 총을 보는 중이면 그 총, 아니면 손에 든 총)</summary>
+        public Transform Muzzle => isFirstPersonGunShown || thirdPersonMuzzle == null ? firstPersonMuzzle : thirdPersonMuzzle;
 
         /// <summary>양손으로 잡는 총인지. (3인칭 총에 Left Hand 지점이 있고 외형이 조준 IK를 쓸 때)</summary>
         private bool IsTwoHanded => thirdPersonGun != null && aimPivot != null && leftGripPoint.HasValue && hasAimIK;
@@ -79,6 +91,7 @@ namespace GuardVsMannequin.Player.Guard
                 leftGripPoint = GunGripSpots.FindLocalPoint(thirdPersonGun, GunGripSpots.LeftHand);
             }
 
+            sway = GetComponent<CharacterSway>();
             skinView = GetComponent<CharacterSkinView>();
             if (skinView != null)
             {
@@ -101,37 +114,41 @@ namespace GuardVsMannequin.Player.Guard
         }
 
         /// <summary>
-        /// 소유자에게는 1인칭 총만, 다른 플레이어에게는 3인칭 총만 보이게 한다.
+        /// 소유자는 1인칭으로 시작하므로 그에 맞는 총을 보여주고, 다른 플레이어에게는 손에 든 3인칭 총만 보이게 한다.
         /// </summary>
         public override void OnStartClient()
         {
             base.OnStartClient();
-            if (firstPersonGun != null)
-                firstPersonGun.gameObject.SetActive(IsOwner);
-
-            if (IsOwner && thirdPersonGun != null)
-            {
-                foreach (Renderer gunRenderer in thirdPersonGun.GetComponentsInChildren<Renderer>(true))
-                    gunRenderer.shadowCastingMode = ShadowCastingMode.ShadowsOnly;
-            }
+            if (IsOwner)
+                ApplyOwnerGunVisibility(true);
+            else if (firstPersonGun != null)
+                firstPersonGun.gameObject.SetActive(false);
         }
 
         /// <summary>
-        /// 소유자 시점이 바뀌면 1인칭 총과 손에 든 3인칭 총 중 하나만 보이게 한다. (테스트 방 시점 전환)
+        /// 소유자 시점이 바뀌면 그 시점에 맞는 총을 보여준다. (테스트 방 시점 전환)
         /// </summary>
         public void OnPerspectiveChanged(bool firstPerson)
         {
-            if (!IsOwner)
+            if (IsOwner)
+                ApplyOwnerGunVisibility(firstPerson);
+        }
+
+        /// <summary>
+        /// 소유자 화면의 총: 1인칭이고 손에 든 총을 쓰지 않으면 카메라 앞 총(손에 든 총은 그림자만),
+        /// 그 밖에는(손에 든 총 사용 또는 3인칭) 손에 든 총을 보여준다.
+        /// </summary>
+        private void ApplyOwnerGunVisibility(bool firstPerson)
+        {
+            isFirstPersonGunShown = firstPerson && (!useHandGunInFirstPerson || thirdPersonGun == null);
+            if (firstPersonGun != null)
+                firstPersonGun.gameObject.SetActive(isFirstPersonGunShown);
+            if (thirdPersonGun == null)
                 return;
 
-            if (firstPersonGun != null)
-                firstPersonGun.gameObject.SetActive(firstPerson);
-            if (thirdPersonGun != null)
-            {
-                ShadowCastingMode mode = firstPerson ? ShadowCastingMode.ShadowsOnly : ShadowCastingMode.On;
-                foreach (Renderer gunRenderer in thirdPersonGun.GetComponentsInChildren<Renderer>(true))
-                    gunRenderer.shadowCastingMode = mode;
-            }
+            ShadowCastingMode mode = isFirstPersonGunShown ? ShadowCastingMode.ShadowsOnly : ShadowCastingMode.On;
+            foreach (Renderer gunRenderer in thirdPersonGun.GetComponentsInChildren<Renderer>(true))
+                gunRenderer.shadowCastingMode = mode;
         }
 
         /// <summary>
@@ -170,7 +187,12 @@ namespace GuardVsMannequin.Player.Guard
 
             if (firstPersonGun != null)
             {
-                firstPersonGun.localPosition = firstPersonPosition;
+                // 카메라는 그릴 때만 흔들림 × 카메라 배율만큼 옮겨진다. 총이 같은 양만 움직이면 화면에선 멈춰 보이므로
+                // 카메라 배율만큼 따라간 뒤 firstPersonSwayScale만큼 더 움직여 화면 안에서도 출렁이게 한다.
+                // (흔들림은 월드 기준이라 총의 부모 기준으로 바꿔 더한다)
+                Vector3 swayLocal = firstPersonGun.parent != null ? firstPersonGun.parent.InverseTransformVector(BodySway) : BodySway;
+                float cameraScale = sway != null ? sway.CameraSwayScale : 0f;
+                firstPersonGun.localPosition = firstPersonPosition + swayLocal * (cameraScale + firstPersonSwayScale);
                 firstPersonGun.localRotation = Quaternion.Euler(firstPersonRotation);
                 firstPersonGun.localScale = Vector3.one * firstPersonScale;
             }
@@ -221,12 +243,16 @@ namespace GuardVsMannequin.Player.Guard
 
         /// <summary>
         /// 양손 총의 회전 중심(월드)과 좌우 시선 방향의 회전. 좌우는 조준 방향을 따르고 상하는 뺀다.
+        /// 몸 흔들림만큼 함께 움직여 총과 두 손이 몸과 같이 출렁인다.
         /// </summary>
         private Vector3 HoldPivot(WeaponGrip grip, out Quaternion bodyYaw)
         {
             bodyYaw = Quaternion.Euler(0f, aimPivot.eulerAngles.y, 0f);
-            return transform.position + bodyYaw * grip.holdPivot;
+            return transform.position + bodyYaw * grip.holdPivot + BodySway;
         }
+
+        /// <summary>이번 프레임 몸 흔들림(월드). 흔들림 구성 요소가 없으면 0.</summary>
+        private Vector3 BodySway => sway != null ? sway.WorldOffset : Vector3.zero;
 
         /// <summary>
         /// 총의 회전·크기는 그대로 두고, 총 루트 기준 지점이 목표 위치에 오도록 총을 옮긴다.

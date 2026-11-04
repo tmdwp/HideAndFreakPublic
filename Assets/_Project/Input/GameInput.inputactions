@@ -106,6 +106,15 @@
                                          "initialStateCheck":  false
                                      },
                                      {
+                                         "name":  "Reload",
+                                         "type":  "Button",
+                                         "id":  "c4e8a1d2-7b3f-4e5a-9c6d-2f1b8e7a3d90",
+                                         "expectedControlType":  "Button",
+                                         "processors":  "",
+                                         "interactions":  "",
+                                         "initialStateCheck":  false
+                                     },
+                                     {
                                          "name":  "Rotate",
                                          "type":  "Value",
                                          "id":  "3678534b-0906-4920-bc2d-5f7a655ff0cb",
@@ -323,6 +332,17 @@
                                           "processors":  "",
                                           "groups":  "Keyboard\u0026Mouse",
                                           "action":  "Flashlight",
+                                          "isComposite":  false,
+                                          "isPartOfComposite":  false
+                                      },
+                                      {
+                                          "name":  "",
+                                          "id":  "5a9d3e7c-1f4b-4c2a-8e6d-9b0f2a4c7e13",
+                                          "path":  "<Keyboard>/r",
+                                          "interactions":  "",
+                                          "processors":  "",
+                                          "groups":  "Keyboard&Mouse",
+                                          "action":  "Reload",
                                           "isComposite":  false,
                                           "isPartOfComposite":  false
                                       },

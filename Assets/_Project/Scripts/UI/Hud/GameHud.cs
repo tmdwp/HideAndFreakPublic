@@ -13,8 +13,12 @@ namespace GuardVsMannequin.UI
     /// - <see cref="HudTopPanel"/>(상단 중앙): 단계 | 남은 시간, 남은 마네킹 / 전체 마네킹
     /// - <see cref="HudControlsPanel"/>(중앙 좌측): 조작 키 안내
     /// - <see cref="HudObjectivePanel"/>(중앙 우측): 역할별 목표와 남은 수
-    /// - <see cref="HudStaminaBar"/>(하단 중앙): 스태미나 막대
-    /// - <see cref="HudBottomPanel"/>(하단): 내 체력, 도구 쿨타임, 관전 정보
+    /// - <see cref="HudHealthBar"/>·<see cref="HudStaminaBar"/>(하단 중앙): 체력 게이지와 그 아래 스태미나 막대
+    /// - <see cref="HudRevealIndicator"/>(체력 바 위): 수류탄에 맞아 위치가 드러난 동안의 아이콘
+    /// - <see cref="HudSwitchToolIndicator"/>(체력 바 옆): 손전등 단축키
+    /// - <see cref="HudAmmoDisplay"/>·<see cref="HudCooldownRing"/>(조준점 둘레): 총 탄·장전 게이지, 구울 공격 쿨타임 고리
+    /// - <see cref="HudCooldownBars"/>(조준점 왼쪽): 수류탄·변신 쿨타임 세로 바
+    /// - <see cref="HudBottomPanel"/>(하단): 사망·미참가 시 관전 정보
     /// - <see cref="HudResultPanel"/>: 결과 화면
     /// 다른 플레이어의 체력과 킬 로그는 기획에 따라 표시하지 않는다.
     /// </summary>

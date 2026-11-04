@@ -26,6 +26,18 @@ namespace GuardVsMannequin.Audio
         FlashlightClick = 7,
 
         /// <summary>가드 수류탄 폭발.</summary>
-        GrenadeExplosion = 8
+        GrenadeExplosion = 8,
+
+        /// <summary>사냥 시간 구울의 숨소리·으르렁 (구울 주변에서 계속 반복, 움직일수록 커짐).</summary>
+        GhoulBreath = 9,
+
+        /// <summary>구울이 손발로 바닥을 짚는 소리.</summary>
+        GhoulStep = 10,
+
+        /// <summary>구울 비명 (사냥 시간 시작).</summary>
+        GhoulShriek = 11,
+
+        /// <summary>가드 본인에게만 들리는 심장 소리 (가까운 구울이 보일 때, 2D 반복).</summary>
+        GuardHeartbeat = 12
     }
 }

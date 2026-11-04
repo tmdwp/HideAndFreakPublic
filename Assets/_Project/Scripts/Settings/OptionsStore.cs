@@ -45,6 +45,8 @@ namespace GuardVsMannequin.Settings
             options.bgmVolume = Mathf.Clamp01(options.bgmVolume);
             options.sfxVolume = Mathf.Clamp01(options.sfxVolume);
             options.screenMode = DisplaySettings.ClampMode(options.screenMode);
+            options.frameLimit = FrameRateSettings.ClampMode(options.frameLimit);
+            options.cameraSway = CameraSwaySettings.ClampMode(options.cameraSway);
 
             bool displayChanged = !current.HasSameDisplay(options);
             current = options;
@@ -52,6 +54,7 @@ namespace GuardVsMannequin.Settings
             PlayerPrefs.Save();
 
             ApplyMasterVolume();
+            FrameRateSettings.Apply(current);
             // 해상도 변경은 화면이 깜빡이므로 화면 설정이 바뀌었을 때만 적용한다.
             if (displayChanged)
                 DisplaySettings.Apply(current);
@@ -116,6 +119,8 @@ namespace GuardVsMannequin.Settings
 
             bindingOverridesJson = PlayerPrefs.GetString(BindingsKey, string.Empty);
             ApplyMasterVolume();
+            // 저장한 적 없는 예전 설정은 frameLimit이 0이라 수직 동기화가 기본으로 켜진다.
+            FrameRateSettings.Apply(current);
 
             // 플레이어가 화면 크기를 고른 적이 있을 때만 시작 시 적용한다. (고른 적 없으면 Unity 기본 화면 유지)
             if (current.screenWidth > 0 && current.screenHeight > 0)

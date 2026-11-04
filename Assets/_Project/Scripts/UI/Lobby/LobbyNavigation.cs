@@ -13,7 +13,8 @@ namespace GuardVsMannequin.UI
         SteamJoin,
         DirectJoin,
         Mods,
-        DirectCreate
+        DirectCreate,
+        Browse
     }
 
     /// <summary>

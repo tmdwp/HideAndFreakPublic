@@ -35,15 +35,17 @@ namespace GuardVsMannequin.Network
         /// </summary>
         event System.Action<string> PasswordRequired;
 
-        /// <summary>
-        /// 모드가 달라 입장이 거부된 기록을 꺼낸다. 꺼내면 지워진다. (로비 씬을 다시 불러와도 남도록 상태로 보관)
-        /// </summary>
-        /// <param name="hostMods">호스트가 켠 모드 목록 설명. (없으면 빈 문자열)</param>
-        /// <returns>보여줄 거부 기록이 있었는지 여부.</returns>
-        bool TryTakeModRejection(out string hostMods);
+        /// <summary>현재 방이 공개방인지 여부. (Steam 방이 아니면 false)</summary>
+        bool IsPublicRoom { get; }
 
-        /// <summary>Steam 방을 만든다. 암호를 비우면 암호 없는 방이 된다.</summary>
-        void HostSteamRoom(string password);
+        /// <summary>공개방 찾기. Steam을 쓸 수 없으면 null.</summary>
+        IRoomBrowser RoomBrowser { get; }
+
+        /// <summary>Steam 방을 만든다.</summary>
+        void HostSteamRoom(SteamRoomOptions options);
+
+        /// <summary>고른 맵과 최대 인원을 공개방 목록에 알린다. Steam 방이 아니면 아무것도 하지 않는다. (호스트 전용)</summary>
+        void UpdateRoomListing(string mapId, int maxPlayers);
 
         /// <summary>방 코드로 Steam 방에 참가한다. 암호 없는 방이면 암호는 비워도 된다.</summary>
         void JoinSteamRoom(string roomCode, string password);
@@ -67,6 +69,10 @@ namespace GuardVsMannequin.Network
 
         /// <summary>방에서 나간다. 호스트가 나가면 방이 닫힌다.</summary>
         void Leave();
+
+        /// <summary>방에서 나가고 로비에 안내를 남긴다. (문제가 생겨 더 있을 수 없을 때)</summary>
+        /// <param name="noticeKey">안내 문구 key(strings.csv).</param>
+        void LeaveWithNotice(string noticeKey);
 
         /// <summary>안내 메시지를 지운다.</summary>
         void ClearNotice();

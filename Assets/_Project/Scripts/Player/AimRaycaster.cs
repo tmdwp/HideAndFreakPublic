@@ -86,6 +86,31 @@ namespace GuardVsMannequin.Player
         }
 
         /// <summary>
+        /// 피해 판정용 광선. <see cref="TryRaycast"/>와 같지만 캐릭터의 판정 캡슐(<see cref="SkinHitboxes"/>, 트리거)을 맞히고,
+        /// 판정 캡슐이 대신하고 있는 이동 캡슐과 그 밖의 트리거는 건너뛴다. (총)
+        /// </summary>
+        public static bool TryRaycastHittable(Ray ray, float maxDistance, Transform ignoreRoot, out RaycastHit hit)
+        {
+            int count = Physics.RaycastNonAlloc(ray, hitBuffer, maxDistance, Physics.DefaultRaycastLayers, QueryTriggerInteraction.Collide);
+            Array.Sort(hitBuffer, 0, count, HitDistanceComparer.Instance);
+
+            for (int i = 0; i < count; i++)
+            {
+                Collider target = hitBuffer[i].collider;
+                if (ignoreRoot != null && hitBuffer[i].transform.IsChildOf(ignoreRoot))
+                    continue;
+                if (target.isTrigger ? !SkinHitboxes.IsHitbox(target) : SkinHitboxes.IsReplacedCapsule(target))
+                    continue;
+
+                hit = hitBuffer[i];
+                return true;
+            }
+
+            hit = default;
+            return false;
+        }
+
+        /// <summary>
         /// 충돌 거리 오름차순 비교기.
         /// </summary>
         private sealed class HitDistanceComparer : System.Collections.Generic.IComparer<RaycastHit>

@@ -20,6 +20,7 @@ UntransformCooldown,5,변신 해제 후 다시 변신할 수 있을 때까지 �
 InteractRange,2.2,전원 장치와 상호작용할 수 있는 거리(m)
 CoopDestroySpeedBase,1.4,여럿이 함께 파괴할 때 속도 증가 밑값 (인원이 늘수록 거듭제곱으로 빨라짐)
 MannequinAttackCooldown,1,사냥 시간 공격 쿨타임(초)
+MannequinAttackMoveLock,0.9,사냥 시간 공격을 시작한 뒤 이동할 수 없는 시간(초)
 MannequinAttackRadius,0.35,공격 판정 구체 반경(m)
 DisguiseNoiseIntervalMin,8,변신 중 소음 간격 최소(초)
 DisguiseNoiseIntervalMax,14,변신 중 소음 간격 최대(초)
@@ -72,6 +73,7 @@ GrenadeMaxFlightTime,3,최대 비행 시간(초). 넘으면 그 자리에서 폭
 FlashlightRange,25,손전등 범위(m)
 FlashlightToggleCooldown,0.2,손전등을 다시 켜고 끌 수 있을 때까지 시간(초)
 FlashlightAngle,55,손전등 퍼짐 각도(도)
+GhoulDreadRange,8,"이 거리(m) 안의 구울이 화면에 보이고 가려지지 않으면 가드 화면에 노이즈가 끼고 심장 소리가 남 (가까울수록 강함)"
 
 # 진행
 MatchStartDelay,3,판 시작 준비(카운트다운) 시간(초). 이 동안은 이동 불가

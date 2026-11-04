@@ -26,6 +26,9 @@ namespace GuardVsMannequin.UI
         /// <summary>로컬 아바타의 도구 목록.</summary>
         public IReadOnlyList<ITool> Tools { get; private set; } = NoTools;
 
+        /// <summary>로컬 아바타의 탄창 있는 도구(가드 총). 없으면 null.</summary>
+        public IAmmoSource Ammo { get; private set; }
+
         /// <summary>이번 판의 로컬 역할. 사망 후 안내·결과에 쓰려고 아바타가 사라져도 유지한다.</summary>
         public PlayerRole LastRole { get; private set; } = PlayerRole.None;
 
@@ -65,6 +68,7 @@ namespace GuardVsMannequin.UI
             Stamina = identity.GetComponent<IStaminaSource>();
             StatusEffects = identity.GetComponent<IStatusEffects>();
             Tools = identity.GetComponents<ITool>();
+            Ammo = identity.GetComponent<IAmmoSource>();
             LastRole = identity.Role;
         }
 
@@ -81,6 +85,7 @@ namespace GuardVsMannequin.UI
             Stamina = null;
             StatusEffects = null;
             Tools = NoTools;
+            Ammo = null;
         }
     }
 }

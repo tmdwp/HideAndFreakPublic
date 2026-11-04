@@ -14,6 +14,8 @@ namespace GuardVsMannequin.UI
         [SerializeField] private Text settingsHintText;
         [SerializeField] private SettingRowView[] settingRows;
 
+        private RefreshTimer refreshTimer;
+
         /// <summary>
         /// 룸에서 숨기는 항목의 줄을 끄고(이전에 만든 프리팹 대비), 남은 줄의 조정 동작을 연결한다.
         /// </summary>
@@ -31,12 +33,12 @@ namespace GuardVsMannequin.UI
         }
 
         /// <summary>
-        /// 설정 값을 표시하고 호스트에게만 조정 버튼을 켠다.
+        /// 설정 값을 표시하고 호스트에게만 조정 버튼을 켠다. (값 문구를 새로 만들므로 일정 간격으로만 갱신)
         /// </summary>
         private void Update()
         {
             RoomState room = RoomState.Instance;
-            if (room == null)
+            if (room == null || !refreshTimer.Tick())
                 return;
 
             bool isHost = RoomClient.IsHost;

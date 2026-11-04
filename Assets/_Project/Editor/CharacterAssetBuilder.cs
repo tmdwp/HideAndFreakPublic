@@ -9,11 +9,12 @@ using UnityEngine;
 namespace GuardVsMannequin.Editor
 {
     /// <summary>
-    /// 외부 에셋으로 캐릭터 외형과 무기 모델을 만든다.
-    /// - 마네킹 외형 3종: 더미(Kevin Iglesias), 슬라임(Kawaii Slimes), 유령(Monster Ghosts)
-    /// - 가드 외형: SWAT(Low Poly Character Series 1) + 더미 애니메이션(휴머노이드 리타깃)
-    /// - 사냥 시간 마네킹 외형: Ghoul(Art/Skins/Ghoul.fbx, 준비는 <see cref="GhoulSkinBuilder"/>)
-    /// - 가드 소총(SWAT 팩 Recon_M): 총구가 +Z를 향하고 Muzzle 자식을 가진 모델
+    /// 캐릭터 외형과 무기 모델을 만든다.
+    /// - 마네킹 외형: Blender로 만든 로우폴리 매장 마네킹(Art/Characters/Models/SK_Mannequin.fbx, Humanoid)
+    ///   + Kevin Iglesias 이동 애니메이션 (파일 이름 Skin_Dummy·Model_Dummy는 기존 프리팹 참조를 지키려고 그대로 둔다)
+    /// - 가드 외형: Blender로 만든 로우폴리 시설 경비원(SK_Guard.fbx, Humanoid) + Kevin 이동 애니메이션, 조준 IK
+    /// - 사냥 시간 마네킹 외형: Blender로 만든 로우폴리 구울(SK_Ghoul.fbx, Generic + 자체 애니메이션, 준비는 <see cref="GhoulSkinBuilder"/>)
+    /// - 가드 소총: Blender로 만든 로우폴리 소총(SM_GuardRifle.fbx, 총구 +Z, Muzzle·Right Hand·Left Hand 표시 포함)
     ///   (Art/Weapons/Weapon_View.prefab에 덮어써 Guard 프리팹의 참조를 유지한다)
     /// 모델은 스크립트·충돌체를 제거하고, 발을 원점에 맞추고, 정해진 키로 크기를 맞춰 저장한다.
     /// 머티리얼은 URP Lit으로 변환한다. 다시 실행하면 같은 경로에 덮어쓴다.
@@ -24,8 +25,6 @@ namespace GuardVsMannequin.Editor
         private const string WeaponFolder = "Assets/_Project/Art/Weapons";
 
         public const string DummySkinPath = SkinFolder + "/Skin_Dummy.asset";
-        public const string SlimeSkinPath = SkinFolder + "/Skin_Slime.asset";
-        public const string GhostSkinPath = SkinFolder + "/Skin_Ghost.asset";
         public const string GuardSkinPath = SkinFolder + "/Skin_Guard.asset";
         public const string GhoulSkinPath = SkinFolder + "/Skin_Ghoul.asset";
         public const string WeaponViewPath = WeaponFolder + "/Weapon_View.prefab";
@@ -36,21 +35,16 @@ namespace GuardVsMannequin.Editor
 
         private const string HumanoidControllerPath = SkinFolder + "/AC_HumanoidLocomotion.controller";
         private const string KevinRoot = "Assets/Kevin Iglesias/Human Animations";
-        private const string DummySource = KevinRoot + "/Unity Demo Scenes/Human Basic Motions/Prefabs/Human_BasicMotionsDummy_M.prefab";
+        private const string MannequinSource = LowPolyCharacterCheck.ModelFolder + "/SK_Mannequin.fbx";
         private const string KevinMaleAnimations = KevinRoot + "/Animations/Male";
-        private const string SlimeSource = "Assets/Kawaii Slimes/Prefabs/Slime_01.prefab";
-        private const string SlimeController = "Assets/Kawaii Slimes/Animator/Slime.controller";
-        private const string GhostSource = "Assets/Monster_Ghosts_FREE/Prefabs/Little_Ghost_ZOMbi (1).prefab";
-        private const string GhostController = "Assets/Monster_Ghosts_FREE/Animator/Ghost_ZOMbi.controller";
-        private const string GuardSource = "Assets/Low Poly Character Series 1_SWAT/Prefabs/Characters/Character_SWAT_A_3.prefab";
-        private const string GunSource = "Assets/Low Poly Character Series 1_SWAT/Prefabs/Weapons/Recon_M.prefab";
+        private const string GuardSource = LowPolyCharacterCheck.ModelFolder + "/SK_Guard.fbx";
+        private const string GunSource = LowPolyCharacterCheck.ModelFolder + "/SM_GuardRifle.fbx";
+        private const string MuzzleName = "Muzzle";
 
         private const float HumanHeight = 1.8f;
 
         // 사냥 시간 Ghoul은 위압감을 주도록 사람보다 크게 만든다. (기본 자세 경계 높이 기준)
         private const float GhoulHeight = 2.4f;
-        // 소총(Recon_M) 전체 길이(m). 권총으로 바꾸면 0.3 정도로 줄인다.
-        private const float GunLength = 0.9f;
 
         // 걷기/달리기 블렌드 트리의 기준 속도(m/s)
         private const float WalkSpeed = 1.6f;
@@ -66,34 +60,105 @@ namespace GuardVsMannequin.Editor
             Directory.CreateDirectory(WeaponFolder);
             AssetDatabase.Refresh();
 
-            AnimatorController humanoid = CreateHumanoidLocomotionController(HumanoidControllerPath);
-
-            // 마네킹(더미)은 이동 + 감정 표현·상호작용 컨트롤러를 쓴다. (가드와 따로)
-            AnimatorController mannequin = MannequinAnimatorBuilder.CreateController();
-
-            CreateSkin("Dummy", DummySource, mannequin, HumanHeight, useAimIK: false, DummySkinPath);
-            CreateSkin("Slime", SlimeSource, AssetDatabase.LoadAssetAtPath<RuntimeAnimatorController>(SlimeController), 1.3f, false, SlimeSkinPath);
-            CreateSkin("Ghost", GhostSource, AssetDatabase.LoadAssetAtPath<RuntimeAnimatorController>(GhostController), 1.6f, false, GhostSkinPath);
-            // SWAT 프리팹은 꺼 둔 교체용 장비(방패, 충격봉 등)를 함께 갖고 있어 지운 뒤 크기를 맞춘다.
-            CreateSkin("Guard", GuardSource, humanoid, HumanHeight, useAimIK: true, GuardSkinPath, stripInactiveParts: true);
-
-            // 사냥 시간 마네킹 외형(Generic 리그, 전용 애니메이터)
-            AnimatorController ghoul = GhoulSkinBuilder.Prepare();
-            if (ghoul != null)
-            {
-                CharacterSkin ghoulSkin = CreateSkin("Ghoul", GhoulSkinBuilder.SourcePath, ghoul, GhoulHeight, useAimIK: false, GhoulSkinPath);
-
-                // 맞는 순간은 처음 한 번만 정한다. (이후 에셋에서 조정한 값 유지)
-                if (ghoulSkin != null && ghoulSkin.attackHitDelay <= 0f)
-                {
-                    ghoulSkin.attackHitDelay = GhoulSkinBuilder.DefaultAttackHitDelay();
-                    EditorUtility.SetDirty(ghoulSkin);
-                }
-            }
-            CreateGun();
+            BuildMannequinSkin();
+            BuildGuardSkin();
+            BuildGhoulSkin();
 
             AssetDatabase.SaveAssets();
             Debug.Log("[CharacterAssetBuilder] 캐릭터 외형과 무기 모델 생성 완료: " + SkinFolder);
+        }
+
+        /// <summary>
+        /// 사냥 시간 구울 외형만 다시 만든다. (마네킹·가드·총은 건드리지 않음)
+        /// </summary>
+        [MenuItem(EditorMenus.Root + "캐릭터 생성/구울 외형만 다시 만들기")]
+        private static void BuildGhoulSkinFromMenu()
+        {
+            Directory.CreateDirectory(SkinFolder);
+            BuildGhoulSkin();
+            AssetDatabase.SaveAssets();
+        }
+
+        /// <summary>
+        /// 사냥 시간 마네킹 외형(Generic 리그, 전용 애니메이터)을 만든다.
+        /// 맞는 순간(attackHitDelay)은 Blender 공격 클립의 맞는 프레임으로 정해지므로 다시 만들 때마다 맞춘다.
+        /// </summary>
+        private static void BuildGhoulSkin()
+        {
+            AnimatorController ghoul = GhoulSkinBuilder.Prepare();
+            if (ghoul == null)
+                return;
+
+            CharacterSkin ghoulSkin = CreateSkin("Ghoul", GhoulSkinBuilder.SourcePath, ghoul, GhoulHeight, useAimIK: false, GhoulSkinPath);
+            if (ghoulSkin == null)
+                return;
+            ghoulSkin.attackHitDelay = GhoulSkinBuilder.DefaultAttackHitDelay();
+            EditorUtility.SetDirty(ghoulSkin);
+            Debug.Log($"[CharacterAssetBuilder] 구울 외형 생성: {GhoulSkinPath} (맞는 순간 {ghoulSkin.attackHitDelay:F3}초)");
+        }
+
+        /// <summary>
+        /// 마네킹 외형만 다시 만든다. (가드·구울·총은 건드리지 않음)
+        /// </summary>
+        [MenuItem(EditorMenus.Root + "캐릭터 생성/마네킹 외형만 다시 만들기")]
+        private static void BuildMannequinSkinFromMenu()
+        {
+            Directory.CreateDirectory(SkinFolder);
+            BuildMannequinSkin();
+            AssetDatabase.SaveAssets();
+        }
+
+        /// <summary>
+        /// 로우폴리 마네킹 모델을 Humanoid로 임포트·검사하고, 이동 + 감정 표현·상호작용 컨트롤러(가드와 따로)로 외형을 만든다.
+        /// </summary>
+        private static void BuildMannequinSkin()
+        {
+            var report = new System.Collections.Generic.List<string>();
+            if (!LowPolyCharacterCheck.Check(MannequinSource, report))
+            {
+                Debug.LogError($"[CharacterAssetBuilder] 마네킹 모델 검사 실패: {MannequinSource}\n{string.Join("\n", report)}");
+                return;
+            }
+
+            AnimatorController mannequin = MannequinAnimatorBuilder.CreateController();
+            CharacterSkin skin = CreateSkin("Dummy", MannequinSource, mannequin, HumanHeight, useAimIK: false, DummySkinPath);
+            if (skin != null)
+            {
+                skin.displayName = "Mannequin";
+                EditorUtility.SetDirty(skin);
+            }
+            Debug.Log($"[CharacterAssetBuilder] 마네킹 외형 생성: {DummySkinPath}\n{string.Join("\n", report)}");
+        }
+
+        /// <summary>
+        /// 가드 외형과 총만 다시 만든다. (마네킹·구울은 건드리지 않음)
+        /// </summary>
+        [MenuItem(EditorMenus.Root + "캐릭터 생성/가드 외형·총만 다시 만들기")]
+        private static void BuildGuardSkinFromMenu()
+        {
+            Directory.CreateDirectory(SkinFolder);
+            Directory.CreateDirectory(WeaponFolder);
+            BuildGuardSkin();
+            AssetDatabase.SaveAssets();
+        }
+
+        /// <summary>
+        /// 로우폴리 경비원 모델을 Humanoid로 임포트·검사하고, 공용 이동 컨트롤러 + 조준 IK로 가드 외형을 만든 뒤 총 프리팹을 만든다.
+        /// 총·손 위치 조정값(CharacterSkin.weaponGrip)은 외형 에셋에 그대로 남는다.
+        /// </summary>
+        private static void BuildGuardSkin()
+        {
+            var report = new System.Collections.Generic.List<string>();
+            if (!LowPolyCharacterCheck.Check(GuardSource, report))
+            {
+                Debug.LogError($"[CharacterAssetBuilder] 가드 모델 검사 실패: {GuardSource}\n{string.Join("\n", report)}");
+                return;
+            }
+
+            AnimatorController humanoid = CreateHumanoidLocomotionController(HumanoidControllerPath);
+            CreateSkin("Guard", GuardSource, humanoid, HumanHeight, useAimIK: true, GuardSkinPath);
+            CreateGun();
+            Debug.Log($"[CharacterAssetBuilder] 가드 외형·총 생성: {GuardSkinPath}, {WeaponViewPath}\n{string.Join("\n", report)}");
         }
 
         #region 애니메이터
@@ -200,7 +265,7 @@ namespace GuardVsMannequin.Editor
         /// 원본 모델로 외형 프리팹과 <see cref="CharacterSkin"/> 에셋을 만들고 반환한다. 원본이 없으면 null.
         /// </summary>
         /// <param name="stripInactiveParts">꺼져 있는 파츠(교체용 장비 등)를 지울지 여부. 켜 두면 크기 맞춤 경계에서도 빠진다.</param>
-        private static CharacterSkin CreateSkin(string skinName, string sourcePath, RuntimeAnimatorController controller,
+        internal static CharacterSkin CreateSkin(string skinName, string sourcePath, RuntimeAnimatorController controller,
             float targetHeight, bool useAimIK, string skinAssetPath, bool stripInactiveParts = false)
         {
             GameObject source = AssetDatabase.LoadAssetAtPath<GameObject>(sourcePath);
@@ -317,8 +382,9 @@ namespace GuardVsMannequin.Editor
         #region 무기
 
         /// <summary>
-        /// 총 모델을 총구가 +Z를 향하도록 돌리고, 길이를 맞추고, 총구 끝에 Muzzle 자식을 만든다.
-        /// 총열 방향은 가장 긴 수평 축으로, 총구 쪽은 손잡이(아래로 튀어나온 부분)의 반대쪽으로 추정한다.
+        /// Blender로 만든 로우폴리 소총(총구 +Z, 원점 = 권총 손잡이)으로 총 프리팹을 만든다.
+        /// 모델에 함께 들어 있는 Muzzle·Right Hand·Left Hand 표시를 루트 바로 아래로 옮긴다. (GuardWeaponView가 Muzzle을 바로 아래 자식에서 찾음)
+        /// 손·총구 위치를 바꾸려면 generate_guard_rifle.py의 위치 값을 고친 뒤 다시 만든다.
         /// </summary>
         private static void CreateGun()
         {
@@ -329,137 +395,31 @@ namespace GuardVsMannequin.Editor
                 return;
             }
 
+            var root = new GameObject(Path.GetFileNameWithoutExtension(WeaponViewPath));
             GameObject model = InstantiateClean(source);
             UrpMaterialConverter.ConvertRenderers(model.GetComponentsInChildren<Renderer>(true));
-            model.transform.SetPositionAndRotation(Vector3.zero, Quaternion.identity);
-
-            Vector3[] points = CollectVertices(model);
-            if (points.Length == 0)
-            {
-                Debug.LogError("[CharacterAssetBuilder] 총 메시에 정점이 없습니다.");
-                Object.DestroyImmediate(model);
-                return;
-            }
-
-            Bounds bounds = new Bounds(points[0], Vector3.zero);
-            foreach (Vector3 point in points)
-                bounds.Encapsulate(point);
-
-            // 총열 축: X와 Z 중 더 긴 축
-            bool barrelAlongX = bounds.size.x >= bounds.size.z;
-            Vector3 axis = barrelAlongX ? Vector3.right : Vector3.forward;
-            float min = barrelAlongX ? bounds.min.x : bounds.min.z;
-            float max = barrelAlongX ? bounds.max.x : bounds.max.z;
-            float length = max - min;
-
-            // 양 끝 20% 구간의 평균 높이: 손잡이 쪽이 더 낮다.
-            float lowEndY = AverageHeight(points, axis, min, min + length * 0.2f);
-            float highEndY = AverageHeight(points, axis, max - length * 0.2f, max);
-            bool muzzleAtMax = highEndY >= lowEndY;
-            Vector3 barrelDirection = muzzleAtMax ? axis : -axis;
-
-            // 총구 위치: 총구 쪽 끝 10% 구간 정점의 중심
-            float muzzleStart = muzzleAtMax ? max - length * 0.1f : min;
-            float muzzleEnd = muzzleAtMax ? max : min + length * 0.1f;
-            Vector3 muzzleLocal = CenterOfSlice(points, axis, muzzleStart, muzzleEnd);
-            muzzleLocal += barrelDirection * 0.01f;
-
-            // 감싸는 루트: 모델을 돌려 총열이 +Z를 향하게 하고, 손잡이 근처가 원점이 되게 한다.
-            var root = new GameObject(Path.GetFileNameWithoutExtension(WeaponViewPath));
-            float scale = length > 0.0001f ? GunLength / length : 1f;
-            Quaternion rotation = Quaternion.FromToRotation(barrelDirection, Vector3.forward);
-            Vector3 gripLocal = muzzleAtMax ? new Vector3(barrelAlongX ? min : bounds.center.x, bounds.center.y, barrelAlongX ? bounds.center.z : min)
-                                            : new Vector3(barrelAlongX ? max : bounds.center.x, bounds.center.y, barrelAlongX ? bounds.center.z : max);
-
             model.transform.SetParent(root.transform, false);
-            model.transform.localRotation = rotation;
-            model.transform.localScale = Vector3.one * scale;
-            model.transform.localPosition = -(rotation * gripLocal) * scale;
+            model.transform.localPosition = Vector3.zero;
+            model.transform.localRotation = Quaternion.identity;
 
-            var muzzle = new GameObject("Muzzle").transform;
-            muzzle.SetParent(root.transform, false);
-            muzzle.localPosition = model.transform.localPosition + rotation * muzzleLocal * scale;
-            muzzle.localRotation = Quaternion.identity;
-
-            // 양손이 잡는 지점. 사용자가 프리팹에서 옮겨 둔 위치를 다시 만들 때도 유지한다.
-            // 처음 만들 때 오른손은 원점(뒤쪽 끝), 왼손은 그보다 총 길이의 40% 앞이다.
-            CreateGripSpot(root.transform, GunGripSpots.RightHand, Vector3.zero);
-            CreateGripSpot(root.transform, GunGripSpots.LeftHand, Vector3.forward * GunLength * 0.4f);
+            foreach (string spotName in new[] { MuzzleName, GunGripSpots.RightHand, GunGripSpots.LeftHand })
+            {
+                Transform spot = GunGripSpots.Find(model.transform, spotName);
+                if (spot == null)
+                {
+                    Debug.LogError($"[CharacterAssetBuilder] 총 모델에 '{spotName}' 표시가 없습니다: {GunSource}");
+                    continue;
+                }
+                spot.SetParent(root.transform, true);
+                spot.name = spotName;
+                spot.localRotation = Quaternion.identity;
+            }
 
             foreach (Renderer gunRenderer in root.GetComponentsInChildren<Renderer>(true))
                 gunRenderer.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
 
             PrefabUtility.SaveAsPrefabAsset(root, WeaponViewPath);
             Object.DestroyImmediate(root);
-        }
-
-        /// <summary>
-        /// 총 루트 아래에 손잡이 지점을 만든다. 이미 저장된 총 프리팹에 같은 지점이 있으면 그 위치(루트 기준)를 쓴다.
-        /// (총 원본을 바꿨다면 예전 위치가 맞지 않을 수 있으니 프리팹에서 다시 옮긴다)
-        /// </summary>
-        private static void CreateGripSpot(Transform gunRoot, string spotName, Vector3 defaultPosition)
-        {
-            GameObject existing = AssetDatabase.LoadAssetAtPath<GameObject>(WeaponViewPath);
-            Vector3? saved = existing != null ? GunGripSpots.FindLocalPoint(existing.transform, spotName) : null;
-
-            var spot = new GameObject(spotName).transform;
-            spot.SetParent(gunRoot, false);
-            spot.localPosition = saved ?? defaultPosition;
-            spot.localRotation = Quaternion.identity;
-        }
-
-        /// <summary>
-        /// 모델의 모든 메시 정점을 모델 루트 기준 좌표로 모은다.
-        /// </summary>
-        private static Vector3[] CollectVertices(GameObject model)
-        {
-            var result = new System.Collections.Generic.List<Vector3>();
-            Matrix4x4 toRoot = model.transform.worldToLocalMatrix;
-            foreach (MeshFilter filter in model.GetComponentsInChildren<MeshFilter>(true))
-            {
-                if (filter.sharedMesh == null)
-                    continue;
-                Matrix4x4 matrix = toRoot * filter.transform.localToWorldMatrix;
-                foreach (Vector3 vertex in filter.sharedMesh.vertices)
-                    result.Add(matrix.MultiplyPoint3x4(vertex));
-            }
-            return result.ToArray();
-        }
-
-        /// <summary>
-        /// 축 방향 구간 안에 있는 정점의 평균 높이.
-        /// </summary>
-        private static float AverageHeight(Vector3[] points, Vector3 axis, float from, float to)
-        {
-            float sum = 0f;
-            int count = 0;
-            foreach (Vector3 point in points)
-            {
-                float t = Vector3.Dot(point, axis);
-                if (t < from || t > to)
-                    continue;
-                sum += point.y;
-                count++;
-            }
-            return count > 0 ? sum / count : 0f;
-        }
-
-        /// <summary>
-        /// 축 방향 구간 안에 있는 정점의 중심.
-        /// </summary>
-        private static Vector3 CenterOfSlice(Vector3[] points, Vector3 axis, float from, float to)
-        {
-            Vector3 sum = Vector3.zero;
-            int count = 0;
-            foreach (Vector3 point in points)
-            {
-                float t = Vector3.Dot(point, axis);
-                if (t < from || t > to)
-                    continue;
-                sum += point;
-                count++;
-            }
-            return count > 0 ? sum / count : Vector3.zero;
         }
 
         #endregion

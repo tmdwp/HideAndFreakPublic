@@ -77,7 +77,7 @@ namespace GuardVsMannequin.Editor
             Loc.Reload();
             GameSettingDefinitions.ClearCache();
 
-            // 캐릭터 외형(마네킹 3종, 가드)과 리볼버 모델을 먼저 만든다. (프리팹이 참조)
+            // 캐릭터 외형(마네킹, 가드, 구울)과 총 모델을 먼저 만든다. (프리팹이 참조)
             CharacterAssetBuilder.BuildAll();
 
             Dictionary<string, Material> materials = CreateMaterials();
@@ -422,7 +422,7 @@ namespace GuardVsMannequin.Editor
             AddNoiseEmitter(root, noiseLibrary);
             root.AddComponent<DisguiseNoiseEmitter>();
             AvatarMovementRigs.Current.AddMannequinAbilities(root);
-            AddEmotes(root, visual);
+            AddEmotes(root);
 
             // Phase 3: 사냥 시간 모드(1인칭, 체력 배율, 속도), 근접 공격
             MannequinHuntingMode huntingMode = root.AddComponent<MannequinHuntingMode>();
@@ -555,14 +555,11 @@ namespace GuardVsMannequin.Editor
         }
 
         /// <summary>
-        /// 감정 표현 뷰와 네트워크 컨트롤러를 추가한다.
+        /// 감정 표현 뷰와 네트워크 컨트롤러를 추가한다. (외형 애니메이터에 감정 표현이 없으면 아무 동작도 하지 않는다)
         /// </summary>
-        private static void AddEmotes(GameObject root, Transform visual)
+        private static void AddEmotes(GameObject root)
         {
-            // 순서가 우선순위: 외형 애니메이터에 감정 표현이 있으면 그것을, 없으면 절차적 움직임을 쓴다.
             root.AddComponent<AnimatorEmoteView>();
-            ProceduralEmoteView emoteView = root.AddComponent<ProceduralEmoteView>();
-            SetField(emoteView, "body", visual);
             root.AddComponent<EmoteController>();
         }
 

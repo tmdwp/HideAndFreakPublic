@@ -16,22 +16,16 @@ namespace GuardVsMannequin.Network
     /// </summary>
     public class SessionService : MonoBehaviour, ISessionService
     {
-        /// <summary>모드가 달라 입장할 수 없을 때의 안내 key.</summary>
-        public const string ModRejectedNoticeKey = "notice.rejected.mods";
-
         [SerializeField] private TransportConnector connector;
         [SerializeField] private SteamLobbyService steamLobby;
 
         private bool isLeaving;
         private bool isRegistered;
+        private SteamRoomBrowser roomBrowser;
 
         // 호스트가 알려 준 접속 거부 이유 (연결이 끊길 때 안내에 사용)
         private string rejectNoticeKey;
         private string rejectNoticeDetail;
-
-        // 모드가 달라 거부됐을 때 호스트 모드 목록 (거부 직후: 연결이 끊길 때 확정, 확정 후: 로비 팝업이 꺼내 감)
-        private string pendingModRejection;
-        private string modRejection;
 
         // 안내 문구는 key와 끼워 넣을 값으로 보관하고, 읽을 때 현재 언어로 만든다. (언어를 바꾸면 바로 반영)
         private string noticeKey = string.Empty;
@@ -46,6 +40,13 @@ namespace GuardVsMannequin.Network
         public string RoomCode => IsSteamRoom && steamLobby.CurrentLobbyId != 0
             ? steamLobby.CurrentLobbyId.ToString()
             : Loc.Get(IsTestRoom ? "session.testRoomCode" : "session.directRoomCode");
+
+        public bool IsPublicRoom => IsSteamRoom && steamLobby.IsCurrentLobbyPublic;
+
+        /// <inheritdoc />
+        public IRoomBrowser RoomBrowser => IsSteamAvailable
+            ? roomBrowser ??= new SteamRoomBrowser(() => steamLobby.CurrentLobbyId, ModService.Instance.HasMap)
+            : null;
 
         public string RoomPassword { get; private set; } = string.Empty;
         public string JoinPassword { get; private set; } = string.Empty;
@@ -127,32 +128,15 @@ namespace GuardVsMannequin.Network
                 ConnectionRejectReason.InGame => ("notice.rejected.inGame", string.Empty),
                 ConnectionRejectReason.NotLobbyMember => ("notice.rejected.notMember", string.Empty),
                 ConnectionRejectReason.WrongPassword => ("notice.rejected.password", string.Empty),
-                ConnectionRejectReason.ModMismatch => (ModRejectedNoticeKey, DescribeMods(message.hostMods)),
+                ConnectionRejectReason.TooManyPasswordAttempts => ("notice.rejected.passwordLocked", string.Empty),
                 _ => ("notice.rejected.version", $"{message.hostVersion} ≠ {GameVersion.Current}")
             };
-            pendingModRejection = message.reason == ConnectionRejectReason.ModMismatch ? message.hostMods ?? string.Empty : null;
-        }
-
-        /// <inheritdoc />
-        public bool TryTakeModRejection(out string hostMods)
-        {
-            hostMods = modRejection;
-            modRejection = null;
-            return hostMods != null;
-        }
-
-        /// <summary>
-        /// 모드 목록 안내 문구. (없으면 "없음")
-        /// </summary>
-        private static string DescribeMods(string mods)
-        {
-            return string.IsNullOrEmpty(mods) ? Loc.Get("notice.mods.none") : mods;
         }
 
         /// <summary>
         /// Steam 로비를 먼저 만들고, 생성되면 서버를 시작한다. 암호를 정하면 참가자는 같은 암호를 입력해야 한다.
         /// </summary>
-        public void HostSteamRoom(string password)
+        public void HostSteamRoom(SteamRoomOptions options)
         {
             if (!CanStartNewSession())
                 return;
@@ -164,11 +148,19 @@ namespace GuardVsMannequin.Network
             }
 
             // 호스트 자신의 접속도 암호 확인을 거치므로 참가 암호도 같게 둔다.
-            RoomPassword = NormalizePassword(password);
+            RoomPassword = NormalizePassword(options.password);
             JoinPassword = RoomPassword;
             IsBusy = true;
             SetNotice("notice.creatingRoom");
-            steamLobby.CreateLobby(hasPassword: RoomPassword.Length > 0);
+            options.password = RoomPassword;
+            steamLobby.CreateLobby(options);
+        }
+
+        /// <inheritdoc />
+        public void UpdateRoomListing(string mapId, int maxPlayers)
+        {
+            if (IsSteamRoom)
+                steamLobby.UpdateListing(mapId, maxPlayers);
         }
 
         /// <summary>
@@ -284,6 +276,13 @@ namespace GuardVsMannequin.Network
             JoinPassword = string.Empty;
         }
 
+        /// <inheritdoc />
+        public void LeaveWithNotice(string noticeKey)
+        {
+            Leave();
+            SetNotice(noticeKey);
+        }
+
         /// <summary>
         /// 앞뒤 공백을 지운 암호. 없으면 빈 문자열.
         /// </summary>
@@ -324,10 +323,8 @@ namespace GuardVsMannequin.Network
             IsTestRoom = false;
             rejectNoticeKey = null;
             rejectNoticeDetail = null;
-            pendingModRejection = null;
-            modRejection = null;
             SetNotice(string.Empty);
-            // 지난 접속에서 따르던 호스트 모드 구성이 남아 있으면 내 설정으로 돌린다.
+            // 지난 접속에서 쓰던 맵 모드 구성이 남아 있으면 내 설정으로 돌린다.
             ModService.Instance.ClearSessionMods();
             return true;
         }
@@ -419,7 +416,7 @@ namespace GuardVsMannequin.Network
             bool wasConnecting = IsBusy;
             IsBusy = false;
             steamLobby.LeaveLobby();
-            // 접속 동안 따르던 호스트 모드 구성을 버리고 내 설정으로 돌아간다.
+            // 접속 동안 쓰던 맵 모드 구성을 버리고 내 설정으로 돌아간다.
             ModService.Instance.ClearSessionMods();
 
             // 호스트가 이유를 알려 줬으면(버전 불일치 등) 그 이유로 안내한다.
@@ -429,9 +426,6 @@ namespace GuardVsMannequin.Network
                 SetNotice(wasConnecting ? "notice.joinFailed" : "notice.hostDisconnected");
             rejectNoticeKey = null;
             rejectNoticeDetail = null;
-            // 모드가 달라 거부됐으면 로비 팝업이 부족한 모드를 보여주도록 남긴다.
-            modRejection = pendingModRejection;
-            pendingModRejection = null;
 
             // 호스트가 아닌 경우에만 여기서 정리한다. (호스트는 Leave에서 서버까지 정리)
             if (!connector.IsServerRunning)

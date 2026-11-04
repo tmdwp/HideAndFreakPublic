@@ -15,17 +15,8 @@ EditorBuildSettings:
     path: Assets/_Project/Scenes/Game_Systems.unity
     guid: 6ca92a47572d52c4fa6553ea1fec40d9
   - enabled: 1
-    path: Assets/_Project/Scenes/Map_Asylum.unity
-    guid: ab72790a9376b7948bb02fffb512d403
-  - enabled: 1
-    path: Assets/_Project/Scenes/Map_Industrial.unity
-    guid: 03c5afebceed1924f9348818443dac95
-  - enabled: 1
-    path: Assets/_Project/Scenes/Map_Hospital.unity
-    guid: 6bd678c632fd7ba45a7a836e2302f506
-  - enabled: 1
-    path: Assets/_Project/Scenes/Map_AlchemistHouse.unity
-    guid: bd316a02866cedb4d900321dae12ef1a
+    path: Assets/_Project/Scenes/Custom/Map_Forest.unity
+    guid: c42e839ee1f68944594a0003bd057eca
   - enabled: 1
     path: Assets/_Project/Scenes/Custom/Map_Laboratory.unity
     guid: 82eea225332b66d46bbab65ffa52afb3

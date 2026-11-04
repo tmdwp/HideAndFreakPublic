@@ -10,7 +10,7 @@ namespace GuardVsMannequin.Player.Guard
 {
     /// <summary>
     /// 가드의 총. 좌클릭 시 서버가 히트스캔으로 판정하고, 맞은 대상이 충격을 받을 수 있으면(<see cref="IImpactReceiver"/>) 튕겨낸다.
-    /// 탄창(<see cref="GunMagazine"/>)을 다 쓰면 자동으로 장전하고, 탄창 안에서는 발사 간격(쿨타임)을 지킨다.
+    /// 탄창(<see cref="GunMagazine"/>)을 다 쓰면 자동으로, 장전 키(R)를 누르면 한 발이라도 쓴 경우 바로 장전하고, 탄창 안에서는 발사 간격(쿨타임)을 지킨다.
     /// 쿨타임·탄창은 서버가 최종 판정하고, 소유자는 즉시 반응·HUD 표시용으로 같은 값을 예측한다.
     /// </summary>
     public class GunTool : NetworkBehaviour, ITool, IAmmoSource
@@ -42,11 +42,14 @@ namespace GuardVsMannequin.Player.Guard
         /// <inheritdoc />
         public float ReloadRemaining => localMagazine.GetReloadRemaining(Time.time);
 
+        /// <inheritdoc />
+        public float FireCooldownRemaining => cooldown.LocalRemaining;
+
         /// <summary>호스트 설정의 총 발사 간격.</summary>
         private static float Cooldown => GameServices.CurrentSettingsOrDefault.gunCooldown;
 
-        /// <summary>호스트 설정의 장전 시간.</summary>
-        private static float ReloadTime => Mathf.Max(0f, GameServices.CurrentSettingsOrDefault.gunReloadTime);
+        /// <summary>호스트 설정의 발당 장전 시간. (장전 시간 = 채울 탄 수 × 이 값)</summary>
+        private static float ReloadTimePerRound => Mathf.Max(0f, GameServices.CurrentSettingsOrDefault.gunReloadTime);
 
         /// <summary>한 발의 피해량. (가드 능력치, 최소 1)</summary>
         private static int Damage => Mathf.Max(1, GameServices.CurrentSettingsOrDefault.GetStats(PlayerRole.Guard).AttackDamage);
@@ -63,13 +66,16 @@ namespace GuardVsMannequin.Player.Guard
         }
 
         /// <summary>
-        /// 소유자만 사격 입력을 구독한다.
+        /// 소유자만 사격·장전 입력을 구독한다.
         /// </summary>
         public override void OnStartClient()
         {
             base.OnStartClient();
             if (IsOwner && playerInput != null)
+            {
                 playerInput.PrimaryPressed += OnPrimaryPressed;
+                playerInput.ReloadPressed += OnReloadPressed;
+            }
         }
 
         /// <summary>
@@ -79,7 +85,10 @@ namespace GuardVsMannequin.Player.Guard
         {
             base.OnStopClient();
             if (IsOwner && playerInput != null)
+            {
                 playerInput.PrimaryPressed -= OnPrimaryPressed;
+                playerInput.ReloadPressed -= OnReloadPressed;
+            }
         }
 
         /// <summary>
@@ -87,12 +96,50 @@ namespace GuardVsMannequin.Player.Guard
         /// </summary>
         private void OnPrimaryPressed()
         {
-            if (!IsReady || !localMagazine.TryFire(MagazineSize, ReloadTime, Time.time, out _))
+            if (!IsReady || !localMagazine.TryFire(MagazineSize, ReloadTimePerRound, Time.time, out _))
                 return;
 
             Ray aim = aimProvider.GetAimRay();
             cooldown.StartLocal(Cooldown);
             FireServerRpc(aim.origin, aim.direction);
+        }
+
+        /// <summary>
+        /// 한 발이라도 썼고 장전 중이 아니면 바로 장전을 시작하고 서버에 알린다. (발사 간격과 관계없이)
+        /// </summary>
+        private void OnReloadPressed()
+        {
+            if (!DamageRules.CanUseGuardTools(GameServices.State))
+                return;
+            if (!localMagazine.TryStartReload(MagazineSize, ReloadTimePerRound, Time.time))
+                return;
+
+            ReloadServerRpc();
+        }
+
+        /// <summary>
+        /// 서버에서 수동 장전을 검증하고 시작한다. 거부하면 소유자 예측을 서버 상태로 맞춘다.
+        /// </summary>
+        [ServerRpc]
+        private void ReloadServerRpc()
+        {
+            if (!DamageRules.CanUseGuardTools(GameServices.State) || !serverMagazine.TryStartReload(MagazineSize, ReloadTimePerRound, Time.time))
+            {
+                MagazineCorrectionTargetRpc(Owner, serverMagazine.GetAmmo(MagazineSize, Time.time), serverMagazine.GetReloadRemaining(Time.time));
+                return;
+            }
+
+            ReloadStartedObserversRpc();
+        }
+
+        /// <summary>
+        /// 모든 클라이언트에 장전 동작을 재생한다. (트리거가 있는 외형만)
+        /// </summary>
+        [ObserversRpc]
+        private void ReloadStartedObserversRpc()
+        {
+            if (skinView != null)
+                skinView.TryPlayTrigger(CharacterAnimatorParameters.Reload);
         }
 
         /// <summary>
@@ -107,7 +154,7 @@ namespace GuardVsMannequin.Player.Guard
                 return;
             // 거부하면 소유자가 이미 한 발을 쓴 것으로 예측했으므로 서버 탄창 상태로 맞춘다. (지연 등)
             bool startedReload = false;
-            if (!cooldown.IsServerReady || !serverMagazine.TryFire(MagazineSize, ReloadTime, Time.time, out startedReload))
+            if (!cooldown.IsServerReady || !serverMagazine.TryFire(MagazineSize, ReloadTimePerRound, Time.time, out startedReload))
             {
                 MagazineCorrectionTargetRpc(Owner, serverMagazine.GetAmmo(MagazineSize, Time.time), serverMagazine.GetReloadRemaining(Time.time));
                 return;
@@ -119,7 +166,8 @@ namespace GuardVsMannequin.Player.Guard
             Ray ray = new Ray(origin, direction.normalized);
             Vector3 endPoint = ray.GetPoint(GameConstants.GunRange);
 
-            bool didHit = AimRaycaster.TryRaycast(ray, GameConstants.GunRange, transform, out RaycastHit hit);
+            // 캐릭터는 외형 크기·자세를 따라가는 판정 캡슐로 맞힌다. (SkinHitboxes)
+            bool didHit = AimRaycaster.TryRaycastHittable(ray, GameConstants.GunRange, transform, out RaycastHit hit);
             if (didHit)
             {
                 endPoint = hit.point;

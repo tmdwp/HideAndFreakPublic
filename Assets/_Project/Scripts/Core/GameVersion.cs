@@ -13,7 +13,7 @@ namespace GuardVsMannequin.Core
     public static class GameVersion
     {
         /// <summary>네트워크 규약 번호.</summary>
-        public const int Protocol = 7;
+        public const int Protocol = 9;
 
         /// <summary>이 게임의 버전 문자열. (예: 0.3.0-p2-t1a2b3c4d)</summary>
         public static string Current => $"{Application.version}-p{Protocol}-t{GameTuning.Fingerprint}";

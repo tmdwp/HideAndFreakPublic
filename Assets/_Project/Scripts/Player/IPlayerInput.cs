@@ -42,6 +42,9 @@ namespace GuardVsMannequin.Player
         /// <summary>손전등 키(E)를 눌렀을 때.</summary>
         event Action FlashlightPressed;
 
+        /// <summary>장전 키(R)를 눌렀을 때.</summary>
+        event Action ReloadPressed;
+
         /// <summary>관전 대상 전환 키를 눌렀을 때. (-1: 이전, +1: 다음)</summary>
         event Action<int> SpectateCycled;
     }

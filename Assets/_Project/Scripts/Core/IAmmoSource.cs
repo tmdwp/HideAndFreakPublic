@@ -13,5 +13,8 @@ namespace GuardVsMannequin.Core
 
         /// <summary>장전 남은 시간(초). 장전 중이 아니면 0.</summary>
         float ReloadRemaining { get; }
+
+        /// <summary>사격 후 다음 발까지 남은 발사 간격(초). (장전·출발 보호와 별개)</summary>
+        float FireCooldownRemaining { get; }
     }
 }

@@ -15,6 +15,9 @@ namespace GuardVsMannequin.Audio
 
         private AudioSource audioSource;
 
+        /// <summary>소음 설정. (반복 재생하는 소리를 직접 관리하는 구성 요소가 클립·거리를 읽는다)</summary>
+        public NoiseLibrary Library => library;
+
         /// <summary>
         /// 3D 오디오 소스를 준비한다.
         /// </summary>
@@ -48,14 +51,15 @@ namespace GuardVsMannequin.Audio
         /// <summary>
         /// 이 클라이언트에서만 소음을 재생한다.
         /// </summary>
-        public void PlayLocal(NoiseType type)
+        /// <param name="volumeScale">설정 크기에 곱할 배율. (본인에게 들리는 자기 몸 소리를 줄일 때 등)</param>
+        public void PlayLocal(NoiseType type, float volumeScale = 1f)
         {
             if (library == null || audioSource == null)
                 return;
 
             NoiseLibrary.Entry entry = library.Get(type);
             audioSource.maxDistance = entry.maxDistance;
-            audioSource.PlayOneShot(library.GetClip(type), entry.volume * AudioVolumes.Sfx);
+            audioSource.PlayOneShot(library.GetClip(type), entry.volume * volumeScale * AudioVolumes.Sfx);
         }
 
         /// <summary>

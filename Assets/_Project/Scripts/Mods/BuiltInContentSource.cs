@@ -16,13 +16,12 @@ namespace GuardVsMannequin.Mods
 
         private const string FilePath = "Data/maps";
 
-        // 파일을 읽을 수 없을 때 쓰는 기본 목록 (맵 번호 = 순서)
-        private static readonly (string id, string scene)[] FallbackMaps =
+        // 파일을 읽을 수 없을 때 쓰는 기본 목록 (맵 번호 = 순서, nameKey = strings.csv 이름 문구)
+        private static readonly (string id, string scene, string nameKey)[] FallbackMaps =
         {
-            ("builtin.map_asylum", "Map_Asylum"),
-            ("builtin.map_industrial", "Map_Industrial"),
-            ("builtin.map_hospital", "Map_Hospital"),
-            ("builtin.map_alchemisthouse", "Map_AlchemistHouse")
+            ("builtin.map_forest", "Map_Forest", "map.6"),
+            ("builtin.map_laboratory", "Map_Laboratory", "map.4"),
+            ("builtin.map_transferstation", "Map_TransferStation", "map.5")
         };
 
         /// <inheritdoc />
@@ -62,19 +61,19 @@ namespace GuardVsMannequin.Mods
         }
 
         /// <summary>
-        /// 코드 기본 목록을 만든다. 이름은 strings.csv의 map.&lt;번호&gt; 문장을 쓴다.
+        /// 코드 기본 목록을 만든다. 이름은 strings.csv의 nameKey 문장을 쓴다.
         /// </summary>
         private static BuiltInMapList CreateFallback()
         {
             var list = new BuiltInMapList();
-            for (int i = 0; i < FallbackMaps.Length; i++)
+            foreach ((string id, string scene, string nameKey) in FallbackMaps)
             {
                 list.maps.Add(new MapManifest
                 {
-                    id = FallbackMaps[i].id,
-                    scene = FallbackMaps[i].scene,
-                    nameKey = "map." + i,
-                    name = FallbackMaps[i].scene
+                    id = id,
+                    scene = scene,
+                    nameKey = nameKey,
+                    name = scene
                 });
             }
             return list;

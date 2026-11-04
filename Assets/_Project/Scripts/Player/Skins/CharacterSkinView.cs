@@ -300,7 +300,7 @@ namespace GuardVsMannequin.Player
             if (skin.useAimIK && animator.isHuman)
                 aimIK = animator.gameObject.AddComponent<HandAimIK>();
 
-            // 일반 모델(슬라임 등)의 이동 클립은 뼈가 앞으로 나갔다 돌아오므로 제자리로 고정한다. (휴머노이드는 루트 모션을 끄면 이미 제자리)
+            // 일반(Generic) 모델의 이동 클립은 뼈가 앞으로 나갔다 돌아오므로 제자리로 고정한다. (휴머노이드는 루트 모션을 끄면 이미 제자리)
             if (skin.keepRootBoneInPlace && !animator.isHuman)
                 animator.gameObject.AddComponent<RootBoneInPlaceLock>();
         }

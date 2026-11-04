@@ -103,7 +103,7 @@ Waiting ─▶ Preparation ─▶ Playing ─▶ Hunting ─▶ Ended
 | `generatorDestroyTime` | float | 10 | 1인 기준 파괴 소요 시간 |
 | `gunCooldown` | float | 1 | 발사 간격(초). 탄창 안에서 다음 발까지 |
 | `gunMagazineSize` | int | 4 | 탄창 크기(1~10발). 다 쓰면 자동 장전 (Phase 8) |
-| `gunReloadTime` | float | 5 | 장전 시간(1~15초) (Phase 8) |
+| `gunReloadTime` | float | 2 | 발당 장전 시간(0.5~5초, 장전 시간 = 채울 탄 수 × 이 값) (Phase 8) |
 | `detectorCooldown` | float | 10 | |
 | `guardMaxHealth` | int | 3 | |
 | `mannequinMaxHealth` | int | 1 | |
@@ -417,7 +417,7 @@ public interface ITransformable { int PropId { get; } }
 - **UI 프리팹과 맵 제작 도구**: 사용법은 `Docs/UiAndMapGuide.md`. UI는 `Prefabs/UI`의 프리팹(설정·크레딧 패널은 중첩 프리팹)으로 관리되어 씬 생성 도구를 다시 실행해도 직접 수정한 내용이 유지된다(`UiPrefabLibrary`). 맵은 "맵 제작 도우미" 창(`MapMakerWindow`)에서 새 맵 뼈대 생성 → 등록(`PropRegistrar` 공용) → 지점 배치 → 경계 → 검사(`MapValidator`) → 최적화 → 맵 목록 갱신(`MapRegistrySync`: 빌드 설정·RoomState·strings.csv·game_settings.csv) 순서로 만든다. 직접 만든 맵은 `Scenes/Custom`에 두면 자동 생성 맵 뒤 번호로 붙는다.
 - **맵 크기**: 걸을 수 있는 바닥이 800㎡보다 좁은 맵은 생성 시 환경 전체를 키운다(최대 2.5배, 조명 범위도 함께). `MapCatalog`의 `scale`에 값을 넣으면 그 배율로 고정된다(0 = 자동).
 - **전원 장치 배치**: 생성 시 후보 12개를 서로 최대한 멀리 배치하고, 매 판 `GeneratorSpawner`가 후보 중 서로 먼 것을 고른다(가장 먼 상위 3개 중 무작위). 편집은 맵 제작 도우미(`GameSettingTools > 맵 제작 > 맵 제작 도우미`)의 지점 배치 버튼(씬 뷰 중앙에 전원 장치 후보·마네킹 스폰·가드 출발 지점 추가, 전원 장치 후보 넓게 다시 배치)나 씬에서 직접 옮기기·복제로 한다. 후보는 씬 뷰에 빨간 상자와 이름표로 보인다.
-- **캐릭터 애니메이션 규칙** (`CharacterAnimatorParameters`): 외형 컨트롤러에 `Speed`/`MoveX`/`MoveZ`(Float), `Attack`/`Shoot`/`Hit`(Trigger), `Emote1`~`Emote6`(Trigger) 또는 `Emote`(Trigger)+`EmoteId`(Int), `Interact`(Bool, 전원 장치 등과 상호작용하는 동안 켜짐)를 만들면 게임이 자동으로 사용한다. 없는 파라미터는 건너뛰며, 감정 표현 애니메이션이 없으면 절차적 움직임으로 대신한다(`AnimatorEmoteView` → `ProceduralEmoteView`).
+- **캐릭터 애니메이션 규칙** (`CharacterAnimatorParameters`): 외형 컨트롤러에 `Speed`/`MoveX`/`MoveZ`(Float), `Attack`/`Shoot`/`Hit`(Trigger), `Emote1`~`Emote6`(Trigger) 또는 `Emote`(Trigger)+`EmoteId`(Int), `Interact`(Bool, 전원 장치 등과 상호작용하는 동안 켜짐)를 만들면 게임이 자동으로 사용한다. 없는 파라미터는 건너뛰며, 감정 표현 애니메이션이 없으면 아무 동작도 하지 않는다(`AnimatorEmoteView`). 임시 절차적 움직임(`ProceduralEmoteView`)은 2026-11-03 삭제했다(구울 외형에서 감정 표현 키를 누르면 점프·회전이 나오던 문제).
 - **마네킹 감정 표현·상호작용 애니메이션** (2026-10-03): '캐릭터·무기 에셋 생성'(`MannequinAnimatorBuilder`)이 `Assets/_Project/Animation`의 Mixamo FBX를 휴머노이드로 임포트하고 마네킹 전용 컨트롤러 `Art/Skins/AC_MannequinHumanoid`를 만들어 더미 외형에 지정한다. 가드는 계속 `AC_HumanoidLocomotion`을 쓴다.
   - 번호: 1 Salute, 2 Thoughtful Head Shake, 3 Talking On Phone, 4 Situps, 5 Backflip(전신, Base Layer의 `Emotes` 하위 상태 머신 — 클립이 끝나거나 0.3m/s 넘게 움직이면 이동 애니메이션으로 복귀) / 6 Working On Device(상체 전용, `UpperBody` 레이어 + 상체 마스크 `AM_UpperBody`).
   - 전원 장치 상호작용: 서버가 `MannequinInteractor`의 동기화 값(`IsInteracting`, 대상이 참여자를 빼면 꺼짐)을 정하고, 모든 클라이언트의 `InteractAnimationView`가 `Interact`(Bool)로 옮겨 Working On Device를 상체로 반복 재생한다.
@@ -431,7 +431,7 @@ public interface ITransformable { int PropId { get; } }
 - 맵 최적화는 추가로 영역(Area) 조명 제거(URP 실시간 미지원), 맵 조명 그림자 끄기(그림자 지도 부족 방지, 방향광·손전등 제외), 음수 크기 상자 충돌체를 메시 충돌체로 교체한다.
 - `MovementValidator`의 이동 예산은 실제 경과 시간(`realtimeSinceStartup`)으로 쌓는다. `Time.deltaTime`은 프레임 멈춤 시 0.33초로 잘려, 서버가 잠깐 멈춘 뒤 도착한 정상 이동을 부정 이동으로 오판했다(사냥 시간 시작 시 확인). 몰아 쓰기 한도 3초. 서버 프레임 간격이 0.5초를 넘으면(에디터 일시정지·로딩) 그동안의 이동은 검사하지 않고 받아들인다.
 - 외형 애니메이터의 애니메이션 이벤트는 기본으로 끈다(`CharacterSkin.fireAnimationEvents`). 에셋 팩 클립의 이벤트가 외형 생성 때 제거된 팩 스크립트를 불러 "has no receiver" 오류가 났다(슬라임 공격 `AlertObservers`).
-- **맵 최적화** (`GameSettingTools > 맵 최적화 > 전체 맵 최적화`, 맵 하나는 맵 제작 도우미의 `현재 맵 최적화`, 맵 생성 시 자동 실행): 투명 경계 밖(실내 3m·실외 12m 여유)의 환경 오브젝트와 꺼진 오브젝트를 지우고, 남은 환경에 Occludee·정적 배칭 플래그(1m 이상 불투명 메시는 Occluder)를 준 뒤, 플레이 영역을 덮는 Occlusion Area로 오클루전 컬링을 굽는다. 수동으로 옮긴 스폰·전원 장치 배치는 건드리지 않는다.
+- **맵 최적화** (맵 제작 도우미의 `현재 맵 최적화`, 맵 빌더 실행 시 자동 실행): 투명 경계 밖(실내 3m·실외 12m 여유)의 환경 오브젝트와 꺼진 오브젝트를 지우고, 남은 환경에 Occludee·정적 배칭 플래그(1m 이상 불투명 메시는 Occluder)를 준 뒤, 플레이 영역을 덮는 Occlusion Area로 오클루전 컬링을 굽는다. 수동으로 옮긴 스폰·전원 장치 배치는 건드리지 않는다.
 - **빌드 최적화 설정** (`GameSettingTools > 빌드 최적화 설정 적용`): 셰이더 변형이 4천 개 넘게 나와 첫 빌드가 1시간 이상 걸리던 문제로, PC URP 에셋의 라이트 쿠키·라이트 레이어·LOD 크로스페이드·반사 프로브 블렌딩/박스 투영·부드러운 그림자를 끄고 캐스케이드를 2개로 줄이며, SSAO를 끄고, Windows 그래픽 API를 Direct3D11만 쓰게 한다. (손전등용 추가 조명 그림자는 유지. Mobile 품질 레벨은 원래 PC 빌드에서 제외되어 있음)
 - 새로 추가된 외부 에셋 중 Unity 6에서 컴파일되지 않던 옛 스크립트(Standard Assets `Utility` 3개와 에디터 스크립트 2개, Flooded_Grounds PostProcessing 에디터 2개)는 제거된 API만 대체 API로 바꿨다. (파일마다 "GuardVsMannequin 프로젝트 수정" 주석)
 - 인스펙터 툴팁·개발용 로그는 한국어로 유지한다. (플레이어에게 보이지 않음)
@@ -555,7 +555,7 @@ Phase 7은 **A. 게임플레이 개편**(7-A1~7-A5)을 먼저 하고 **B. 모드
 
 **확정한 방향 (2026-10-02)**
 - 형식: **Unity 모드 SDK** — 제작자는 같은 Unity 버전(6000.4.2f1) + URP에서 SDK 패키지로 작업하고, 도구가 **AssetBundle + `mod.json`**을 내보낸다. 모드에는 **코드를 넣을 수 없다**(AssetBundle은 스크립트를 담지 못함 — 보안상 장점). 모드 안의 컴포넌트는 게임에 이미 있는 스크립트(`MapInfo`, `SpawnPoint` 등)만 쓸 수 있다.
-- 동기화: **같은 모드만 입장** — 접속 요청(`JoinRequestBroadcast`)에 모드 목록(ID·버전·해시)을 함께 보내고 `RoomAuthenticator`가 호스트와 다르면 "필요한 모드" 목록과 함께 거부한다. Steam 방은 로비 데이터에 모드 목록 해시를 적어 입장 전에 거른다. 배포는 수동(폴더 복사), Steam 창작마당은 정식 AppID 이후.
+- 동기화: (2026-11-04 변경) **입장은 자유, 시작할 때 고른 맵의 모드만 확인** — 아래 "모드 확인 방식 변경" 참고. 배포는 수동(폴더 복사), Steam 창작마당은 정식 AppID 이후.
 - 스탯: **맵별 스탯** — 맵 모드가 그 맵의 캐릭터 스탯 기본값과 최소·최대 범위를 정한다. 호스트가 맵을 고르면 룸 설정의 기본값·범위가 그 맵 값으로 바뀐다.
 
 **추가 결정 (2026-10-05)** — 7-B 착수 전 점검에서 바꾼 것
@@ -593,11 +593,24 @@ Phase 7은 **A. 게임플레이 개편**(7-A1~7-A5)을 먼저 하고 **B. 모드
 - [x] B8. 로비 "모드" 화면 (7-7): 설치된 모드 목록, 켜기/끄기, 오류 표시.
 - [ ] B9. 예제 모드로 전체 검증: 내장 맵 하나를 모드로 내보내 2PC에서 플레이.
 
+**모드 확인 방식 변경 (2026-11-04)**
+- 이유: 입장 때 전체 모드를 비교하면 호스트가 켜 둔 모드 때문에 내장 맵을 할 때도 입장이 막히고, 공개방에서 사람이 모드 구성별로 갈린다.
+- 입장: `RoomAuthenticator`와 Steam 로비는 모드를 확인하지 않는다.
+- 맵 정보: `GameSettings.mapId`는 호스트 목록의 번호일 뿐이므로 게스트는 쓰지 않는다. `RoomState.selectedMap`(`RoomMapInfo`: 맵 ID, 호스트 언어 이름, `RequiredMod[]`, 확인 차수)을 동기화한다.
+- 필요한 모드: `ModService.BuildRequirements` = 맵의 모드 + 의존 모드 전부. 내장 맵은 비어 있어 확인 없이 시작한다.
+- 사전 확인: 맵이 바뀌면 게스트가 `ModService.UseRequiredMods`로 폴더를 다시 읽고 비교(ID·버전·`contentHash`·번들 크기)한 뒤 `ReportMapModsServerRpc`로 답한다. 없으면 참가자 목록에 `[모드 없음]`, 게스트 화면 위쪽에 안내 버튼이 뜬다.
+- 시작: 호스트가 시작을 누르면 확인 차수를 올려 다시 확인시키고 `StartModCheck`가 최대 5초 기다린다. 전원 있으면 시작, 없거나 답이 없으면 중단하고 호스트에게 이름을, 해당 게스트에게 `RoomModRequiredPopup`(링크·다시 확인)을 보여 준다.
+- 판 동안 게스트는 필요한 모드만 켠다(`sessionModIds`). 씬 이름으로 맵을 찾으므로 나만 가진 모드의 씬 이름이 겹치는 문제를 막는다. 저장된 켜기/끄기 설정은 바꾸지 않는다.
+- 링크: `mod.json`의 `url`(SDK `ModProject.downloadUrl`). 호스트가 바꿀 수 있는 값이라 받는 쪽이 `ModLinkPolicy`로 검사한다(https, `github.com`, `steamcommunity.com`의 창작마당 경로만, 사용자 정보·포트·비ASCII 금지). 전체 주소를 보여 주고 확인을 받은 뒤 연다. 이름은 `DisplayTextSanitizer`로 정리하고 리치 텍스트를 끈다.
+- 시작 방해: 모드 없는 게스트가 있으면 호스트는 맵을 바꾸거나, Phase 10 추방을 쓴다.
+- 보안 점검 후 보강(2026-11-04): 씬을 불러올 수 없으면 FishNet 씬 대기열이 멈추지 않게 건너뛰고 대기열이 끝난 뒤 방을 나간다(`ModSceneProcessor`). `mod.json` 번들 이름은 경로 없는 파일 이름만 허용(`ModScanner`). 방 암호를 5번 연속 틀리면 그 주소를 60초 막는다(`PasswordAttemptLimiter`). 게스트도 받은 플레이어 이름을 정리한다.
+- 남은 위험: 모드 번들을 불러올 때 컴포넌트 허용 목록이 없다(맵 검사는 제작자 PC에서만 돈다). `github.com`이면 어떤 저장소든 열린다(자체 AppID 후 창작마당만 허용 검토). `contentHash`는 번들로 다시 계산하지 않는다. Phase 9에서 `HostAddress` 대신 `GetLobbyOwner`를 쓴다.
+
 **구현 결과 (2026-10-05, Unity 확인 전)**
 - 등록소: `ContentRegistry`(내장 `BuiltInContentSource` → 켜진 모드 `ModContentSource`, 모드 ID 순). 맵 번호 = 목록 번호. 룸의 맵 이름·범위는 등록소에서 읽는다(`GameSettingDefinitions.Get(Map)`). `game_settings.csv`의 Map 줄 범위는 더 이상 쓰지 않는다.
 - 맵별 설정: `MapSettingRules` — 맵을 바꾸면 기본값 적용, 설정 보정은 `GetEffective`(게임 범위 ∩ 맵 범위) → `GameSettingsValidator` 순. 맵 인원 범위 밖이면 시작 불가(`room.reason.mapPlayerCount`).
 - 모드 로더: `ModService`(시작 시 1회 + 로비에서 켜고 끌 때) → `ModScanner`(검사) · `ModPreferences`(끈 목록, PlayerPrefs) · `Loc.AddStrings`. 맵 번들은 `ModSceneProcessor`(FishNet `DefaultSceneProcessor` 확장, `SessionService`가 설치)가 씬을 불러오기 직전에 `ModBundleCache`로 로드하고, 모드 맵 씬이 없어지면 해제한다.
-- 모드 일치: `ModService.ModSetHash` = 켜진 모드(ID·버전·contentHash·번들 크기) + 맵 ID 순서의 SHA-256 앞 8자리. `JoinRequestBroadcast.modHash`, 거부 이유 `ModMismatch`(호스트 모드 목록 안내), Steam 로비 데이터 `Mods`/`ModList`.
+- 모드 일치: 2026-11-04 아래 "모드 확인 방식 변경"으로 교체. (`ModSetHash`, `modHash`, `ModMismatch`, 로비 데이터 `Mods`/`ModList`, `LobbyModMismatchPopup` 삭제)
 - SDK: `GuardVsMannequin.Content.Editor`(Content만 참조) — `ModMapTools`(GameSettingTools > 모드 제작 > 맵 도구), `ModMapValidator`, `ModProject`(Create > GameSettingTools > Mod Project), `ModExporter`(GameSettingTools > 모드 제작 > 모드 내보내기 → `ModExports/<id>/`), 공용 `PropRegistrar`·`PropIndexer`·`PropCopyChecks`. 패키지는 게임 메뉴 "GameSettingTools/모드/모드 SDK 패키지 만들기"(`Builds/ModSDK/`). 안내서 `Docs/ModdingGuide.md`.
 - 로비: 메인 화면 오른쪽 위 "모드" 버튼 → `LobbyModsMenu`. 왼쪽 아래 버전 표시(`VersionLabel`). 기존 로비 프리팹은 "UI > 빠진 UI 영역·키 줄 추가"로 더한다.
 - 에디터 GI 계산 끄기: `SceneLightingSetup`(공용 `Lighting_RealtimeOnly.lighting`). 모든 씬 생성 도구와 맵 최적화가 적용한다. (기존 씬 일괄 적용 메뉴는 적용을 마쳐 삭제)
@@ -697,7 +710,7 @@ Phase 7은 **A. 게임플레이 개편**(7-A1~7-A5)을 먼저 하고 **B. 모드
 - 소유자 카메라는 날아가는 동안 대리 물체를 따라간다(조작 잠금 표시는 HUD 하단 문구).
 
 **8-4. 총 탄창·장전**
-- 규칙: 탄창 `gunMagazineSize`(기본 4발), 발사 간격 `gunCooldown`(기존 설정, 0.5초 권장), 탄창이 비면 자동 장전 `gunReloadTime`(기본 5초) 후 가득 찬다. 수동 장전(R)은 1차에서 넣지 않는다(검토 항목).
+- 규칙: 탄창 `gunMagazineSize`(기본 4발), 발사 간격 `gunCooldown`(기존 설정, 0.5초 권장), 탄창이 비면 자동 장전, 한 발이라도 쓴 뒤 R을 누르면 바로 장전한다. 장전 시간은 채울 탄 수 × `gunReloadTime`(기본 2초)이다. HUD는 조준점 둘레 원형 게이지로 남은 탄을 보여준다(사격 시 시계 방향으로 일정하게 감소, 장전 시 반시계 방향으로 증가, 발사 간격·장전 중에는 색 변경).
 - 두 값은 룸 설정(`GameSettings`, `game_settings.csv`, `default_game_settings.json`, `strings.csv`, `GameSettingsValidator`, 맵별 스탯 범위)에 추가한다. 권장 범위: 탄창 1~10발, 장전 1~15초. 빌드 폴더의 옛 json에 키가 없으면 0 → 코드 기본값으로 채우는 기존 처리(`DefaultGameSettings`)를 따른다.
 - 구조
   - `GunMagazine`(순수 클래스, `ToolCooldown`처럼 소유자 예측 + 서버 검증): 남은 탄, 장전 끝 시각, `TryConsume`. 서버 판정이 최종이다.
@@ -777,6 +790,288 @@ Phase 7은 **A. 게임플레이 개편**(7-A1~7-A5)을 먼저 하고 **B. 모드
 - **사물이 혼자 움직이는 단서:** 움직이는 사물은 플레이어와 충돌하지 않지만, 멈춘(키네마틱) 사물은 마네킹이 밀 수 없다. 마네킹이 사물을 미는 기능은 넣지 않는다.
 - **호스트 부담:** 서버 시뮬레이션과 렌더링을 함께 하므로 호스트 PC 기준으로 상한을 정한다.
 - **모드 맵:** 기존 모드는 물리용 충돌체가 없다. 충돌체가 볼록이 아닌 사물은 물리 대상에서 빼고(움직이지 않음) 경고만 남겨 호환성을 지킨다.
+
+### Phase 9 — 공개방 목록 (Steam 로비 검색) (계획, 2026-11-02)
+
+**목표:** 친구 없이도 게임을 할 수 있게, 로비에서 열려 있는 공개방 목록을 보고 골라 들어가거나 "빠른 참가"로 바로 들어간다.
+
+**확정한 방향 (2026-11-02)**
+- 방 목록은 FishNet이 아니라 이미 쓰는 **Steam 로비**(`SteamMatchmaking.RequestLobbyList`)로 만든다. 서버·비용이 들지 않고, 고른 방에 들어가는 흐름(로비 입장 → `HostAddress`로 FishySteamworks 접속 → `RoomAuthenticator`)은 지금 그대로 쓴다.
+- FishNet·RPC는 바뀌지 않는다. 로비 데이터 키만 늘어난다.
+
+**사용자 확정 (2026-11-02)**
+- 방 만들기 기본값은 **공개**. 스팀 방 만들기 화면의 토글로 친구 전용을 고를 수 있다. (지금의 인스펙터 고정값 `FriendsOnly`는 없앤다)
+- 방 이름은 **호스트가 입력**한다. 최대 24자, 비우면 "<Steam 이름>의 방".
+- **빠른 참가 버튼을 넣는다.**
+- 게임 중인 방은 **목록에서 숨긴다.** 지금은 게임 중에 `SetJoinable(false)`라 Steam 검색에 나오지 않는다. 단, Phase 10 재접속을 넣으면 게임 중에도 로비 입장이 열려 있어야 하므로, 그때는 로비 데이터 `State`(`Room`/`InGame`)를 적고 검색 필터 `State = Room`으로 숨긴다(10-1 참고).
+
+**9-1. 로비 데이터 정리 (`SteamLobbyService`)**
+- 키 상수를 `SteamLobbyKeys`(정적 클래스)로 옮겨 방 만들기·검색이 함께 쓴다.
+- 새 키
+
+| 키 | 값 | 용도 |
+|---|---|---|
+| `Game` | 고정 문자열 `HideAndFreak` | **검색 필터.** 테스트용 AppID 480은 다른 게임 로비가 섞이므로 반드시 거른다 |
+| `Name` | 방 이름 (UTF-8 24자 이내) | 목록 표시 |
+| `Map` | 맵 ID(`builtin.map_forest`, 모드 맵 ID) | 목록 표시 (이름은 받은 쪽이 `ContentRegistry`로 찾고, 없으면 "모드 맵") |
+| `MaxPlayers` | 룸 설정 최대 인원 | 목록 표시, 가득 찬 방 걸러내기 |
+| `PingLoc` | 호스트의 Steam 핑 위치 (`SteamNetworkingUtils.GetLocalPingLocation`) | (선택) 받은 쪽이 `EstimatePingTimeFromLocalHost`로 예상 핑 표시 |
+
+- 기존 키(`HostAddress`, `Version`, `HasPassword`)는 그대로 쓴다. (`Mods`, `ModList`는 2026-11-04 모드 확인 변경으로 삭제)
+- 맵 모드 표시: 로비 `Map` 키의 맵 ID가 내 등록소(꺼 둔 모드 포함 설치 목록)에 있으면 "모드 있음"으로 본다. 버전·파일까지의 확인은 시작할 때 한다.
+- 로비 종류: 방 만들기 때 받은 공개 여부로 `k_ELobbyTypePublic` / `k_ELobbyTypeFriendsOnly`를 고른다(인스펙터 고정값 제거). `CreateLobby(SteamRoomOptions)`로 암호 여부·공개 여부·이름을 한 번에 받는다.
+- 인원 상한: 룸 설정의 최대 인원이 바뀌면 `SetLobbyMemberLimit`도 맞춘다(지금은 `maxMembers` 10 고정).
+- 호스트 갱신: 룸에서 맵·최대 인원이 바뀌면 `ISessionService.UpdateRoomListing(mapId, maxPlayers)` → `SetLobbyData`. 호출은 `RoomState`의 설정 변경 처리(서버)에서 한다. 직접 접속·테스트 방이면 아무것도 하지 않는다.
+
+**9-2. 방 검색 (`SteamRoomBrowser`, 새 파일)**
+- `SteamLobbyService`(내 로비 관리)와 책임을 나눈다(SRP). 인터페이스 `IRoomBrowser`: `Refresh()`, `IsRefreshing`, `event ListUpdated(IReadOnlyList<RoomListing>)`, `event Failed(string key)`. UI는 인터페이스에만 의존한다(DIP).
+- 검색 조건(`RequestLobbyList` 전에 설정)
+  - `AddRequestLobbyListStringFilter("Game", "HideAndFreak", Equal)`
+  - `AddRequestLobbyListStringFilter("Version", GameVersion.Current, Equal)` — 버전이 다른 방은 들어가도 거절되므로 처음부터 숨긴다
+  - `AddRequestLobbyListFilterSlotsAvailable(1)` — 가득 찬 방 제외
+  - `AddRequestLobbyListDistanceFilter(k_ELobbyDistanceFilterWorldwide)` — 초기 사용자 수가 적으므로 전 세계(사용자가 늘면 기본 거리로)
+  - `AddRequestLobbyListResultCountFilter(50)`
+- 결과(`LobbyMatchList_t`)마다 `GetLobbyData`·`GetNumLobbyMembers`·`GetLobbyMemberLimit`으로 `RoomListing`(값 구조체: 로비 ID, 이름, 맵 ID, 인원/최대, 암호 여부, 모드 지문, 예상 핑)을 만든다. 내가 들어가 있는 로비는 뺀다.
+- 새로고침 간격 제한 3초(Steam 요청 남발 방지). Steam이 꺼져 있으면 `notice.steamNotRunning`.
+
+**9-3. 목록 규칙 (`RoomListingRules`, 순수 클래스 — EditMode 테스트 대상)**
+- 정렬: ① 고른 맵의 모드를 가진 방(내장 맵 포함) ② 암호 없는 방 ③ 인원이 많은 방(곧 시작할 방) ④ 예상 핑 낮은 순.
+- 표시 필터(UI 토글): 암호 방 숨기기, 모드가 없는 맵의 방 숨기기.
+- 빠른 참가 고르기: 암호 없음 + 고른 맵의 모드 있음 + 자리 있음 중 정렬 1순위. 없으면 "들어갈 수 있는 방이 없습니다 — 방을 만들까요?" 안내.
+
+**9-4. 로비 UI**
+- 새 화면 `LobbyScreen.Browse`(참가 화면에 "공개방 찾기" 버튼): `LobbyRoomBrowserView` + 줄 프리팹 `RoomListRowView`(이름 · 맵 · 인원 3/10 · 자물쇠 · 모드 없음 표시 · 핑). 새로고침, 빠른 참가, 필터 토글 2개, "방이 없습니다" 빈 화면.
+- 줄을 누르면 지금의 `JoinSteamRoom(로비 ID, "")`를 부른다. 암호 방이면 기존 `PasswordRequired` 흐름(스팀 방 입장 화면에 방 코드를 채우고 암호 입력)을 그대로 탄다. 모드가 없는 맵의 방도 들어갈 수 있고, 시작할 때 설치 안내를 받는다.
+- 스팀 방 만들기 화면: "공개방" 토글(기본 켜짐)과 방 이름 입력칸 추가.
+- 룸 화면 방 코드 옆에 "공개 / 친구 전용" 표시.
+- 기존 프리팹은 메뉴 **"UI > 빠진 UI 영역·키 줄 추가"**가 새 화면·토글·입력칸을 더한다(기존 방식). 문구는 `strings.csv`(ko/en).
+
+**9-5. 영향받는 기존 코드**
+
+| 대상 | 변경 |
+|---|---|
+| `ISessionService` / `SessionService` | `HostSteamRoom(SteamRoomOptions)`(암호·공개·이름), `UpdateRoomListing`, `RoomBrowser` 노출 |
+| `SteamLobbyService` | 키 상수 이전, 로비 종류·인원 상한·새 데이터 기록, 인스펙터 `lobbyType` 제거 |
+| `RoomState` | 맵·최대 인원 변경 시 `UpdateRoomListing` 호출 (`SetRoomJoinable`과 같은 방식) |
+| `LobbyCreateMenu` | 공개 토글·방 이름 입력을 `SteamRoomOptions`로 넘김 |
+| `LobbyJoinMenu` / `LobbyNavigation` | "공개방 찾기" 버튼, `LobbyScreen.Browse` 추가 |
+| `UiPrefabDefaults`·`SharedUiBuilder` | 새 UI 영역 생성 |
+
+**9-6. 위험과 한계**
+- **AppID 480:** 공용 테스트 ID라 다른 게임 로비가 많다. `Game` 필터로 거르지만 결과 50개 한도를 다른 게임이 차지할 수 있어, 테스트 중에는 목록이 비어 보일 수 있다. **자체 AppID를 받으면 해결**된다(출시 필수 항목과 같음).
+- **Steam 로비 인원 ≠ 실제 접속 인원:** 로비에 들어온 뒤 FishNet 접속 전이거나, 접속에 실패하고 로비만 남은 경우 숫자가 어긋날 수 있다. 접속 실패 시 로비를 나가는 기존 처리(`LeaveLobby`)를 확인하고, 필요하면 호스트가 실제 인원을 `Players` 키로 따로 적는다.
+- **방 이름 악용:** 욕설 등. 1차는 길이 제한만 두고, 신고·필터는 이후 검토한다.
+- **오래된 로비:** 호스트가 비정상 종료하면 Steam이 로비를 정리할 때까지 잠깐 남는다. 들어가면 접속 실패 안내가 나오므로 목록을 새로고침하도록 안내한다.
+- **버전:** FishNet·RPC 변경이 없어 `GameVersion.Protocol`은 그대로다. Player Settings Version만 마이너 버전을 올린다. 옛 빌드의 방은 `Game` 키가 없어 목록에 나오지 않는다.
+
+**구현 단계**
+- [x] 9-1. 로비 데이터·로비 종류·인원 상한, `SteamRoomOptions`, `UpdateRoomListing`.
+- [x] 9-2. `SteamRoomBrowser`(`IRoomBrowser`) + 9-3. `RoomListingRules`(+ EditMode 테스트).
+- [x] 9-4. 로비 UI(공개방 찾기 화면, 방 만들기 토글·이름, 룸 표시), 문구, UI 생성 메뉴.
+
+**구현하며 바뀐 점 (2026-11-04)**
+- 룸 설정에는 최대 인원 항목이 없어, `MaxPlayers`는 고른 맵의 최대 인원(없으면 게임 최대)이다. 인원 상한은 지금 인원보다 낮추지 않는다.
+- `HostAddress` 키를 없애고 `GetLobbyOwner`로 접속한다. (로비 데이터는 주인이 위조할 수 있음. Phase 10의 호스트 이전도 이 값을 쓴다)
+- `Mods` 지문 대신 `hasMap`(맵 ID가 내 PC에 있는지, 꺼 둔 모드 포함)으로 정렬·거르기·빠른 참가를 한다.
+- 공개 여부는 게스트도 볼 수 있게 `IsPublic` 키에 적는다. 목록 줄은 별도 프리팹 없이 `LobbyRoomBrowserView`가 템플릿 버튼으로 만든다.
+- [ ] 9-5. 2PC(Steam 계정 2개) 확인: 공개방이 목록에 나오는가, 친구 전용 방은 안 나오는가, 암호·모드 다름·가득 참·게임 중 처리, 맵·인원 변경이 목록에 반영되는가, 빠른 참가.
+
+### Phase 10 — 접속 안정성: 재접속, 호스트 이탈, 방장 추방 (계획, 2026-11-02)
+
+**목표:** 공개방에서 모르는 사람과 할 때 생기는 문제를 막는다. 끊긴 사람은 진행 중인 판으로 돌아올 수 있고, 호스트가 나가도 방이 바로 깨지지 않으며, 방장은 방해하는 사람을 내보낼 수 있다.
+
+**지금 상태 (코드 확인)**
+- 게임 중 접속은 `RoomAuthenticator`가 무조건 거부한다(`ConnectionRejectReason.InGame`). Steam 로비도 게임 중에는 `SetJoinable(false)`다.
+- 끊기면 FishNet이 그 사람의 아바타를 제거하고, `PlayerRegistry`가 생존 인원에서 뺀다. 가드가 모두 끊기면 `MatchJudge`가 곧바로 마네킹 승리로 끝낸다.
+- 끊긴 게스트는 `SessionService.OnClientConnectionState`에서 Steam 로비를 나가고 "호스트 연결 끊김" 안내와 함께 로비로 돌아간다. 다시 들어올 정보(방 코드·암호)는 남지 않는다.
+- 호스트가 나가면 서버가 멈추고 모든 게스트가 로비로 돌아간다. 방장 넘기기는 없다.
+- 룸 참가자(`RoomMember`)는 표시 이름·준비·호스트 여부만 있다. 추방 기능은 없다.
+- 판 도중 상태(옮겨진 사물 위치 등)를 새로 들어온 사람에게 보내는 처리는 없다. Phase 8 계획에 "게임 중 난입은 막혀 있어 전체 상태 전송은 필요 없다"고 적어 둔 부분을 이번에 바꾼다.
+
+**사용자 확정 (2026-11-02)**
+1. 재접속 유예 시간은 **60초**. 지나면 그 자리는 사라지고 사망으로 처리한다.
+2. 유예 중인 사람은 승패 판정에서 **살아 있는 것으로 계산**한다. 가드 한 명이 잠깐 끊겼다고 판이 바로 끝나지 않게 한다.
+3. 게임 중 호스트가 나가면 판은 끝나고 **새 방장 아래 룸으로 돌아간다.**
+4. 추방된 사람은 **그 방에 다시 들어올 수 없다**(방이 닫힐 때까지).
+5. **게임 중 추방을 허용**한다(ESC 메뉴의 플레이어 목록에서 확인 창 후).
+
+**10-0. 플레이어 식별 키 (공통 기반)**
+- 재접속·추방 모두 "같은 사람"을 알아봐야 한다. 연결 번호(`ClientId`)는 다시 접속하면 바뀌므로 쓰지 않는다.
+- `PlayerKey`: Steam 방은 접속 주소의 **SteamID**(FishySteamworks가 주므로 위조할 수 없음). 직접 접속 방은 실행할 때마다 만드는 **임의 토큰**을 `JoinRequestBroadcast`에 담아 보낸다(같은 실행 안에서만 재접속 가능).
+- 서버의 `RoomMembership`(새 클래스, 순수): `ClientId ↔ PlayerKey` 대응, 추방 목록, 재접속 대기 자리를 관리한다. `RoomState`와 `RoomAuthenticator`가 함께 쓴다.
+
+**10-1. 재접속**
+- 끊겼을 때 (서버)
+  - 게임 중이면 `RejoinSlot`을 만든다: PlayerKey, 역할, 생존 여부, 체력, 마지막 위치·방향, 변신 상태(복사한 사물 번호·회전), 끊긴 시각.
+  - 아바타는 FishNet이 지금처럼 제거한다. 저장은 제거 직전(`PlayerIdentity.ServerDespawned`)에 한다.
+  - 유예 동안 `PlayerRegistry`는 그 자리를 "생존 대기"로 센다(정해야 할 것 2). 유예가 지나면 사망으로 처리하고 다시 판정한다.
+  - 사냥 시간 진입, 판 종료 때는 대기 자리를 모두 정리한다.
+- 다시 들어올 때
+  - `RoomAuthenticator`: 게임 중이어도 **대기 자리가 있는 PlayerKey는 통과**시킨다(인원 검사도 그 자리를 이미 포함). 추방된 사람과 처음 오는 사람은 지금처럼 거부한다.
+  - FishNet이 전역 씬(맵·게임 시스템)을 새 클라이언트에 자동으로 불러준다. 불러온 뒤 `PlayerSpawner`가 저장한 위치·체력·역할로 아바타를 만들고, 마네킹이면 같은 사물로 다시 변신시킨다. 사냥 시간이면 Ghoul 외형으로 만든다.
+  - **판 상태 따라잡기:** 새로 들어온 사람에게 한 번 보낸다(`LateJoinSnapshot`, 대상 지정 메시지).
+    - 시작 위치에서 옮겨진 변신 사물의 위치·회전 (`PropPhysicsSync`에 "전체 상태 보내기" 추가)
+    - 전원 장치 진행도·파괴 여부, 사냥 시간 여부·깜빡이는 조명은 이미 SyncVar거나 위치 해시로 같아서 따로 보내지 않는다. 구현 때 하나씩 확인한다.
+  - 로딩 대기(`MatchSessionBridge`의 로딩 보고)는 판 시작 때만 쓰므로, 판 도중 들어온 사람은 기다리지 않는다.
+- 클라이언트
+  - 게임 중에 예상치 못하게 끊기면 `LastSession`(로비 ID 또는 주소, 입력한 암호, 끊긴 시각)을 남긴다. 게임이 꺼진 경우에 대비해 PlayerPrefs에도 10분 동안 저장한다.
+  - 로비 화면에 **"다시 참가"** 버튼과 남은 유예 시간을 보여 준다. 끊긴 직후 한 번은 자동으로 다시 시도한다.
+  - Steam 방은 끊겨도 **Steam 로비를 바로 나가지 않는다**(로비 멤버 확인을 다시 통과하기 위함). 다시 참가를 포기하거나 유예가 지나면 나간다.
+- Steam 로비와 Phase 9의 관계
+  - 게임 중에도 로비 입장(`SetJoinable`)은 열어 둔다. 대신 로비 데이터 `State = InGame`을 적고, 방 목록 검색은 `State = Room`만 가져온다. 새로 오는 사람은 인증 단계에서 거부된다.
+
+**10-2. 호스트 이탈 (방장 넘기기)**
+- FishNet은 호스트가 곧 서버라, 판 도중에 서버를 다른 PC로 옮기는 것(진짜 호스트 이전)은 하지 않는다. 비용이 크고 판 상태 전체를 옮겨야 하기 때문이다. 대신 **"방은 살리고 판은 끝낸다"**.
+- 룸 단계에서 호스트가 나갈 때 (정상 종료)
+  1. 호스트가 다음 방장을 고른다(가장 먼저 들어온 게스트).
+  2. 호스트가 `HostHandoverBroadcast`(새 방장 SteamID, 현재 룸 설정, 방 이름·공개 여부)를 보낸다. 이어서 `SteamMatchmaking.SetLobbyOwner`로 Steam 로비 주인을 넘긴 뒤 나간다.
+  3. 새 방장은 같은 Steam 로비에서 서버를 시작하고, `HostAddress`를 자기 SteamID로 바꾼다. 받은 룸 설정을 적용하고, 암호는 자기가 입력했던 암호를 그대로 쓴다.
+  4. 나머지 게스트는 로비 데이터 변경(`LobbyDataUpdate_t`)으로 새 `HostAddress`를 보고 자동으로 다시 접속한다. 준비 상태는 초기화된다.
+- 게임 중에 호스트가 나갈 때
+  - ESC → 방 나가기를 누르면 "나가면 이번 판이 끝납니다" 확인 창을 띄운다.
+  - 호스트가 `MatchAbortedBroadcast(HostLeft)`를 보내고 위 1~4를 진행한다. 게스트는 "호스트가 나가 판이 끝났습니다" 안내를 본 뒤 새 방장의 룸으로 간다(정해야 할 것 3).
+- 호스트가 갑자기 꺼졌을 때 (알림 없음)
+  - Steam은 로비 주인이 나가면 남은 멤버 중 한 명에게 주인을 자동으로 넘긴다.
+  - 게스트는 서버 연결이 끊겨도 Steam 로비에 15초 동안 남아 기다린다. 자기가 새 주인이 되면(`GetLobbyOwner == 나`) 마지막으로 받은 룸 설정으로 서버를 시작하고 `HostAddress`를 바꾼다. 나머지는 바뀐 주소로 다시 접속한다. 15초 안에 새 주소가 오지 않으면 로비로 돌아간다.
+- 직접 접속 방·테스트 방은 넘기지 않는다. 지금처럼 방이 닫히고 안내가 나온다.
+
+**10-3. 방장 추방**
+- 룸 화면 참가자 줄(`RoomMemberListView`)에 호스트에게만 **"추방"** 버튼을 보인다. 확인 창을 띄운 뒤 실행한다.
+- 게임 중에는 ESC 메뉴에 플레이어 목록을 두고 같은 버튼을 단다(정해야 할 것 5).
+- 서버(호스트가 곧 서버라 RPC 없음): `IRoomModeration.Kick(clientId)`
+  1. PlayerKey를 추방 목록에 넣는다.
+  2. `ConnectionRejectedBroadcast(Kicked)`를 보낸 뒤 연결을 끊는다.
+  3. 재접속 대기 자리를 만들지 않는다. 게임 중이면 사망으로 처리하고 판정한다.
+- `RoomAuthenticator`: 추방 목록의 PlayerKey는 `Banned`로 거부한다.
+- Steam 로비에서 다른 사람을 강제로 내보내는 API는 없다. 접속 거부가 실제 차단 역할을 하고, 추방된 사람은 끊길 때 스스로 로비를 나간다(지금 코드).
+- 문구: `notice.rejected.kicked`("방장이 방에서 내보냈습니다"), `notice.rejected.banned`("이 방에는 다시 들어갈 수 없습니다").
+
+**10-4. 영향받는 기존 코드**
+
+| 대상 | 변경 |
+|---|---|
+| `RoomAuthenticator` | PlayerKey 확인, 재접속 대기 자리 통과, 추방 목록 거부. 거부 이유 `Kicked`·`Banned` 추가 |
+| `JoinRequestBroadcast` | 직접 접속용 토큰 추가 → **Protocol +1** |
+| `RoomState` | `RoomMembership` 사용, 끊김 때 재접속 자리 만들기, 추방·방장 넘기기 처리 |
+| `PlayerSpawner` | 재접속한 사람을 저장 상태로 스폰 |
+| `PlayerRegistry` / `MatchJudge` | 유예 중인 사람을 생존으로 계산, 유예가 끝나면 다시 판정 |
+| `PropPhysicsSync` | 판 도중 들어온 사람에게 옮겨진 사물 위치를 한 번 보냄 |
+| `SessionService` / `SteamLobbyService` | 끊김 때 로비 유지, `LastSession`, 다시 참가, 로비 주인 넘기기·자동 재접속, 로비 `State` 키 |
+| `RoomMemberListView`, `PauseMenuView` | 추방 버튼, 게임 중 플레이어 목록, 호스트 나가기 확인 창 |
+| 로비 UI | "다시 참가" 버튼과 남은 시간 |
+| `strings.csv` | 새 안내 문구(ko/en) |
+
+**10-5. 위험과 한계**
+- **Steam 로비 주인 자동 이전 시점:** 호스트 PC가 갑자기 꺼지면 Steam이 주인이 나간 것을 알아채기까지 수십 초 걸릴 수 있다. 15초 기다림을 넘기면 로비로 돌아간다. 실제 시간은 2PC 테스트로 정한다.
+- **새 방장의 PC 성능·회선:** 판 단위로만 넘기므로 새 방장이 느리면 다음 판부터 느려진다. 방장 넘기기 대상을 고르는 기준(먼저 들어온 사람)은 테스트 후 바꿀 수 있다.
+- **변신한 마네킹의 재접속:** 끊긴 동안 아바타가 사라지므로 가드가 "사물이 없어졌다"는 단서를 얻을 수 있다. 1차는 이 한계를 받아들이고, 문제가 되면 끊긴 동안 변신 외형만 남겨 두는 방법을 검토한다.
+- **유예 악용:** 질 것 같을 때 일부러 끊었다가 들어오는 행동. 다시 들어오면 저장한 위치·체력 그대로라 이득이 거의 없다. 유예 중 받은 피해는 없음(아바타가 없으므로).
+- **버전:** 새 메시지와 요청 필드가 생기므로 **`GameVersion.Protocol` +1**, Player Settings Version은 마이너 버전을 올린다.
+
+**구현 순서 (작고 독립적인 것부터)**
+- [ ] 10-0. `PlayerKey`·`RoomMembership`(+ EditMode 테스트).
+- [ ] 10-3. 방장 추방(룸 → 게임 중).
+- [ ] 10-2a. 룸 단계 방장 넘기기(정상 종료).
+- [ ] 10-1. 재접속(대기 자리, 상태 저장·복원, 판 상태 따라잡기, 다시 참가 UI).
+- [ ] 10-2b. 게임 중 호스트 이탈, 갑자기 꺼진 경우의 자동 방장 넘기기.
+- [ ] 10-6. 2PC 확인: 게스트 랜선 끊고 60초 안에 복귀, 유예 초과, 가드 끊김 때 판 유지, 정상·비정상 호스트 이탈, 추방 후 재입장 거부.
+- Phase 9(공개방)와 함께 갈 경우: 로비 `State` 키와 게임 중 `SetJoinable` 유지는 10-1에서 바꾸므로, 9-1을 먼저 하고 10-1에서 맞춘다.
+
+### Phase 11 — 캐릭터 화풍 통일 + 더 무서운 구울 (계획, 2026-11-02)
+
+**목표:** 마네킹·가드·구울·총을 맵(MapKit)과 같은 로우폴리 화풍으로 맞춘다. 사냥 시간의 구울은 생김새·눈·움직임·소리로 확실히 무섭게 만든다.
+
+**사용자 결정 (2026-11-02)**
+- 화풍: **MapKit과 같은 로우폴리.** 단순한 형태 + 단색 머티리얼(텍스처 없음), 각진 면.
+- 제작: **Blender 스크립트로 직접 생성**(MapKit·지하철 소품·덤불과 같은 방식, `Art/MapKit/Source~`의 공용 함수 재사용). 라이선스 문제가 없어 공개 저장소에도 넣을 수 있다.
+- 구울 강화 방향: **실루엣·비율, 얼굴·발광, 움직임, 소리·연출 모두.**
+
+**지금 외형 (교체 대상)**
+
+| 역할 | 지금 | 원본 | 리그·애니메이션 |
+|---|---|---|---|
+| 마네킹 | 더미 | Kevin Iglesias `Human_BasicMotionsDummy_M` | Humanoid, Kevin 걷기·달리기 + Mixamo 감정 표현 6개 |
+| 가드 | SWAT | Low Poly Character Series 1 `Character_SWAT_A_3` | Humanoid, Kevin 걷기·달리기, 조준 IK, 1인칭 팔다리 메시(`LimbMeshFilter`) |
+| 가드 총 | Recon_M 소총 | 같은 SWAT 팩 | `Muzzle`·`Right Hand`·`Left Hand` 지점 |
+| 구울 | Ghoul | 사용자 제공 `Ghoul.fbx`(낙서 텍스처) | Generic, Idle·Hunch_Reach + 코드로 만든 할퀴기(`GhoulSwipeClipBuilder`) |
+
+**11-1. 공용 캐릭터 생성 기반 (`Art/Characters/Source~/character_common.py`, 새 파일)**
+- 구현(2026-11-02): `character_common.py`(Humanoid 뼈대 22개·부위 도형·뼈별 100% 가중치·검사·세로 미리보기·FBX 내보내기), `generate_test_body.py` → `Art/Characters/Models/SK_TestBody.fbx`(1024 tris, 1.81m). Blender 미리보기로 정면(-Y→Unity +Z)·가중치(확인 자세) 확인. Unity 확인 메뉴 **"캐릭터 생성/로우폴리 몸 Humanoid 확인 (SK_TestBody)"**(`LowPolyCharacterCheck`): Humanoid 임포트, 필수 뼈·정면·좌우·키 검사(결과 `Temp/CharacterCheck/report.txt`), 시험용 외형 `Skin_TestBody`(마네킹 애니메이터) 생성. Unity 검사 통과(뼈 22개 연결, +Z 정면, 키 1.86m). 에디터에서 휴머노이드 클립을 입혀 사진을 찍는 방식(SampleAnimation·PlayableGraph·AnimationMode)은 기존 Kevin 더미에서도 근육 자세가 적용되지 않아 빼고, 애니메이션은 테스트 방에서 확인한다. FBX는 뼈대 때문에 `bake_space_transform`을 끄고 Unity 축 변환에 맡긴다.
+- `mapkit_common.py`의 팔레트·머티리얼·FBX 내보내기를 그대로 쓴다. 머티리얼 이름 앞머리는 `M_Char_`.
+- 몸은 부위별 단순 도형(각진 상자·원기둥·구)을 이어 붙여 만들고, 관절마다 뼈 하나에 100% 가중치를 준다(로우폴리라 자동 가중치보다 깔끔하고, 결과가 항상 같다).
+- **Humanoid 호환 뼈대:** `Hips → Spine → Chest → UpperChest → Neck → Head`, 팔(`Shoulder·UpperArm·LowerArm·Hand`), 다리(`UpperLeg·LowerLeg·Foot·Toes`), 손가락은 엄지·나머지 묶음 2개만. Unity Humanoid 아바타 자동 매핑이 되는 이름을 쓴다. → **Kevin 걷기·달리기와 Mixamo 감정 표현을 그대로 재사용**한다.
+- 크기 기준: 사람 1.8m, 발이 원점, 정면 +Z(Blender −Y). 기본 자세는 T자.
+- 미리보기 PNG(정면·옆·뒤, 맵 소품과 나란히)를 남겨 화풍을 눈으로 맞춘다.
+
+**11-2. 마네킹 (`generate_mannequin.py`)**
+- 매장 마네킹 모습: 얼굴 없는 달걀형 머리, 둥근 관절(어깨·팔꿈치·무릎이 공 모양), 매끈한 몸통, 흰색·연회색 무광. 관절이 보이는 것이 "마네킹" 정체성이자 구울로 바뀔 때의 대비가 된다.
+- 조금씩 다른 색 2~3개(흰색·베이지·연회색)를 같은 메시에 머티리얼만 바꿔 만들어, 나중에 플레이어마다 다르게 고를 여지를 둔다(1차는 한 가지만 사용).
+- 구현(2026-11-02): `generate_mannequin.py` → `Models/SK_Mannequin.fbx`(1504 tris, 1.80m, 머티리얼 `M_Char_MannequinBody`·`M_Char_MannequinJoint`). 몸통은 앞뒤로 납작한 원기둥(골반·허리 관절 고리·가슴), 관절 공 7곳, 벙어리장갑 손, 신발 모양 발. `CharacterAssetBuilder`가 Kevin 더미 대신 이 모델을 Humanoid로 검사·임포트해 `Skin_Dummy`(표시 이름 Mannequin, 파일 이름은 기존 참조 유지)를 만든다. 새 메뉴 **"캐릭터 생성/마네킹 외형만 다시 만들기"**(가드·구울·총은 그대로).
+
+**11-3. 가드 (`generate_guard.py`) + 총 (`generate_guard_rifle.py`)**
+- 시설 경비원 모습: 남색 제복, 모자, 조끼, 허리띠의 손전등 집, 장화. 팔다리 굵기는 1인칭 팔다리 메시가 잘 보이게 마네킹보다 조금 굵게.
+- 1인칭 팔다리 메시(`LimbMeshFilter`)는 뼈 가중치로 팔다리를 고르므로, 위 뼈 이름 규칙만 지키면 그대로 동작한다. 모델 Read/Write를 켠다.
+- 총: 로우폴리 소총(상자·원기둥 조합, 각진 총열), `Muzzle`·`Right Hand`·`Left Hand` 빈 오브젝트를 Blender에서 함께 만든다. 손전등도 같은 화풍으로 만든다.
+- 총·손 위치(`WeaponGrip`) 값은 새 모델에 맞춰 다시 조정한다(Play 중 에셋 값 조정 방식 그대로).
+- 구현(2026-11-03): `generate_guard.py` → `SK_Guard.fbx`(1800 tris, 1.80m: 남색 제복·검은 조끼·배지·무전기·허리띠와 오른쪽 허리 손전등 집·모자·장갑·장화), `generate_guard_rifle.py` → `SM_GuardRifle.fbx`(176 tris, 0.97m, 원점 = 권총 손잡이, `Muzzle`·`Right Hand`·`Left Hand` 빈 오브젝트 포함). `CharacterAssetBuilder.CreateGun`은 총구 방향·손 위치 추정을 없애고 모델의 표시를 루트 바로 아래로 옮겨 쓴다. 새 메뉴 **"캐릭터 생성/가드 외형·총만 다시 만들기"**. 손전등은 손에 드는 모델이 없고(빛만 카메라에 붙음) 허리 손전등 집으로 표현했다.
+
+**11-4. 구울 (`generate_ghoul.py`) — 생김새**
+- **실루엣·비율:** 키 2.4m(지금과 같음)지만 늘 구부정해서 머리는 1.9m 정도. 마네킹 몸이 뒤틀린 모습 — 같은 둥근 관절에 팔이 무릎 아래까지 내려오고(사람의 약 1.5배), 손가락 대신 길고 날카로운 손톱 3개, 튀어나온 척추 마디, 비대칭 어깨, 뒤로 꺾인 발.
+- **얼굴·발광:** 마네킹의 매끈한 얼굴이 세로로 찢어져 이빨이 드러난 입, 눈구멍 2개에서 빛나는 눈(발광 머티리얼 `M_Char_GhoulEye`, 어두운 사냥 시간에도 보임). 몸은 마네킹 흰색이 더러워진 회색 + 갈라진 틈의 검붉은 색.
+- 리그는 **Generic**(긴 팔·꺾인 다리는 Humanoid 리타깃이 어색해짐). 애니메이션은 Blender에서 스크립트로 키를 찍어 만든다.
+
+**11-5. 구울 — 움직임 (Blender 키 애니메이션)**
+
+| 클립 | 내용 | 쓰는 곳 |
+|---|---|---|
+| `Ghoul_Idle` | 구부정하게 서서 숨 쉬듯 들썩이다가 가끔 머리를 홱 꺾음 | 멈춤 |
+| `Ghoul_Stalk` | 긴 팔로 바닥을 짚으며 느리게 다가가는 걸음 | 걷기 |
+| `Ghoul_Crawl` | 네 발로 빠르게 기어 달리기 | 달리기(Shift) |
+| `Ghoul_Attack` | 두 팔을 치켜들었다가 휘두르는 할퀴기 (맞는 순간 = `attackHitDelay`) | 공격 |
+| `Ghoul_Twitch` | 짧게 경련하듯 떠는 동작 (덧입히는 레이어, 무작위로 가끔) | 대기·걷기 중 |
+| `Ghoul_Shriek` | 머리를 젖히고 비명 (사냥 시간 시작 때 한 번) | 연출 |
+
+- **끊기는 느낌:** 일부 키를 일부러 프레임 단위로 뚝뚝 끊어(보간 없음) 부자연스럽게 만든다.
+- **갑자기 멈추기:** 이동을 멈추면 바로 `Idle`로 0.05초 만에 넘어가 "딱 멈춘" 느낌을 낸다(애니메이터 전환 시간으로 조절).
+- 이동 속도·판정 크기는 바뀌지 않는다. 기어도 충돌 캡슐은 그대로다(보이는 모습만 낮아짐). 화면상 머리 높이와 판정이 달라지는 문제는 테스트로 확인한다.
+- `GhoulSwipeClipBuilder`(Unity에서 코드로 만든 할퀴기)와 `Ghoul.fbx`·낙서 텍스처·`M_Ghoul`은 새 모델이 확인되면 지운다.
+- 구현(2026-11-03): `generate_ghoul.py` → `SK_Ghoul.fbx`(1452 tris, 서 있으면 2.37m, 팔 약 1.4배, 비대칭 어깨, 척추 마디, 검붉은 틈, 세로 입·이빨, 발광 눈 `M_Char_GhoulEye`) + 액션 6개(Idle 2초·Stalk 1.33초·Crawl 0.67초 반복, Attack 1.08초(맞는 프레임 11)·Shriek 1.67초, Twitch 6초 덧입히기). 다시 불러와 6개 액션이 모두 들어 있는지 확인한다. `GhoulSkinBuilder`를 새로 씀: 눈만 URP 발광 머티리얼(`M_GhoulEye`)로 바꿔 끼우고, 애니메이터는 Speed 0.3/2.7(나갈 때 2.5) 기준 대기↔다가가기↔기어가기, 멈출 때 전환 0.05초, Attack·Shriek 트리거(→ 대기), Twitch 덧입히기 레이어. `attackHitDelay`는 다시 만들 때마다 0.05 + 11/24 ≈ 0.508초로 맞춘다. `CharacterAnimatorParameters.Shriek` 추가(트리거 호출은 11-6). `GhoulSwipeClipBuilder` 삭제. 새 메뉴 **"캐릭터 생성/구울 외형만 다시 만들기"**.
+
+**11-6. 구울 — 소리·연출**
+- 소리: 낮은 숨소리·으르렁(구울 주변에서 계속 나는 3D 소리, 걸을 때 커짐), 기어갈 때 손발 짚는 소리, 공격할 때 비명, 사냥 시간 시작 비명. 사운드는 프로젝트의 공포 사운드 팩(`Horror SFX - 082918`, 사용자가 보류해 둔 `free horror ambience 2`)에서 고르고, 없으면 구한다. `NoiseType`에 `GhoulBreath`, `GhoulStep`, `GhoulShriek`을 추가하고 `NoiseLibrary`에 연결한다.
+- 가드 화면 연출(가드 본인 화면만): 가까운 구울이 **시야 안에 있고 8m 이내**면 화면 가장자리 노이즈·비네트가 진해지고 심장 소리가 빨라진다. 시야 밖의 구울은 알려 주지 않는다(위치 정보를 주지 않기 위함). 기존 `HuntVisionEffect`·`LowHealthVignette` 방식에 효과를 하나 더한다.
+- 사냥 시간 시작: 조명이 꺼질 때 모든 구울이 `Shriek`을 한 번 하고, 가드 화면이 잠깐 흔들린다.
+- 구현(2026-11-03, 네트워크 변경 없음 — 모두 각 피어가 보이는 상태로 재생): `NoiseType` 9~12(GhoulBreath·GhoulStep·GhoulShriek·GuardHeartbeat) + 임시 합성음(`ProceduralNoiseClips`), `NoiseLibrary` 항목(클립 비움 — 사운드 팩에서 골라 끼우면 교체). `HuntCreatureSounds`(마네킹): 사냥 중·변신 아님·생존이면 3D 숨소리 반복(멈춤 0.45 ~ 3m/s 이상 1배), 걸음 1.3m·기어가기 0.8m마다 발소리. `MannequinHuntingMode`: 외형 교체 다음 프레임에 `Shriek` 트리거 + 비명. `GuardDreadEffect`(가드): `GhoulDreadRange`(8m) 안의 구울이 화면 안·가려지지 않으면 필름 노이즈·색 번짐·채도 감소 + 2D 심장 소리(빨라짐), 사냥 시간 시작 때 0.8초 흔들림. 저체력 비네트와 겹치지 않게 비네트·노출은 쓰지 않음. 눈 밝기 조정값(`GhoulEyeGlow`)은 아직 넣지 않음.
+- 구울 눈의 빛은 손전등으로 비추지 않아도 보이므로, 어둠 속에서 "눈만 보이는" 연출이 된다. 밸런스상 너무 잘 보이면 밝기를 `game_tuning.csv`의 `GhoulEyeGlow`로 조정한다.
+
+**11-7. 영향받는 기존 코드**
+
+| 대상 | 변경 |
+|---|---|
+| `CharacterAssetBuilder` | 원본 경로를 `Art/Characters/Models`의 새 FBX로 교체(마네킹·가드·총). Kevin 걷기·달리기 클립은 그대로 사용 |
+| `GhoulSkinBuilder` | 새 구울 FBX·클립 이름·애니메이터(이동 2단계 + 경련 레이어 + 비명) |
+| `MannequinAnimatorBuilder` | 새 마네킹에서도 감정 표현 6개가 그대로 붙는지 확인(Humanoid라 바뀌지 않을 것으로 예상) |
+| `LocomotionAnimatorDriver` | 구울 달리기 판단용 `IsSprinting` 파라미터(있으면 씀, 없으면 건너뜀 — 기존 규칙) |
+| `NoiseType` / `NoiseLibrary` | 구울 소리 3종 |
+| HUD·화면 효과 | 가드용 구울 근접 효과(새 `IViewEffect` 구현) |
+| `ModdingGuide.md` | 기본 외형 설명(더미·SWAT → 마네킹·경비원), 구울 애니메이터 파라미터 |
+| 에셋 정리 | 확인 후 `Low Poly Character Series 1_SWAT`(가드·총), Kevin `Human_BasicMotionsDummy_M` 모델(애니메이션은 유지) 사용 중지 → 크레딧·`AssetLicenses.md` 갱신, 필요 없어진 팩 삭제 |
+
+**11-8. 위험과 한계**
+- **로우폴리 품질:** 스크립트로 만든 사람 모델은 손·얼굴 표현에 한계가 있다. 화풍이 단순한 MapKit에 맞추는 것이라 오히려 어울리지만, 미리보기로 단계마다 확인한다.
+- **Humanoid 자동 매핑 실패:** 뼈 이름·축이 맞지 않으면 Unity가 아바타를 못 만든다. 11-1에서 빈 몸으로 먼저 Kevin 걷기와 Mixamo 감정 표현이 제대로 붙는지 확인한 뒤 모델을 만든다.
+- **Blender 손 애니메이션의 자연스러움:** 구울 걸음은 코드로 키를 찍으므로 처음엔 어색할 수 있다. 무서운 구울은 "약간 어색한 것"이 장점이 되지만, 발이 미끄러지지 않게 이동 속도와 걸음 길이를 맞춘다.
+- **밸런스:** 구울 근접 효과와 눈 발광은 가드에게 정보를 준다. 시야 안·짧은 거리로 제한하고 테스트로 조정한다.
+- **모드:** 기존 모드의 외형은 그대로 동작한다(외형 시스템은 바뀌지 않음). 기본 외형이 바뀌는 것뿐이다.
+- **버전:** 외형만 바뀌면 Protocol은 그대로. `NoiseType`에 새 번호가 생기면(네트워크로 번호를 보냄) **`GameVersion.Protocol` +1**.
+
+**구현 순서**
+- [x] 11-1. 공용 생성 기반 + 빈 몸 Humanoid 확인(Kevin 걷기·Mixamo 감정 표현). — 2026-11-02 테스트 방에서 걷기·감정 표현 확인.
+- [x] 11-2. 마네킹 → 테스트 방에서 이동·감정 표현·변신 확인. — 2026-11-03 확인.
+- [x] 11-3. 가드·총·손전등 → 1인칭 팔다리, 조준 IK, 총 위치 조정. — 2026-11-03 확인(가드·마네킹 머리 반지름도 키움).
+- [x] 11-4·11-5. 구울 모델·애니메이션 → 테스트 방 구울 전환으로 확인. — 2026-11-03 확인. 함께 반영: 임시 절차적 감정 표현 삭제, 공격 중 이동 잠금(`MannequinAttackMoveLock` 0.9초), 기어가기 팔 수정, 1인칭 구울 팔 표시(`FirstPersonBodyView` Generic 지원), 1인칭 카메라가 머리를 따라감(`SkinEyePoint`), 뼈를 따라가는 피격 판정 캡슐(`SkinHitboxes`, `Hitbox` 레이어, 총만 `AimRaycaster.TryRaycastHittable`).
+- [x] 11-6. 구울 소리·가드 화면 연출, 사냥 시간 시작 비명. — 2026-11-03 확인. 함께 반영: 구울 본인 숨소리·발소리 0.25배, 가드 손전등이 1인칭 총(FirstPersonGun) 아래에 있어 손에 든 총을 쓰면 꺼지던 문제(CameraPivot 아래로 이동), 본인 손전등 그림자 시작 거리 0.8m, 사냥 시작 흔들림이 카메라에 누적되던 문제.
+- [ ] 11-7. 옛 외형 에셋 정리, 크레딧·문서, 2PC 확인.
 
 ---
 

@@ -9,7 +9,7 @@
     "generatorDestroyTime": 10,
     "gunCooldown": 1,
     "gunMagazineSize": 4,
-    "gunReloadTime": 5,
+    "gunReloadTime": 1,
     "grenadeCooldown": 15,
     "guardMaxHealth": 3,
     "mannequinMaxHealth": 1,

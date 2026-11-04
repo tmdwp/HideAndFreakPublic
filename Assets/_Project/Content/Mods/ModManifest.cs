@@ -24,6 +24,9 @@ namespace GuardVsMannequin.Mods
         /// <summary>설명.</summary>
         public string description;
 
+        /// <summary>모드를 받을 수 있는 주소. 없는 플레이어에게 설치 안내로 보여 준다. (<see cref="ModLinkPolicy"/>를 통과한 주소만 열 수 있다)</summary>
+        public string url;
+
         /// <summary>필요한 최소 게임 버전(Player Settings Version, 예: "0.6.0"). 비우면 확인하지 않는다.</summary>
         public string gameVersion;
 

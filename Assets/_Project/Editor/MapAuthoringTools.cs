@@ -35,10 +35,11 @@ namespace GuardVsMannequin.Editor
 
         /// <summary>
         /// 새 맵 씬을 만든다. 이름은 영문·숫자로 쓰며, 씬 파일은 Scenes/Custom/Map_&lt;이름&gt;.unity가 된다.
+        /// 이름을 "Map_"로 시작해 적어도 접두어는 한 번만 붙는다.
         /// </summary>
         public static void CreateNewMap(string mapName)
         {
-            string safeName = new string((mapName ?? string.Empty).Where(c => char.IsLetterOrDigit(c) || c == '_').ToArray());
+            string safeName = StripMapPrefix(new string((mapName ?? string.Empty).Where(c => char.IsLetterOrDigit(c) || c == '_').ToArray()));
             if (string.IsNullOrEmpty(safeName))
             {
                 EditorUtility.DisplayDialog("새 맵", "맵 이름을 영문·숫자로 입력하세요.", "확인");
@@ -96,6 +97,17 @@ namespace GuardVsMannequin.Editor
 
             Selection.activeGameObject = environment.gameObject;
             Debug.Log($"[MapAuthoringTools] 새 맵을 만들었습니다: {scenePath}. Map/Environment 아래에 맵 모델을 넣고 도우미 창의 순서대로 진행하세요.");
+        }
+
+        /// <summary>
+        /// 앞에 붙은 "Map_"(대소문자 무시)를 뗀다. 씬 이름을 만들 때 접두어가 두 번 붙지 않게 하기 위함이다.
+        /// </summary>
+        private static string StripMapPrefix(string name)
+        {
+            const string prefix = "Map_";
+            while (name.StartsWith(prefix, System.StringComparison.OrdinalIgnoreCase))
+                name = name.Substring(prefix.Length);
+            return name;
         }
 
         /// <summary>

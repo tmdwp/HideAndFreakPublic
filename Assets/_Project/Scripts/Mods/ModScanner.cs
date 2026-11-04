@@ -102,6 +102,9 @@ namespace GuardVsMannequin.Mods
 
             foreach (string bundle in new[] { manifest.assetBundle, manifest.sceneBundle })
             {
+                if (!string.IsNullOrEmpty(bundle) && !IsPlainFileName(bundle))
+                    return $"번들 파일 이름 '{bundle}'이 잘못되었습니다. 모드 폴더 안의 파일 이름만 쓸 수 있습니다.";
+
                 string path = mod.GetFilePath(bundle);
                 if (path != null && !File.Exists(path))
                     return $"번들 파일이 없습니다: {bundle}";
@@ -122,6 +125,16 @@ namespace GuardVsMannequin.Mods
                 map.settings ??= new List<MapSettingRange>();
             }
             return null;
+        }
+
+        /// <summary>
+        /// 경로 없는 파일 이름인지 확인한다. (mod.json으로 모드 폴더 밖의 파일을 읽지 못하게 한다)
+        /// </summary>
+        private static bool IsPlainFileName(string fileName)
+        {
+            return fileName != "." && fileName != ".." && fileName.IndexOf(':') < 0
+                && fileName.IndexOf('/') < 0 && fileName.IndexOf('\\') < 0
+                && Path.GetFileName(fileName) == fileName;
         }
 
         /// <summary>

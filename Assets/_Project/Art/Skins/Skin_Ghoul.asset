@@ -19,10 +19,18 @@ MonoBehaviour:
   useAimIK: 0
   fireAnimationEvents: 0
   keepRootBoneInPlace: 0
-  attackHitDelay: 0.81875
+  attackHitDelay: 0.5083333
   weaponGrip:
     followHandRotation: 0
     handPositionOffset: {x: 0, y: 0.02, z: 0.06}
     handRotationOffset: {x: 0, y: 0, z: 0}
     gunScale: 1
     ikHandPosition: {x: 0.18, y: -0.15, z: 0.45}
+    holdPivot: {x: 0.05, y: 1.4, z: 0.05}
+    holdOffset: {x: 0.1, y: -0.1, z: 0.4}
+    holdPitchLimit: 60
+    rightElbowHint: {x: 0.35, y: -0.35, z: -0.1}
+    leftElbowHint: {x: -0.3, y: -0.4, z: 0.15}
+    lockHandRotation: 1
+    rightHandRotationOffset: {x: 0, y: 0, z: 0}
+    leftHandRotationOffset: {x: 0, y: 0, z: 0}

@@ -34,7 +34,6 @@ GameObject:
   - component: {fileID: 3947446186194541744}
   - component: {fileID: 4579842159026776760}
   - component: {fileID: 3303560899435614600}
-  - component: {fileID: 257246070984453191}
   - component: {fileID: 4571227541005378936}
   - component: {fileID: 4950935256107480423}
   - component: {fileID: 8405995815294703452}
@@ -46,6 +45,11 @@ GameObject:
   - component: {fileID: 2881373125637323731}
   - component: {fileID: 3698923241498591086}
   - component: {fileID: 3519428585864654902}
+  - component: {fileID: 7713920465182736402}
+  - component: {fileID: 6158412093847502231}
+  - component: {fileID: 6158412093847502232}
+  - component: {fileID: 6158412093847502233}
+  - component: {fileID: 6158412093847502234}
   m_Layer: 0
   m_Name: Mannequin
   m_TagString: Untagged
@@ -628,19 +632,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 849319fed8c5e5543ae4f8283b66d1d2, type: 3}
   m_Name: 
   m_EditorClassIdentifier: GuardVsMannequin.Runtime::GuardVsMannequin.Player.Emotes.AnimatorEmoteView
---- !u!114 &257246070984453191
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 569088088292649313}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 06a829d93d2d07d41911838094828e4e, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: GuardVsMannequin.Runtime::GuardVsMannequin.Player.Emotes.ProceduralEmoteView
-  body: {fileID: 8459712865084029878}
 --- !u!114 &4571227541005378936
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -1282,3 +1273,77 @@ Light:
   m_LightUnit: 1
   m_LuxAtDistance: 1
   m_EnableSpotReflector: 1
+--- !u!114 &7713920465182736402
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 569088088292649313}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 51d68deaf56e47c0bf6ff65f5d5692ce, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: GuardVsMannequin.Runtime::GuardVsMannequin.Player.CharacterSway
+  viewCamera: {fileID: 8716358739911415403}
+  smoothTime: 0.35
+  axisWeights: {x: 0.6, y: 1, z: 0.3}
+  maxOffset: 0.08
+--- !u!114 &6158412093847502231
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 569088088292649313}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5696d3f6d3164d408245b745d5b23d1a, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: GuardVsMannequin.Runtime::GuardVsMannequin.Player.FirstPersonBodyView
+  showOnSpawn: 0
+--- !u!114 &6158412093847502232
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 569088088292649313}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 471de1e2d1d5479aaff0b49b1696e42a, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: GuardVsMannequin.Runtime::GuardVsMannequin.Player.SkinHitboxes
+  movementCapsule: {fileID: 0}
+--- !u!114 &6158412093847502233
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 569088088292649313}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: c9abe439e54944eb8fb50865fc25914a, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: GuardVsMannequin.Runtime::GuardVsMannequin.Player.SkinEyePoint
+  eyeUp: 0.1
+  eyeForward: 0.1
+  followSharpness: 14
+--- !u!114 &6158412093847502234
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 569088088292649313}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 31d8e43175cd4b97847105608cb92855, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: GuardVsMannequin.Runtime::GuardVsMannequin.Player.Mannequin.HuntCreatureSounds
+  idleBreathVolume: 0.45
+  loudBreathSpeed: 3
+  stalkStride: 1.3
+  crawlStride: 0.8
+  crawlSpeed: 2.7

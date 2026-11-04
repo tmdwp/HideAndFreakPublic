@@ -99,19 +99,19 @@ namespace GuardVsMannequin.Player.Guard
             Transform start = GetMuzzle();
             Vector3 startPosition = start != null ? start.position : origin;
 
+            // 이펙트는 풀(EffectPool)에서 꺼내 다시 쓴다. (쏠 때마다 만들고 지우지 않도록)
             if (muzzleFlashPrefab != null && start != null)
             {
                 // 총과 함께 움직이도록 총구에 붙인다.
-                GameObject flash = Instantiate(muzzleFlashPrefab, start.position, start.rotation, start);
-                EffectTuning.Apply(flash, muzzleFlashBrightness, muzzleFlashScale);
-                Destroy(flash, EffectLifetime);
+                EffectPool.Spawn(muzzleFlashPrefab, start.position, start.rotation, start, muzzleFlashBrightness, muzzleFlashScale, EffectLifetime);
             }
 
             if (bulletPrefab != null)
             {
-                GameObject bullet = Instantiate(bulletPrefab, startPosition, Quaternion.LookRotation(endPoint - startPosition + Vector3.forward * 0.0001f));
-                EffectTuning.Apply(bullet, bulletBrightness, bulletScale);
-                BulletEffect effect = bullet.AddComponent<BulletEffect>();
+                Quaternion direction = Quaternion.LookRotation(endPoint - startPosition + Vector3.forward * 0.0001f);
+                PooledEffect bullet = EffectPool.Spawn(bulletPrefab, startPosition, direction, null, bulletBrightness, bulletScale, EffectLifetime);
+                if (!bullet.TryGetComponent(out BulletEffect effect))
+                    effect = bullet.gameObject.AddComponent<BulletEffect>();
                 effect.Launch(endPoint, bulletSpeed, didHit ? hitPrefab : null, hitBrightness, hitScale);
                 return;
             }

@@ -6,7 +6,7 @@ namespace GuardVsMannequin.Network
     /// <summary>
     /// Steam API를 초기화하고 콜백을 처리한다. 게임 전체에서 한 번만 초기화된다.
     /// Steam이 실행 중이 아니면 초기화에 실패하며, 이때는 직접 접속(Tugboat)만 사용할 수 있다.
-    /// (Assets/Scripts/Steamworks.NET/SteamManager와 중복 초기화하지 않도록 씬에는 이 컴포넌트만 둔다)
+    /// (Steam 초기화는 이 컴포넌트 하나만 맡는다. 다른 초기화 스크립트를 씬에 함께 두지 않는다)
     /// </summary>
     public class SteamBootstrap : MonoBehaviour
     {

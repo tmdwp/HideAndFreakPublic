@@ -122,12 +122,8 @@ InitTestScene*.unity*
 /[Aa]ssets/Flooded_Grounds.meta
 /[Aa]ssets/Doors Small Sound Pack/
 /[Aa]ssets/Doors Small Sound Pack.meta
-/[Aa]ssets/Horror SFX - 082918/
-/[Aa]ssets/Horror SFX - 082918.meta
 /[Aa]ssets/free horror ambience 2/
 /[Aa]ssets/free horror ambience 2.meta
-/[Aa]ssets/Modern Vending Machine/
-/[Aa]ssets/Modern Vending Machine.meta
 /[Aa]ssets/Scalable Grid Prototype Materials/
 /[Aa]ssets/Scalable Grid Prototype Materials.meta
 /[Aa]ssets/TestMap/
@@ -143,3 +139,7 @@ InitTestScene*.unity*
 /[Aa]ssets/ToolboxAsset.meta
 /[Aa]ssets/HorrorHospitalPackFJM.unitypackage
 /[Aa]ssets/HorrorHospitalPackFJM.unitypackage.meta
+
+# Blender 생성 스크립트 실행 부산물 (파이썬 캐시, .blend 백업)
+__pycache__/
+*.blend1

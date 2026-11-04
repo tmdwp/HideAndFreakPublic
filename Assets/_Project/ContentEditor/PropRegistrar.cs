@@ -1,4 +1,3 @@
-using GuardVsMannequin.Core;
 using GuardVsMannequin.Props;
 using UnityEditor;
 using UnityEngine;
@@ -16,8 +15,6 @@ namespace GuardVsMannequin.Editor
     /// </summary>
     public static class PropRegistrar
     {
-        // 이보다 정점이 많고 변신 가능한 크기면 "벽 모양 가구"(책장·옷장·문 등)로 보고 벽 조각 대신 그대로 복사한다.
-        private const int FurnitureMinVertices = 100;
 
         /// <summary>
         /// 오브젝트(자식 포함)를 변신 사물로 등록한다. 메시가 하나도 없으면 false.
@@ -71,20 +68,6 @@ namespace GuardVsMannequin.Editor
 
             // 총에 맞으면 튕겨나갈 수 있는 크기면 충돌체를 움직일 수 있는 모양(볼록)으로 바꾼다.
             PropColliderBaker.Bake(prop);
-        }
-
-        /// <summary>
-        /// 벽 조건(높고 얇은 물체)에 맞아도 정점이 많고 변신 가능한 크기면 가구로 본다. (벽 조각 대신 그대로 복사)
-        /// </summary>
-        public static bool LooksLikeFurniture(MeshRenderer target)
-        {
-            MeshFilter filter = target.GetComponent<MeshFilter>();
-            if (filter == null || filter.sharedMesh == null)
-                return false;
-
-            Vector3 size = target.bounds.size;
-            float longest = Mathf.Max(size.x, size.y, size.z);
-            return filter.sharedMesh.vertexCount > FurnitureMinVertices && longest <= GameTuning.DisguiseMaxSize;
         }
 
         /// <summary>

@@ -67,6 +67,9 @@ namespace GuardVsMannequin.Core
         /// <summary>사냥 시간 마네킹 공격 쿨타임(초).</summary>
         public static float MannequinAttackCooldown => Get(nameof(MannequinAttackCooldown), 1f);
 
+        /// <summary>사냥 시간 마네킹이 공격을 시작한 뒤 이동할 수 없는 시간(초). (휘두르는 동안 쫓아가며 때리지 못하게)</summary>
+        public static float MannequinAttackMoveLock => Get(nameof(MannequinAttackMoveLock), 0.9f);
+
         /// <summary>마네킹 공격 판정 구체의 반경(m).</summary>
         public static float MannequinAttackRadius => Get(nameof(MannequinAttackRadius), 0.35f);
 
@@ -173,6 +176,9 @@ namespace GuardVsMannequin.Core
         #endregion
 
         #region 가드
+
+        /// <summary>이 거리(m) 안의 구울이 화면에 보이고 가려지지 않으면 가드 화면·심장 소리 연출이 생긴다. (가까울수록 강함)</summary>
+        public static float GhoulDreadRange => Get(nameof(GhoulDreadRange), 8f);
 
         /// <summary>가드 스폰 위치가 마네킹 스폰 지점에서 떨어져야 하는 최소 거리(m).</summary>
         public static float GuardSpawnMinDistance => Get(nameof(GuardSpawnMinDistance), 20f);

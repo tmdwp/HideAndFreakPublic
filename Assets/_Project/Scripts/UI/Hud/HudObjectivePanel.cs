@@ -19,6 +19,7 @@ namespace GuardVsMannequin.UI
         [SerializeField] private Text detailText;
 
         private HudContext context;
+        private RefreshTimer refreshTimer;
 
         /// <inheritdoc />
         public void Bind(HudContext hudContext)
@@ -39,6 +40,13 @@ namespace GuardVsMannequin.UI
             bool visible = isInMatch && context.LocalPlayer.Player != null;
             objectivePanel.SetActive(visible);
             if (!visible)
+            {
+                // 다시 보일 때 바로 최신 문구를 보여주도록 한다.
+                refreshTimer.Reset();
+                return;
+            }
+            // 남은 수·시간 문구를 새로 만드므로 일정 간격으로만 갱신한다.
+            if (!refreshTimer.Tick())
                 return;
 
             PlayerRole role = context.LocalPlayer.Player.Role;

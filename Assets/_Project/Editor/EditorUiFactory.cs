@@ -394,6 +394,47 @@ namespace GuardVsMannequin.Editor
         }
 
         /// <summary>
+        /// 체크박스(왼쪽 네모 + 문구) 토글을 만든다. 위치는 호출한 쪽이 <see cref="Place"/>로 정한다.
+        /// </summary>
+        /// <param name="labelKey">문구 key.</param>
+        /// <param name="isOn">처음 켜져 있는지 여부.</param>
+        public static Toggle CreateToggle(Transform parent, string name, string labelKey, bool isOn)
+        {
+            const float BoxSize = 30f;
+            RectTransform root = CreateRect(parent, name);
+
+            RectTransform box = CreateRect(root, "Box");
+            box.anchorMin = new Vector2(0f, 0.5f);
+            box.anchorMax = new Vector2(0f, 0.5f);
+            box.pivot = new Vector2(0f, 0.5f);
+            box.anchoredPosition = Vector2.zero;
+            box.sizeDelta = new Vector2(BoxSize, BoxSize);
+            Image boxImage = box.gameObject.AddComponent<Image>();
+            boxImage.color = ButtonColor;
+
+            RectTransform check = CreateRect(box, "Check");
+            check.anchorMin = Vector2.zero;
+            check.anchorMax = Vector2.one;
+            check.offsetMin = new Vector2(6f, 6f);
+            check.offsetMax = new Vector2(-6f, -6f);
+            Image checkImage = check.gameObject.AddComponent<Image>();
+            checkImage.color = AccentColor;
+
+            Text label = CreateText(root, "Label", labelKey, 22, TextAnchor.MiddleLeft, TextColor);
+            RectTransform labelRect = label.rectTransform;
+            labelRect.anchorMin = Vector2.zero;
+            labelRect.anchorMax = Vector2.one;
+            labelRect.offsetMin = new Vector2(BoxSize + 12f, 0f);
+            labelRect.offsetMax = Vector2.zero;
+
+            Toggle toggle = root.gameObject.AddComponent<Toggle>();
+            toggle.targetGraphic = boxImage;
+            toggle.graphic = checkImage;
+            toggle.isOn = isOn;
+            return toggle;
+        }
+
+        /// <summary>
         /// 레이아웃 안에서의 높이를 고정한다.
         /// </summary>
         public static void SetHeight(Component target, float height)

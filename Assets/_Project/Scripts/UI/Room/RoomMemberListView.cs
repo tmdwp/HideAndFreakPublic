@@ -17,14 +17,15 @@ namespace GuardVsMannequin.UI
 
         private readonly StringBuilder builder = new();
         private readonly List<KeyValuePair<int, RoomMember>> sortedMembers = new();
+        private RefreshTimer refreshTimer;
 
         /// <summary>
-        /// 참가자 목록을 호스트 먼저, 접속 순서대로 표시한다.
+        /// 참가자 목록을 호스트 먼저, 접속 순서대로 표시한다. (문자열을 새로 만들므로 일정 간격으로만 갱신)
         /// </summary>
         private void Update()
         {
             RoomState room = RoomState.Instance;
-            if (room == null)
+            if (room == null || !refreshTimer.Tick())
                 return;
 
             sortedMembers.Clear();
@@ -37,7 +38,8 @@ namespace GuardVsMannequin.UI
             {
                 string name = room.GetDisplayName(pair.Key);
                 string state = Loc.Get(pair.Value.isHost ? "room.member.host" : (pair.Value.isReady ? "room.member.ready" : "room.member.notReady"));
-                builder.AppendLine($"{name}  —  {state}");
+                string modWarning = pair.Value.modState == MemberModState.Missing ? "  " + Loc.Get("room.member.modsMissing") : string.Empty;
+                builder.AppendLine($"{name}  —  {state}{modWarning}");
             }
             memberListText.text = builder.ToString();
         }

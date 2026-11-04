@@ -2,7 +2,6 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using System.Security.Cryptography;
 using System.Text;
 using GuardVsMannequin.Localization;
 using UnityEngine;
@@ -13,10 +12,10 @@ namespace GuardVsMannequin.Mods
     /// 설치된 모드를 관리한다.
     /// 1. 모드 폴더를 읽고(<see cref="ModScanner"/>), ID 중복·켜기/끄기·의존성을 정한다.
     /// 2. 켜진 모드의 맵을 등록소(<see cref="ContentRegistry"/>)에, 문장을 <see cref="Loc"/>에 더한다.
-    /// 3. 켜진 모드 목록의 지문(<see cref="ModSetHash"/>)을 만든다. 방에 들어가려면 호스트와 지문이 같아야 한다.
-    ///    접속자는 <see cref="TryMatchHost"/>로 이번 접속 동안만 호스트가 켠 모드 구성을 따른다.
-    ///    (호스트가 끈 모드는 잠시 끄고, 내가 끈 모드라도 호스트가 켰으면 잠시 켠다. 저장된 켜기/끄기 설정은 바꾸지 않는다)
-    /// 게임 시작 때 한 번 읽고, 로비 "모드" 화면에서 켜고 끌 때 다시 읽는다. (방에 있는 동안은 바꾸지 않는다)
+    /// 3. 호스트는 고른 맵에 필요한 모드 목록을 만든다(<see cref="BuildRequirements"/>).
+    ///    게스트는 <see cref="UseRequiredMods"/>로 그 모드만 이번 접속 동안 켠다.
+    ///    (내가 꺼 둔 모드라도 필요하면 잠시 켜고, 필요 없는 모드는 잠시 끈다. 저장된 켜기/끄기 설정은 바꾸지 않는다)
+    /// 게임 시작 때 한 번 읽고, 로비 "모드" 화면에서 켜고 끌 때와 게스트가 맵의 모드를 확인할 때 다시 읽는다.
     /// </summary>
     public sealed class ModService
     {
@@ -24,7 +23,7 @@ namespace GuardVsMannequin.Mods
 
         private readonly List<ModInfo> mods = new();
 
-        // 이번 접속 동안 켤 모드 ID(호스트의 구성). null이면 플레이어의 켜기/끄기 설정을 따른다.
+        // 이번 접속 동안 켤 모드 ID(고른 맵에 필요한 모드). null이면 플레이어의 켜기/끄기 설정을 따른다.
         private HashSet<string> sessionModIds;
 
         /// <summary>게임 전체가 쓰는 모드 관리자.</summary>
@@ -35,18 +34,6 @@ namespace GuardVsMannequin.Mods
 
         /// <summary>켜져 있고 오류가 없는 모드. (ID 순)</summary>
         public IEnumerable<ModInfo> ActiveMods => mods.Where(m => m.Status == ModStatus.Active).OrderBy(m => m.Id, StringComparer.Ordinal);
-
-        /// <summary>켜진 모드 목록 설명. (예: "author.maps@1.0.0#ab12cd34, ...", 없으면 빈 문자열)</summary>
-        public string ModSetDescription { get; private set; } = string.Empty;
-
-        /// <summary>
-        /// 켜진 모드 ID 목록. (예: "author.maps, author.skins", 없으면 빈 문자열)
-        /// Steam 로비 데이터처럼 크기 제한이 있는 곳에 쓴다. 버전·파일 비교는 접속 후 서버가 지문과 <see cref="ModSetDescription"/>으로 한다.
-        /// </summary>
-        public string ModSetIds { get; private set; } = string.Empty;
-
-        /// <summary>켜진 모드 목록 + 내장 맵 목록의 지문(8자리 16진수). 호스트와 같아야 입장할 수 있다.</summary>
-        public string ModSetHash { get; private set; } = string.Empty;
 
         /// <summary>모드 목록이 바뀌었을 때. (다시 읽은 뒤)</summary>
         public event Action Changed;
@@ -62,7 +49,7 @@ namespace GuardVsMannequin.Mods
         }
 
         /// <summary>
-        /// 모드 폴더를 다시 읽고 등록소·문장·지문을 갱신한다.
+        /// 모드 폴더를 다시 읽고 등록소·문장을 갱신한다.
         /// </summary>
         public void Refresh()
         {
@@ -76,11 +63,10 @@ namespace GuardVsMannequin.Mods
                 LoadStrings(mod);
 
             ContentRegistry.Instance.SetModSources(ActiveMods.Select(mod => (IContentSource)new ModContentSource(mod)));
-            UpdateSignature();
 
             foreach (ModInfo mod in mods.Where(m => m.Status == ModStatus.Error))
                 Debug.LogWarning($"[ModService] 모드 '{mod.Id}'를 쓸 수 없습니다: {mod.Error} ({mod.FolderPath})");
-            Debug.Log($"[ModService] 모드 {mods.Count}개 중 {ActiveMods.Count()}개 사용. 지문 {ModSetHash}");
+            Debug.Log($"[ModService] 모드 {mods.Count}개 중 {ActiveMods.Count()}개 사용.");
             Changed?.Invoke();
         }
 
@@ -95,31 +81,56 @@ namespace GuardVsMannequin.Mods
         }
 
         /// <summary>
-        /// 호스트가 켠 모드 구성에 맞춘다. 지문이 이미 같으면 그대로 두고,
-        /// 다르면 이번 접속 동안만 호스트의 모드 ID 목록대로 켜고 끈 뒤 지문을 다시 비교한다.
-        /// 호스트의 모드가 없거나 버전·파일이 달라 지문이 맞지 않으면 원래 구성으로 되돌리고 false.
+        /// 맵에 필요한 모드(맵의 모드 + 의존 모드 전부) 목록을 만든다. 내장 맵이면 빈 목록. (호스트)
         /// </summary>
-        /// <param name="hostModList">호스트의 <see cref="ModSetDescription"/>("author.maps@1.0.0#ab12cd34, ...") 또는 <see cref="ModSetIds"/>("author.maps, ...").</param>
-        /// <param name="hostModHash">호스트의 <see cref="ModSetHash"/>.</param>
-        public bool TryMatchHost(string hostModList, string hostModHash)
+        public List<RequiredMod> BuildRequirements(MapEntry map)
         {
-            if (hostModHash == ModSetHash)
-                return true;
+            var result = new List<RequiredMod>();
+            if (map == null || map.IsBuiltIn)
+                return result;
 
-            sessionModIds = ParseModIds(hostModList);
-            Refresh();
-            if (ModSetHash == hostModHash)
+            var visited = new HashSet<string>(StringComparer.Ordinal);
+            var pending = new Stack<string>();
+            pending.Push(map.SourceId);
+            while (pending.Count > 0)
             {
-                Debug.Log($"[ModService] 이번 접속 동안 호스트의 모드 구성을 따릅니다: {(hostModList?.Length > 0 ? hostModList : "없음")}");
-                return true;
-            }
+                string modId = pending.Pop();
+                if (!visited.Add(modId) || !TryGet(modId, out ModInfo mod) || mod.Manifest == null)
+                    continue;
 
-            ClearSessionMods();
-            return false;
+                result.Add(ToRequirement(mod));
+                foreach (string dependencyId in mod.Manifest.dependencies)
+                    pending.Push(dependencyId);
+            }
+            result.Sort((a, b) => string.CompareOrdinal(a.id, b.id));
+            return result;
         }
 
         /// <summary>
-        /// 접속 동안 쓰던 호스트 모드 구성을 버리고 플레이어의 켜기/끄기 설정으로 돌아간다. (방을 나가거나 접속에 실패했을 때)
+        /// 필요한 모드만 이번 접속 동안 켠다. 폴더를 다시 읽으므로 방에 있는 동안 설치한 모드도 찾는다. (게스트)
+        /// 씬 이름으로 맵을 찾으므로, 나만 가진 모드의 씬 이름이 겹치지 않도록 필요 없는 모드는 끈다.
+        /// 쓸 수 없는 모드가 있으면 내 설정으로 되돌리고 그 목록을 돌려준다.
+        /// </summary>
+        /// <param name="required">호스트가 보낸 필요한 모드 목록. 내장 맵이면 비어 있다.</param>
+        /// <returns>쓸 수 없는 모드 목록. 비어 있으면 플레이할 수 있다.</returns>
+        public List<MissingMod> UseRequiredMods(IReadOnlyList<RequiredMod> required)
+        {
+            if (required == null || required.Count == 0)
+            {
+                ClearSessionMods();
+                return new List<MissingMod>();
+            }
+
+            sessionModIds = new HashSet<string>(required.Take(RequiredModComparer.MaxRequiredMods).Select(mod => mod.id), StringComparer.Ordinal);
+            Refresh();
+            List<MissingMod> missing = RequiredModComparer.FindMissing(required, id => TryGet(id, out ModInfo mod) ? mod : null, BundleSize);
+            if (missing.Count > 0 || required.Count > RequiredModComparer.MaxRequiredMods)
+                ClearSessionMods();
+            return missing;
+        }
+
+        /// <summary>
+        /// 접속 동안 쓰던 모드 구성을 버리고 플레이어의 켜기/끄기 설정으로 돌아간다. (방을 나가거나 접속에 실패했을 때)
         /// </summary>
         public void ClearSessionMods()
         {
@@ -130,20 +141,56 @@ namespace GuardVsMannequin.Mods
         }
 
         /// <summary>
-        /// 호스트가 켠 모드 중 내 PC에서 맞출 수 없는 모드(없음, 버전·파일 다름, 오류)를 찾는다. (접속 거부 안내용)
+        /// 맵을 내 PC에서 쓸 수 있어 보이는지 확인한다. 꺼 둔 모드의 맵도 포함한다. (필요하면 그 판 동안 켜진다)
         /// </summary>
-        /// <param name="hostModList">호스트의 <see cref="ModSetDescription"/>.</param>
-        public List<MissingMod> FindMissingFor(string hostModList)
+        public bool HasMap(string mapId)
         {
-            return ModSetComparer.FindMissing(hostModList, id => TryGet(id, out ModInfo mod) ? mod : null);
+            return ContentRegistry.Instance.IndexOf(mapId) >= 0 || FindInstalledMap(mapId) != null;
         }
 
         /// <summary>
-        /// 모드 목록 설명("id@버전#지문, ...")에서 모드 ID만 뽑는다.
+        /// 맵의 표시 이름을 찾는다. 없는 맵이면 null.
         /// </summary>
-        private static HashSet<string> ParseModIds(string modList)
+        public string FindMapName(string mapId)
         {
-            return new HashSet<string>(ModSetComparer.Parse(modList).Select(entry => entry.id), StringComparer.Ordinal);
+            ContentRegistry registry = ContentRegistry.Instance;
+            if (registry.TryGetMap(registry.IndexOf(mapId), out MapEntry entry))
+                return entry.DisplayName;
+
+            MapManifest installed = FindInstalledMap(mapId);
+            return installed == null ? null : string.IsNullOrEmpty(installed.name) ? installed.scene : installed.name;
+        }
+
+        /// <summary>
+        /// 설치된 모드(오류 제외, 꺼진 모드 포함)에서 맵을 찾는다. 없으면 null.
+        /// </summary>
+        private MapManifest FindInstalledMap(string mapId)
+        {
+            foreach (ModInfo mod in mods)
+            {
+                if (mod.Status == ModStatus.Error || mod.Manifest?.maps == null)
+                    continue;
+                MapManifest map = mod.Manifest.maps.FirstOrDefault(m => m != null && m.id == mapId);
+                if (map != null)
+                    return map;
+            }
+            return null;
+        }
+
+        /// <summary>
+        /// 모드 하나의 필요한 모드 항목을 만든다.
+        /// </summary>
+        private static RequiredMod ToRequirement(ModInfo mod)
+        {
+            return new RequiredMod
+            {
+                id = mod.Id,
+                version = mod.Manifest.version,
+                contentHash = mod.Manifest.contentHash ?? string.Empty,
+                bundleSize = BundleSize(mod),
+                name = mod.DisplayName,
+                url = mod.Manifest.url ?? string.Empty
+            };
         }
 
         /// <summary>
@@ -171,7 +218,7 @@ namespace GuardVsMannequin.Mods
         }
 
         /// <summary>
-        /// 플레이어가 끈 모드를 꺼진 상태로 둔다. 호스트 구성을 따르는 중이면 호스트가 켜지 않은 모드를 끈다.
+        /// 플레이어가 끈 모드를 꺼진 상태로 둔다. 맵에 필요한 모드를 쓰는 중이면 그 밖의 모드를 끈다.
         /// </summary>
         private void ApplyPreferences()
         {
@@ -231,24 +278,6 @@ namespace GuardVsMannequin.Mods
             {
                 Debug.LogWarning($"[ModService] 모드 '{mod.Id}'의 문장 파일을 읽을 수 없습니다: {exception.Message}");
             }
-        }
-
-        /// <summary>
-        /// 켜진 모드(ID·버전·번들 지문·번들 크기)와 맵 목록(ID 순서)으로 지문을 만든다.
-        /// 맵 목록을 포함하므로 내장 맵 목록 파일(maps.json)을 고친 PC도 걸러진다.
-        /// </summary>
-        private void UpdateSignature()
-        {
-            var parts = new List<string>();
-            foreach (ModInfo mod in ActiveMods)
-                parts.Add($"{mod.Id}@{mod.Manifest.version}#{mod.Manifest.contentHash}:{BundleSize(mod)}");
-            ModSetDescription = string.Join(", ", parts.Select(p => p.Split(':')[0]));
-            ModSetIds = string.Join(", ", ActiveMods.Select(mod => mod.Id));
-
-            string maps = string.Join("|", ContentRegistry.Instance.Maps.Select(m => m.Id));
-            using SHA256 sha = SHA256.Create();
-            byte[] hash = sha.ComputeHash(Encoding.UTF8.GetBytes(string.Join(";", parts) + "/" + maps));
-            ModSetHash = BitConverter.ToString(hash, 0, 4).Replace("-", string.Empty).ToLowerInvariant();
         }
 
         /// <summary>

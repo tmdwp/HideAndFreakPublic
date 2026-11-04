@@ -59,7 +59,7 @@ namespace GuardVsMannequin.Player.Guard
 
             if (explosionEffect != null)
             {
-                Destroy(Instantiate(explosionEffect, position, Quaternion.identity), EffectLifetime);
+                EffectPool.Spawn(explosionEffect, position, Quaternion.identity, null, 1f, 1f, EffectLifetime);
                 return;
             }
 

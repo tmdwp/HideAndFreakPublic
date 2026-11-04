@@ -23,6 +23,24 @@ lobby.steamCreate.hint,암호를 정하면 같은 암호를 입력한 사람만 
 lobby.password.placeholder,암호 (비우면 없음),Password (blank = none)
 lobby.steamCreate.confirm,만들기,Create
 lobby.join.steam,스팀 방 입장,Join Steam Room
+lobby.roomName.placeholder,방 이름 (비우면 내 이름의 방),Room name (blank = your name)
+lobby.roomName.default,{0}의 방,{0}'s room
+lobby.steamCreate.public,공개방 (끄면 친구 전용),Public room (off = friends only)
+lobby.browse.open,공개방 찾기,Find Public Rooms
+lobby.browse.title,공개방 찾기,Public Rooms
+lobby.browse.hidePassword,암호 방 숨기기,Hide password rooms
+lobby.browse.hideMissingMap,모드가 없는 맵의 방 숨기기,Hide rooms with maps I don't have
+lobby.browse.refresh,새로고침,Refresh
+lobby.browse.quickJoin,빠른 참가,Quick Join
+lobby.browse.searching,방을 찾는 중...,Searching...
+lobby.browse.empty,열린 방이 없습니다. 방을 직접 만들어 보세요.,No open rooms. Try creating one.
+lobby.browse.count,방 {0}개,{0} rooms
+lobby.browse.noQuickJoin,들어갈 수 있는 방이 없습니다. 방을 직접 만들어 보세요.,No room to join. Try creating one.
+lobby.browse.unnamed,(이름 없음),(no name)
+lobby.browse.modMap,모드 맵,Mod map
+lobby.browse.unknownMap,맵 확인 중,Checking map
+lobby.browse.tag.password,[암호],[Password]
+lobby.browse.tag.missingMap,[모드 없음],[Missing mod]
 lobby.join.direct,IP로 참가,Join by IP
 lobby.steamJoin.passwordPlaceholder,암호 (없으면 비워 두기),Password (leave blank if none)
 lobby.steamJoin.confirm,입장,Join
@@ -41,21 +59,28 @@ lobby.mods.openFolder,모드 폴더 열기,Open folder
 lobby.mods.state.active,[켜짐],[ON]
 lobby.mods.state.disabled,[꺼짐],[OFF]
 lobby.mods.state.error,[오류],[ERROR]
-lobby.modMismatch.title,모드가 맞지 않아 입장할 수 없습니다,Can't join: mods don't match
-lobby.modMismatch.warning,호스트가 켠 모드가 내 PC에 없거나 버전·파일이 다릅니다. 아래 모드를 호스트와 같은 파일로 설치한 뒤 다시 참가하세요.,Some of the host's mods are missing or differ on your PC. Install the mods below (same files as the host) and try again.
-lobby.modMismatch.listHeader,부족한 모드,Missing mods
-lobby.modMismatch.reason.notInstalled,설치되지 않음,Not installed
-lobby.modMismatch.reason.version,버전이 다름 (내 버전 {0}),Different version (yours: {0})
-lobby.modMismatch.reason.files,파일 내용이 다름 (다시 받아 설치),Different files (reinstall)
-lobby.modMismatch.reason.error,사용할 수 없음: {0},Unusable: {0}
-lobby.modMismatch.unknown,"모드 목록은 같지만 파일 크기나 내장 맵 목록이 호스트와 다릅니다. 모드 파일을 다시 받아 설치하고, 게임 데이터 파일(maps.json)이 같은지 확인하세요.","The mod list matches, but file sizes or the built-in map list differ from the host. Reinstall the mods and check that your game data (maps.json) matches."
-lobby.modMismatch.openMods,모드 화면 열기,Open Mods
-lobby.modMismatch.close,닫기,Close
+room.modRequired.openButton,이 맵을 하려면 모드가 필요합니다 (보기),This map needs mods you don't have (view)
+room.modRequired.title,필요한 모드가 없습니다,Missing required mods
+room.modRequired.warning,호스트가 고른 맵을 하려면 아래 모드가 호스트와 같은 파일로 설치되어 있어야 합니다. 설치한 뒤 다시 확인을 누르세요. 모드는 믿을 수 있는 곳에서만 받으세요.,The map the host picked needs the mods below (same files as the host). Install them and press Check Again. Only download mods from sources you trust.
+room.modRequired.reason.notInstalled,설치되지 않음,Not installed
+room.modRequired.reason.version,버전이 다름 (내 버전 {0}),Different version (yours: {0})
+room.modRequired.reason.files,파일 내용이 다름 (다시 받아 설치),Different files (reinstall)
+room.modRequired.reason.error,사용할 수 없음: {0},Unusable: {0}
+room.modRequired.link,눌러서 받는 곳 열기,Click to open the download page
+room.modRequired.noLink,열 수 있는 링크 없음. 모드 이름으로 찾거나 호스트에게 물어보세요.,No link available. Search by name or ask the host.
+room.modRequired.allGood,필요한 모드를 모두 찾았습니다. 호스트가 다시 시작할 수 있습니다.,All required mods found. The host can start again.
+room.modRequired.recheck,다시 확인,Check Again
+room.modRequired.close,닫기,Close
+room.modRequired.confirm.title,이 주소를 여시겠습니까?,Open this address?
+room.modRequired.confirm.warning,호스트가 보낸 주소입니다. 브라우저에서 열리며 게임 제작자가 내용을 보증하지 않습니다.,This address came from the host. It opens in your browser and is not verified by the game's developer.
+room.modRequired.confirm.open,열기,Open
+room.modRequired.confirm.cancel,취소,Cancel
 lobby.noService,네트워크 서비스를 찾을 수 없습니다.,Network service not found.
 
 # 연결 안내
 notice.steamUnavailable,Steam을 사용할 수 없습니다. Steam을 실행한 뒤 다시 시도하세요.,Steam is unavailable. Run Steam and try again.
 notice.steamNotRunning,Steam이 실행 중이 아닙니다.,Steam is not running.
+notice.roomListFailed,방 목록을 받지 못했습니다. 잠시 뒤 다시 시도하세요.,Couldn't get the room list. Try again shortly.
 notice.creatingRoom,방을 만드는 중...,Creating room...
 notice.joiningRoom,방에 참가하는 중...,Joining room...
 notice.invalidCode,방 코드가 올바르지 않습니다. 숫자로 된 코드를 입력하세요.,Invalid room code. Enter the numeric code.
@@ -71,9 +96,9 @@ notice.lobbyEnterFailed,방에 들어갈 수 없습니다. (방이 가득 찼거
 notice.lobbyDataInvalid,방 정보를 읽을 수 없습니다.,Could not read the room information.
 notice.rejected.version,호스트와 게임 버전이 달라 들어갈 수 없습니다. 같은 버전으로 맞춰 주세요. (호스트 ≠ 내 게임: {0}),Your game version doesn't match the host's. Please use the same version. (host ≠ yours: {0})
 notice.rejected.full,방이 가득 찼습니다.,The room is full.
-notice.rejected.mods,호스트가 켠 모드가 없거나 버전·파일이 달라 들어갈 수 없습니다. 같은 모드를 설치해 주세요. (호스트의 모드: {0}),You're missing some of the host's mods or have a different version. Install the same mods. (Host mods: {0})
-notice.mods.none,없음,none
 notice.rejected.password,암호가 틀렸습니다.,Wrong password.
+notice.rejected.passwordLocked,암호를 여러 번 틀렸습니다. 1분 뒤 다시 시도하세요.,Too many wrong passwords. Try again in a minute.
+notice.modLoadFailed,맵을 불러오지 못해 방을 나왔습니다. 모드 파일을 다시 설치해 보세요.,"Couldn't load the map, so you left the room. Try reinstalling the mod files."
 notice.passwordRequired,암호가 필요한 방입니다. 암호를 입력하고 입장을 누르세요.,This room needs a password. Enter it and press Join.
 notice.rejected.inGame,게임이 진행 중이라 들어갈 수 없습니다. 판이 끝난 뒤 다시 시도하세요.,A game is in progress. Try again after it ends.
 notice.rejected.notMember,방에 정상적으로 입장하지 못했습니다. 방 코드나 초대로 다시 시도하세요.,Could not enter the room properly. Try again with the room code or an invite.
@@ -86,6 +111,9 @@ room.members.count,참가자 {0} / {1},Players {0} / {1}
 room.member.host,★ 호스트,★ Host
 room.member.ready,준비 완료,Ready
 room.member.notReady,준비 중,Not ready
+room.visibility.public,공개방,Public
+room.visibility.friends,친구 전용,Friends only
+room.member.modsMissing,[모드 없음],[Missing mods]
 room.code,방 코드: {0},Room code: {0}
 room.copyCode,코드 복사,Copy Code
 room.invite,친구 초대,Invite Friends
@@ -99,11 +127,15 @@ room.status.loading,방 정보를 불러오는 중...,Loading room...
 room.status.allReady,모든 준비가 끝났습니다.,Everyone is ready.
 room.status.waitingHost,호스트가 게임을 시작하기를 기다리는 중...,Waiting for the host to start...
 room.status.pressReady,준비를 눌러 주세요.,Press Ready.
+room.status.guestsMissingMods,이 맵의 모드가 없는 참가자가 있습니다. 시작을 누르면 다시 확인합니다.,Some players don't have this map's mods. Press Start to check again.
+room.status.localMissingMods,이 맵에 필요한 모드가 없습니다. 위쪽 안내를 확인하세요.,You're missing mods for this map. See the notice at the top.
 room.status.codeCopied,방 코드를 복사했습니다.,Room code copied.
 room.reason.playerCount,{0}~{1}명이 필요합니다. (현재 {2}명),{0}-{1} players required. (Now {2})
 room.reason.mapPlayerCount,이 맵은 {0}~{1}명이 플레이할 수 있습니다. (현재 {2}명),This map is for {0}-{1} players. (Now {2})
 room.reason.notAllReady,모든 참가자가 준비해야 합니다.,All players must be ready.
 room.reason.inGame,이미 게임이 진행 중입니다.,A game is already in progress.
+room.reason.checkingMods,참가자들의 모드를 확인하는 중...,Checking everyone's mods...
+room.reason.modsMissing,모드가 없어 시작을 중단했습니다: {0},Start stopped. Missing mods: {0}
 
 # 씬 전환 로딩 화면
 loading.toGame,맵을 불러오는 중...,Loading map...
@@ -122,7 +154,7 @@ setting.GeneratorCount,전원 장치 수,Power Units
 setting.GeneratorDestroyTime,전원 장치 파괴 시간,Power Unit Destroy Time
 setting.GunCooldown,총 발사 간격,Gun Fire Interval
 setting.GunMagazineSize,총 탄창 크기,Gun Magazine Size
-setting.GunReloadTime,총 장전 시간,Gun Reload Time
+setting.GunReloadTime,총 발당 장전 시간,Gun Reload Time per Round
 setting.GrenadeCooldown,수류탄 쿨타임,Grenade Cooldown
 setting.GuardMaxHealth,가드 체력,Guard Health
 setting.MannequinMaxHealth,마네킹 체력,Mannequin Health
@@ -144,12 +176,9 @@ unit.speed,{0}m/s,{0}m/s
 unit.rounds,{0}발,{0}
 
 # 맵 이름 (map.<맵 번호>)
-map.0,버려진 정신병원,Abandoned Asylum
-map.1,산업 시설,Industrial Site
-map.2,공포 병원,Horror Hospital
-map.3,연금술사의 집,Alchemist House
 map.4, 연구실, Laboratory
 map.5,환승역,Transfer Station
+map.6,숲,Forest
 # 설정 화면
 options.title,설정,Settings
 options.language,언어,Language
@@ -161,6 +190,16 @@ options.screenMode.borderless,전체 화면 (창),Borderless Fullscreen
 options.screenMode.windowed,창 모드,Windowed
 options.screenMode.maximized,최대화 창,Maximized Window
 options.resolution,해상도,Resolution
+options.frameLimit,프레임 제한,Frame Limit
+options.frameLimit.vsync,모니터 주사율 (수직 동기화),Monitor Refresh (VSync)
+options.frameLimit.60,60 FPS,60 FPS
+options.frameLimit.120,120 FPS,120 FPS
+options.frameLimit.144,144 FPS,144 FPS
+options.frameLimit.unlimited,제한 없음,Unlimited
+options.cameraSway,카메라 흔들림,Camera Sway
+options.cameraSway.normal,보통,Normal
+options.cameraSway.weak,약하게,Weak
+options.cameraSway.off,끄기,Off
 options.sensitivity,마우스 감도,Mouse Sensitivity
 options.masterVolume,전체 음량,Master Volume
 options.bgmVolume,배경 음악,Music
@@ -180,6 +219,7 @@ key.moveRight,오른쪽 이동,Move Right
 key.primary,사격 / 파괴 / 공격,Fire / Destroy / Attack
 key.secondary,수류탄 / 변신,Grenade / Disguise
 key.flashlight,손전등 (가드),Flashlight (Guard)
+key.reload,장전 (가드),Reload (Guard)
 key.rotateLeft,변신 중 왼쪽 회전,Rotate Left (Disguised)
 key.rotateRight,변신 중 오른쪽 회전,Rotate Right (Disguised)
 key.emote1,감정 표현 1,Emote 1
@@ -230,7 +270,7 @@ hud.controls.title,조작,Controls
 hud.controls.move,이동,Move
 hud.controls.sprint,달리기,Sprint
 hud.controls.jump,점프,Jump
-hud.stamina,스태미나,Stamina
+hud.controls.reload,장전,Reload
 test.openHint,F2 테스트 메뉴 / F3 시점,F2 Test menu / F3 View
 test.title,테스트 메뉴,Test Menu
 test.status,"모습: {0}   단계: {1}","Form: {0}   Phase: {1}"
@@ -247,12 +287,6 @@ test.togglePerspective,1인칭/3인칭 전환,1st / 3rd person
 test.settingsHint,"게임 설정 (바로 적용: 이동 속도·공격 범위·쿨타임·피해량 / 체력은 다음 스폰부터)","Game settings (instant: speed, attack range, cooldowns, damage / health: next spawn)"
 test.close,닫기,Close
 test.returnToRoom,룸으로 돌아가기 (맵 바꾸기),Return to Room (change map)
-hud.health,체력 {0} / {1},Health {0} / {1}
-hud.tool.ready,준비,Ready
-hud.tool.cooldown,{0}초,{0}s
-hud.tool.unavailable,-,-
-hud.tool.ammo,{0}/{1},{0}/{1}
-hud.tool.reloading,장전 {0}초,Reloading {0}s
 hud.spectating,관전 중,Spectating
 hud.spectatingDead,사망했습니다 · 관전 중,You died · Spectating
 hud.spectate.none,관전할 생존자가 없습니다.,No survivors to spectate.
@@ -276,7 +310,6 @@ role.mannequin,마네킹,Mannequin
 role.none,-,-
 tool.gun,총,Gun
 tool.grenade,수류탄,Grenade
-hud.grenadeHit,수류탄에 맞았습니다! 위치가 드러납니다.,Hit by a grenade! Your position is revealed.
 tool.flashlight,손전등,Flashlight
 tool.disguise,변신,Disguise
 tool.attack,공격,Attack

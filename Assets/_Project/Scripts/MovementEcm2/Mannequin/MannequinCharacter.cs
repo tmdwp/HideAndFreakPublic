@@ -7,7 +7,7 @@ namespace GuardVsMannequin.Player.Mannequin
     /// <summary>
     /// 마네킹 캐릭터.
     /// - 3인칭(기본): 카메라는 추적 대상을 중심으로 궤도 회전하고, 몸체는 이동 방향을 바라본다.
-    /// - 1인칭(사냥 시간): 카메라가 눈 위치에 붙고, 좌우 시점이 몸체를 회전시킨다.
+    /// - 1인칭(사냥 시간): 카메라가 눈 위치(외형 머리를 따라감, <see cref="IEyePointProvider"/>)에 붙고, 좌우 시점이 몸체를 회전시킨다.
     /// </summary>
     public class MannequinCharacter : PlayerCharacter, ILookControllable, IPerspectiveCamera
     {
@@ -32,6 +32,7 @@ namespace GuardVsMannequin.Player.Mannequin
         private float cameraPitch = 15f;
         private readonly PendingLookYaw pendingYaw = new();
         private IMovementPlaneProvider movementPlaneProvider;
+        private IEyePointProvider eyePoint;
 
         /// <summary>1인칭 시점인지 여부. (사냥 시간)</summary>
         public bool IsFirstPerson { get; private set; }
@@ -49,6 +50,7 @@ namespace GuardVsMannequin.Player.Mannequin
 
             cameraYaw = transform.eulerAngles.y;
             movementPlaneProvider = GetComponent<IMovementPlaneProvider>();
+            eyePoint = GetComponent<IEyePointProvider>();
         }
 
         /// <summary>
@@ -109,9 +111,10 @@ namespace GuardVsMannequin.Player.Mannequin
         {
             if (IsFirstPerson)
             {
-                // 눈 위치(추적 대상)에서 몸의 정면(+아직 몸에 반영되지 않은 좌우 입력) + 상하 시점을 바라본다.
+                // 눈 위치(외형 머리, 없으면 추적 대상)에서 몸의 정면(+아직 몸에 반영되지 않은 좌우 입력) + 상하 시점을 바라본다.
                 Quaternion viewRotation = Quaternion.Euler(cameraPitch, pendingYaw.ViewYaw(this), 0f);
-                cameraTransform.SetPositionAndRotation(followTarget.position, viewRotation);
+                Vector3 eye = eyePoint != null && eyePoint.TryGetEyePosition(out Vector3 headEye) ? headEye : followTarget.position;
+                cameraTransform.SetPositionAndRotation(eye, viewRotation);
                 return;
             }
 

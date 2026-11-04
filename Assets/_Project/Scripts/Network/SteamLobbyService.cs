@@ -1,6 +1,6 @@
 using System;
 using GuardVsMannequin.Core;
-using GuardVsMannequin.Mods;
+using GuardVsMannequin.Localization;
 using Steamworks;
 using UnityEngine;
 
@@ -9,28 +9,19 @@ namespace GuardVsMannequin.Network
     /// <summary>
     /// Steam 로비(방 코드, 친구 초대)를 관리한다. 네트워크 연결 자체는 하지 않는다(SRP).
     /// - 방 코드 = Steam 로비 ID
-    /// - 로비 데이터 "HostAddress"에 호스트의 SteamID를 저장해, 참가자가 그 주소로 접속한다.
+    /// - 참가자는 로비 주인(Steam이 정하므로 위조할 수 없음)의 SteamID로 접속한다.
+    /// - 공개방 목록에 필요한 값을 로비 데이터에 적는다. (<see cref="SteamLobbyKeys"/>, 검색은 <see cref="SteamRoomBrowser"/>)
     /// </summary>
     public class SteamLobbyService : MonoBehaviour
     {
-        private const string HostAddressKey = "HostAddress";
-        private const string VersionKey = "Version";
-        private const string ModsKey = "Mods";
-        private const string ModListKey = "ModList";
-        private const string HasPasswordKey = "HasPassword";
-
         [SerializeField] private int maxMembers = 10;
-
-        [Tooltip("로비 공개 범위. FriendsOnly = Steam 친구와 초대받은 사람만 참가(방 코드도 친구만 통함), " +
-                 "Public = 방 코드를 아는 누구나 참가(테스트용 AppID 480에서는 다른 게임의 로비 검색에 보일 수 있음), " +
-                 "Private = 초대로만 참가.")]
-        [SerializeField] private ELobbyType lobbyType = ELobbyType.k_ELobbyTypeFriendsOnly;
 
         private CallResult<LobbyCreated_t> lobbyCreatedResult;
         private Callback<LobbyEnter_t> lobbyEnterCallback;
         private Callback<GameLobbyJoinRequested_t> joinRequestedCallback;
         private bool isCreatingLobby;
-        private bool creatingWithPassword;
+        private SteamRoomOptions creatingOptions;
+        private bool pingLocationWritten;
 
         /// <summary>로비 생성이 끝났을 때. (로비 ID)</summary>
         public event Action<ulong> LobbyCreated;
@@ -58,15 +49,17 @@ namespace GuardVsMannequin.Network
             lobbyCreatedResult = CallResult<LobbyCreated_t>.Create(OnLobbyCreated);
             lobbyEnterCallback = Callback<LobbyEnter_t>.Create(OnLobbyEntered);
             joinRequestedCallback = Callback<GameLobbyJoinRequested_t>.Create(OnJoinRequested);
+            // 핑 위치를 구하려면 Steam 중계망 정보가 필요하다. 미리 받아 둔다.
+            SteamNetworkingUtils.InitRelayNetworkAccess();
 
             CheckLaunchInvite();
         }
 
         /// <summary>
-        /// 인스펙터에서 정한 공개 범위로 로비를 만든다.
+        /// 공개방 또는 친구 전용 로비를 만든다. 친구 전용은 Steam 친구와 초대받은 사람만 들어올 수 있고 목록에 나오지 않는다.
         /// 암호 자체는 로비 데이터에 적지 않는다(누구나 읽을 수 있으므로). 암호가 있다는 표시만 적고, 확인은 호스트가 접속 때 한다.
         /// </summary>
-        public void CreateLobby(bool hasPassword)
+        public void CreateLobby(SteamRoomOptions options)
         {
             if (!SteamBootstrap.IsInitialized)
             {
@@ -74,8 +67,9 @@ namespace GuardVsMannequin.Network
                 return;
             }
 
-            creatingWithPassword = hasPassword;
+            creatingOptions = options;
             isCreatingLobby = true;
+            ELobbyType lobbyType = options.isPublic ? ELobbyType.k_ELobbyTypePublic : ELobbyType.k_ELobbyTypeFriendsOnly;
             SteamAPICall_t call = SteamMatchmaking.CreateLobby(lobbyType, maxMembers);
             lobbyCreatedResult.Set(call);
         }
@@ -112,6 +106,25 @@ namespace GuardVsMannequin.Network
             if (CurrentLobbyId != 0 && SteamBootstrap.IsInitialized)
                 SteamMatchmaking.SetLobbyJoinable(new CSteamID(CurrentLobbyId), joinable);
         }
+
+        /// <summary>
+        /// 고른 맵과 최대 인원을 로비 데이터와 인원 상한에 맞춘다. 지금 인원보다 낮게는 줄이지 않는다. (호스트)
+        /// </summary>
+        public void UpdateListing(string mapId, int maxPlayers)
+        {
+            if (CurrentLobbyId == 0 || !SteamBootstrap.IsInitialized)
+                return;
+
+            CSteamID lobby = new CSteamID(CurrentLobbyId);
+            SteamMatchmaking.SetLobbyData(lobby, SteamLobbyKeys.Map, mapId ?? string.Empty);
+            SteamMatchmaking.SetLobbyData(lobby, SteamLobbyKeys.MaxPlayers, maxPlayers.ToString());
+            SteamMatchmaking.SetLobbyMemberLimit(lobby, Mathf.Max(maxPlayers, SteamMatchmaking.GetNumLobbyMembers(lobby)));
+            WritePingLocation(lobby);
+        }
+
+        /// <summary>현재 로비가 공개방인지 여부. (호스트와 게스트 모두)</summary>
+        public bool IsCurrentLobbyPublic => CurrentLobbyId != 0 && SteamBootstrap.IsInitialized
+            && SteamMatchmaking.GetLobbyData(new CSteamID(CurrentLobbyId), SteamLobbyKeys.IsPublic) == "1";
 
         /// <summary>
         /// 해당 SteamID가 현재 로비의 멤버인지 확인한다. (호스트가 접속자를 검증할 때 사용)
@@ -154,30 +167,41 @@ namespace GuardVsMannequin.Network
 
             CurrentLobbyId = result.m_ulSteamIDLobby;
             CSteamID lobby = new CSteamID(CurrentLobbyId);
-            SteamMatchmaking.SetLobbyData(lobby, HostAddressKey, SteamUser.GetSteamID().m_SteamID.ToString());
+            SteamMatchmaking.SetLobbyData(lobby, SteamLobbyKeys.Game, SteamLobbyKeys.GameValue);
             // 참가자가 호스트에 접속하기 전에 버전을 비교할 수 있게 적어 둔다.
-            SteamMatchmaking.SetLobbyData(lobby, VersionKey, GameVersion.Current);
-            // 켜진 모드 지문과 모드 ID 목록 (참가자가 접속 전에 호스트 구성에 맞춰 둘 수 있게 한다)
-            // 로비 값은 크기 제한이 있으므로 ID만 넣고, 넘치면 비운다. (버전·파일 비교와 안내는 접속 후 서버가 한다)
-            SteamMatchmaking.SetLobbyData(lobby, ModsKey, ModService.Instance.ModSetHash);
-            SteamMatchmaking.SetLobbyData(lobby, ModListKey, FitLobbyValue(ModService.Instance.ModSetIds));
-            SteamMatchmaking.SetLobbyData(lobby, HasPasswordKey, creatingWithPassword ? "1" : "0");
+            SteamMatchmaking.SetLobbyData(lobby, SteamLobbyKeys.Version, GameVersion.Current);
+            SteamMatchmaking.SetLobbyData(lobby, SteamLobbyKeys.HasPassword, string.IsNullOrEmpty(creatingOptions.password) ? "0" : "1");
+            SteamMatchmaking.SetLobbyData(lobby, SteamLobbyKeys.IsPublic, creatingOptions.isPublic ? "1" : "0");
+            SteamMatchmaking.SetLobbyData(lobby, SteamLobbyKeys.Name, ResolveRoomName(creatingOptions.roomName));
+            pingLocationWritten = false;
+            WritePingLocation(lobby);
             LobbyCreated?.Invoke(CurrentLobbyId);
         }
 
-        // Steam 로비 데이터 값 하나의 최대 크기(바이트, Steamworks k_cubChatMetadataMax 8192)보다 조금 작게 둔다.
-        private const int MaxLobbyValueBytes = 8000;
+        /// <summary>
+        /// 방 이름을 정리한다. 비어 있으면 "&lt;Steam 이름&gt;의 방".
+        /// </summary>
+        private static string ResolveRoomName(string roomName)
+        {
+            string cleaned = DisplayTextSanitizer.Clean(roomName, SteamRoomOptions.MaxNameLength);
+            if (cleaned.Length > 0)
+                return cleaned;
+
+            string steamName = DisplayTextSanitizer.Clean(SteamFriends.GetPersonaName(), DisplayTextSanitizer.MaxPlayerNameLength);
+            return DisplayTextSanitizer.Clean(Loc.Format("lobby.roomName.default", steamName), SteamRoomOptions.MaxNameLength);
+        }
 
         /// <summary>
-        /// 로비 값 크기 제한을 넘으면 빈 문자열로 바꾼다. (잘린 목록은 잘못된 모드 구성으로 맞추게 하므로 넣지 않는다)
+        /// 호스트의 핑 위치를 적는다. Steam 중계망 정보가 아직 없으면 다음 갱신 때 다시 시도한다.
         /// </summary>
-        private static string FitLobbyValue(string value)
+        private void WritePingLocation(CSteamID lobby)
         {
-            if (string.IsNullOrEmpty(value) || System.Text.Encoding.UTF8.GetByteCount(value) <= MaxLobbyValueBytes)
-                return value ?? string.Empty;
+            if (pingLocationWritten || SteamNetworkingUtils.GetLocalPingLocation(out SteamNetworkPingLocation_t location) < 0f)
+                return;
 
-            Debug.LogWarning($"[SteamLobby] 켜진 모드 목록이 로비 데이터 크기 제한을 넘어 넣지 않습니다. 참가자는 접속 후 호스트와 모드를 맞춥니다.");
-            return string.Empty;
+            SteamNetworkingUtils.ConvertPingLocationToString(ref location, out string text, Constants.k_cchMaxSteamNetworkingPingLocationString);
+            SteamMatchmaking.SetLobbyData(lobby, SteamLobbyKeys.PingLocation, text);
+            pingLocationWritten = true;
         }
 
         /// <summary>
@@ -199,7 +223,7 @@ namespace GuardVsMannequin.Network
                 return;
 
             // 버전이 다르면 접속하지 않고 나온다. (버전을 적지 않은 옛 빌드의 방도 다른 버전으로 본다)
-            string hostVersion = SteamMatchmaking.GetLobbyData(lobby, VersionKey);
+            string hostVersion = SteamMatchmaking.GetLobbyData(lobby, SteamLobbyKeys.Version);
             if (hostVersion != GameVersion.Current)
             {
                 string shownVersion = string.IsNullOrEmpty(hostVersion) ? "?" : hostVersion;
@@ -208,22 +232,16 @@ namespace GuardVsMannequin.Network
                 return;
             }
 
-            // 켜진 모드가 다르면 접속 전에 호스트 구성(모드 ID)에 맞춰 둔다.
-            // 맞추지 못해도 여기서 거절하지 않고 접속한다. 서버가 전체 모드 정보로 다시 맞추게 하고,
-            // 그래도 다르면 부족한 모드(버전·파일 차이 포함)와 함께 거절한다. (RoomAuthenticator)
-            string hostModIds = SteamMatchmaking.GetLobbyData(lobby, ModListKey);
-            if (!ModService.Instance.TryMatchHost(hostModIds, SteamMatchmaking.GetLobbyData(lobby, ModsKey)))
-                Debug.Log("[SteamLobby] 접속 전 모드 맞추기에 실패했습니다. 접속 후 호스트와 다시 확인합니다.");
-
-            string hostAddress = SteamMatchmaking.GetLobbyData(lobby, HostAddressKey);
-            if (!ulong.TryParse(hostAddress, out ulong hostSteamId))
+            // 로비 데이터에 적힌 주소가 아니라 Steam이 알려 주는 로비 주인에게 접속한다. (로비 데이터는 주인이 마음대로 적을 수 있다)
+            ulong hostSteamId = SteamMatchmaking.GetLobbyOwner(lobby).m_SteamID;
+            if (hostSteamId == 0)
             {
                 Failed?.Invoke("notice.lobbyDataInvalid", string.Empty);
                 LeaveLobby();
                 return;
             }
 
-            bool hasPassword = SteamMatchmaking.GetLobbyData(lobby, HasPasswordKey) == "1";
+            bool hasPassword = SteamMatchmaking.GetLobbyData(lobby, SteamLobbyKeys.HasPassword) == "1";
             JoinedLobby?.Invoke(CurrentLobbyId, hostSteamId, hasPassword);
         }
 

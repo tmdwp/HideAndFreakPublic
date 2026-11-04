@@ -30,6 +30,10 @@ namespace GuardVsMannequin.Audio
                 NoiseType.MannequinAttack => Create("MannequinAttack", 0.25f, Swipe),
                 NoiseType.FlashlightClick => Create("FlashlightClick", 0.05f, Click),
                 NoiseType.GrenadeExplosion => Create("GrenadeExplosion", 0.9f, Blast),
+                NoiseType.GhoulBreath => Create("GhoulBreath", 2.4f, GhoulBreath),
+                NoiseType.GhoulStep => Create("GhoulStep", 0.2f, GhoulStep),
+                NoiseType.GhoulShriek => Create("GhoulShriek", 1.4f, GhoulShriek),
+                NoiseType.GuardHeartbeat => Create("GuardHeartbeat", 0.9f, Heartbeat),
                 _ => Create("Default", 0.2f, Ping)
             };
 
@@ -99,6 +103,52 @@ namespace GuardVsMannequin.Audio
             float noise = Random.value * 2f - 1f;
             float thump = Mathf.Sin(2f * Mathf.PI * 70f * t);
             return (noise * 0.8f * Mathf.Exp(-t * 9f)) + (thump * 0.6f * Mathf.Exp(-t * 5f));
+        }
+
+        /// <summary>구울 숨소리: 들이쉬고 내쉬는 거친 잡음 위에 낮게 떨리는 으르렁. (반복해도 이음매가 없도록 처음·끝이 0)</summary>
+        private static float GhoulBreath(float t, float length)
+        {
+            float phase = t / length;
+            // 앞 40%는 들숨(작게), 뒤 60%는 날숨(크게)
+            float envelope = phase < 0.4f ? Mathf.Sin(Mathf.PI * phase / 0.4f) * 0.45f : Mathf.Sin(Mathf.PI * (phase - 0.4f) / 0.6f);
+            float rasp = (Random.value * 2f - 1f) * 0.5f;
+            float growlFrequency = 62f + Mathf.Sin(2f * Mathf.PI * 3f * t) * 6f;
+            float growl = 2f * (t * growlFrequency - Mathf.Floor(t * growlFrequency + 0.5f));
+            float flutter = 0.6f + 0.4f * Mathf.Sin(2f * Mathf.PI * 23f * t);
+            return (rasp + growl * 0.55f * flutter) * envelope * 0.6f;
+        }
+
+        /// <summary>구울 발소리: 손발이 바닥을 짚는 짧은 쿵 + 손톱 긁힘.</summary>
+        private static float GhoulStep(float t, float length)
+        {
+            float thud = Mathf.Sin(2f * Mathf.PI * 85f * t) * Mathf.Exp(-t * 30f);
+            float scratch = (Random.value * 2f - 1f) * Mathf.Exp(-t * 45f) * 0.5f;
+            return (thud + scratch) * 0.8f;
+        }
+
+        /// <summary>구울 비명: 어긋난 톱니파 여러 개가 높아지며 떨리는 소리 + 잡음.</summary>
+        private static float GhoulShriek(float t, float length)
+        {
+            float phase = t / length;
+            float baseFrequency = Mathf.Lerp(380f, 920f, Mathf.Sqrt(phase));
+            float sum = 0f;
+            foreach (float detune in new[] { 1f, 1.013f, 0.981f, 1.5f })
+            {
+                float frequency = baseFrequency * detune;
+                sum += 2f * (t * frequency - Mathf.Floor(t * frequency + 0.5f));
+            }
+            float tremolo = 0.65f + 0.35f * Mathf.Sin(2f * Mathf.PI * 17f * t);
+            float noise = (Random.value * 2f - 1f) * 0.3f;
+            float envelope = Mathf.Min(1f, t / 0.05f) * (1f - phase) * (1f - phase * 0.3f);
+            return (sum * 0.22f * tremolo + noise) * envelope;
+        }
+
+        /// <summary>심장 소리: "쿵-쿵" 두 번의 낮은 박동. (반복 재생, 빠르기는 재생 속도로 조절)</summary>
+        private static float Heartbeat(float t, float length)
+        {
+            float first = Mathf.Sin(2f * Mathf.PI * 52f * t) * Mathf.Exp(-t * 22f);
+            float second = t > 0.27f ? Mathf.Sin(2f * Mathf.PI * 46f * (t - 0.27f)) * Mathf.Exp(-(t - 0.27f) * 26f) * 0.7f : 0f;
+            return (first + second) * 0.9f;
         }
 
         /// <summary>전원 장치 파괴: 저음 폭발 + 잡음.</summary>

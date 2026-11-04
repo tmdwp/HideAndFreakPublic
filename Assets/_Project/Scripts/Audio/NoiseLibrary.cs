@@ -83,7 +83,11 @@ namespace GuardVsMannequin.Audio
                 new Entry { type = NoiseType.PowerDown, volume = 1f, maxDistance = 500f },
                 new Entry { type = NoiseType.MannequinAttack, volume = 0.9f, maxDistance = 15f },
                 new Entry { type = NoiseType.FlashlightClick, volume = 0.5f, maxDistance = 8f },
-                new Entry { type = NoiseType.GrenadeExplosion, volume = 1f, maxDistance = 40f }
+                new Entry { type = NoiseType.GrenadeExplosion, volume = 1f, maxDistance = 40f },
+                new Entry { type = NoiseType.GhoulBreath, volume = 0.7f, maxDistance = 14f },
+                new Entry { type = NoiseType.GhoulStep, volume = 0.6f, maxDistance = 16f },
+                new Entry { type = NoiseType.GhoulShriek, volume = 1f, maxDistance = 60f },
+                new Entry { type = NoiseType.GuardHeartbeat, volume = 0.9f, maxDistance = 1f }
             };
         }
     }

@@ -1,7 +1,6 @@
 using System.Text;
 using GuardVsMannequin.Core;
 using GuardVsMannequin.Localization;
-using GuardVsMannequin.Settings;
 using UnityEngine;
 using UnityEngine.InputSystem;
 using UnityEngine.UI;
@@ -9,7 +8,7 @@ using UnityEngine.UI;
 namespace GuardVsMannequin.UI
 {
     /// <summary>
-    /// HUD 중앙 좌측: 조작 키 안내. (이동, 좌클릭, 우클릭, 달리기, 점프)
+    /// HUD 중앙 좌측: 조작 키 안내. (이동, 좌클릭, 우클릭, 장전(총이 있을 때), 달리기, 점프)
     /// 키 이름은 지금 키 설정을 따르고, 좌·우클릭 동작 이름은 역할과 단계(<see cref="HudText.GetRoleText"/>)를 따른다.
     /// 문구는 키 설정·언어·역할·단계가 바뀔 때만 다시 만든다.
     /// </summary>
@@ -22,36 +21,32 @@ namespace GuardVsMannequin.UI
         [SerializeField] private InputActionAsset inputActions;
 
         private readonly StringBuilder builder = new();
-        private InputActionAsset displayActions;
+        private HudKeyNames keyNames;
         private HudContext context;
         private bool isDirty = true;
         private PlayerRole shownRole = PlayerRole.None;
         private bool shownHunting;
+        private bool shownReload;
 
         /// <summary>
-        /// 키 이름용 입력 에셋 복제본을 만들고 키 설정·언어 변경을 구독한다.
+        /// 키 이름 공급자를 만들고 키 설정·언어 변경을 구독한다.
         /// </summary>
         public void Bind(HudContext hudContext)
         {
             context = hudContext;
-            if (inputActions != null)
-            {
-                displayActions = Instantiate(inputActions);
-                OptionsStore.ApplyBindings(displayActions);
-            }
-            OptionsStore.BindingsChanged += OnBindingsChanged;
-            Loc.LanguageChanged += MarkDirty;
+            keyNames = new HudKeyNames(inputActions);
+            keyNames.Changed += MarkDirty;
         }
 
         /// <summary>
-        /// 구독을 해제하고 복제본을 지운다.
+        /// 구독을 해제하고 키 이름 공급자를 정리한다.
         /// </summary>
         private void OnDestroy()
         {
-            OptionsStore.BindingsChanged -= OnBindingsChanged;
-            Loc.LanguageChanged -= MarkDirty;
-            if (displayActions != null)
-                Destroy(displayActions);
+            if (keyNames == null)
+                return;
+            keyNames.Changed -= MarkDirty;
+            keyNames.Dispose();
         }
 
         /// <inheritdoc />
@@ -71,25 +66,30 @@ namespace GuardVsMannequin.UI
 
             PlayerRole role = context.LocalPlayer.Player.Role;
             bool isHunting = state == GameState.Hunting;
-            if (!isDirty && role == shownRole && isHunting == shownHunting)
+            // 탄창 있는 도구(총)를 가진 경우에만 장전 줄을 보인다.
+            bool showReload = context.LocalPlayer.Ammo != null;
+            if (!isDirty && role == shownRole && isHunting == shownHunting && showReload == shownReload)
                 return;
 
             shownRole = role;
             shownHunting = isHunting;
+            shownReload = showReload;
             isDirty = false;
-            controlsText.text = BuildText(role, isHunting);
+            controlsText.text = BuildText(role, isHunting, showReload);
         }
 
         /// <summary>
         /// "키 : 동작" 줄들을 만든다.
         /// </summary>
-        private string BuildText(PlayerRole role, bool isHunting)
+        private string BuildText(PlayerRole role, bool isHunting, bool showReload)
         {
             builder.Clear();
             builder.Append("<b>").Append(Loc.Get("hud.controls.title")).Append("</b>");
             AppendLine("Move", Loc.Get("hud.controls.move"));
             AppendLine("Primary", HudText.GetRoleText(role, HudText.PrimaryPart, isHunting));
             AppendLine("Secondary", HudText.GetRoleText(role, HudText.SecondaryPart, isHunting));
+            if (showReload)
+                AppendLine("Reload", Loc.Get("hud.controls.reload"));
             AppendLine("Sprint", Loc.Get("hud.controls.sprint"));
             AppendLine("Jump", Loc.Get("hud.controls.jump"));
             return builder.ToString();
@@ -102,17 +102,7 @@ namespace GuardVsMannequin.UI
         {
             if (string.IsNullOrEmpty(label))
                 return;
-            builder.Append('\n').Append(KeyBindingDisplay.Get(displayActions, actionName)).Append("  :  ").Append(label);
-        }
-
-        /// <summary>
-        /// 게임 중 키 설정을 바꾸면 복제본에도 적용하고 문구를 다시 만든다.
-        /// </summary>
-        private void OnBindingsChanged()
-        {
-            if (displayActions != null)
-                OptionsStore.ApplyBindings(displayActions);
-            MarkDirty();
+            builder.Append('\n').Append(keyNames.Get(actionName)).Append("  :  ").Append(label);
         }
 
         /// <summary>

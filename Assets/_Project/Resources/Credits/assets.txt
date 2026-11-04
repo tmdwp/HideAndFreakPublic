@@ -2,18 +2,12 @@ FishNet: Networking Evolved  —  FirstGearGames  (FishNet License)
 FishySteamworks  —  FirstGearGames  (MIT License)
 Steamworks.NET  —  Riley Labrecque  (MIT License)
 Easy Character Movement 2  —  Oscar Gracián  (Unity Asset Store EULA)
-DOTween  —  Demigiant  (DOTween License)
 Universal Render Pipeline, Input System, AI Navigation  —  Unity Technologies  (Unity Companion License)
-Standard Assets  —  Unity Technologies
-Abandoned Asylum  —  lukasbobor
-RPG/FPS Game Assets - Industrial
-Horror Hospital Pack
-Alchemist House
 Human Basic Motions FREE  —  Kevin Iglesias
-Kawaii Slimes
-Monster Ghosts FREE
-Mid Poly Gun Weapons  —  RyanNein
+Low Poly Character Series 1 - SWAT
+Modern Vending Machine
 Master Stylized Projectiles
 Casual Game Sounds U6
 Sci-Fi Weapons - Bullet Hell Sound Effects Pack
+Horror SFX - 082918  —  GWriterStudio
 NeoDunggeunmo Pro  —  Eunbin Jeong  (SIL Open Font License 1.1)

@@ -11,22 +11,6 @@ namespace GuardVsMannequin.Network
 
         /// <summary>입력한 방 암호. 암호 없는 방이면 무시된다.</summary>
         public string password;
-
-        /// <summary>켜진 모드 목록 + 맵 목록의 지문. (ModService.ModSetHash) 호스트와 같아야 입장할 수 있다.</summary>
-        public string modHash;
-    }
-
-    /// <summary>
-    /// 서버 → 클라이언트: 모드 지문이 달라 호스트의 모드 구성을 알린다. (인증 전)
-    /// 클라이언트는 이번 접속 동안 그 구성으로 맞춘 뒤 참가 요청을 다시 보낸다.
-    /// </summary>
-    public struct ModSetRequiredBroadcast : IBroadcast
-    {
-        /// <summary>호스트가 켠 모드 목록. (ModService.ModSetDescription)</summary>
-        public string hostMods;
-
-        /// <summary>호스트의 모드 지문. (ModService.ModSetHash)</summary>
-        public string hostModHash;
     }
 
     /// <summary>
@@ -38,9 +22,6 @@ namespace GuardVsMannequin.Network
 
         /// <summary>호스트의 게임 버전. (버전이 다를 때 안내용)</summary>
         public string hostVersion;
-
-        /// <summary>호스트가 켠 모드 목록. (모드가 다를 때 안내용, 예: "author.maps@1.0.0#ab12cd34")</summary>
-        public string hostMods;
     }
 
     /// <summary>
@@ -66,7 +47,7 @@ namespace GuardVsMannequin.Network
         /// <summary>방 암호가 틀림.</summary>
         WrongPassword,
 
-        /// <summary>호스트가 켠 모드가 없거나 버전·파일이 다름. (접속자만 켠 모드는 접속 동안 꺼서 맞추므로 해당 없음)</summary>
-        ModMismatch
+        /// <summary>암호를 여러 번 틀려 잠시 막힘.</summary>
+        TooManyPasswordAttempts
     }
 }

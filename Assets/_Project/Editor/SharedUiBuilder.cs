@@ -15,6 +15,16 @@ namespace GuardVsMannequin.Editor
     {
         public const string InputActionsPath = "Assets/_Project/Input/GameInput.inputactions";
 
+        // 하단 중앙 체력 게이지와 그 아래 스태미나 막대의 앵커. (발각 아이콘·손전등 표시가 이 위치를 기준으로 붙는다)
+        private static readonly Vector2 HealthAnchorMin = new(0.4f, 0.064f);
+        private static readonly Vector2 HealthAnchorMax = new(0.6f, 0.1f);
+        private static readonly Vector2 StaminaAnchorMin = new(0.4f, 0.04f);
+        private static readonly Vector2 StaminaAnchorMax = new(0.6f, 0.056f);
+        private static readonly Vector2 FlashlightKeySize = new(34f, 30f);
+        private const float FlashlightIconSize = 44f;
+        private const float FlashlightIconGap = 6f;
+        private static readonly Vector2 CrosshairGaugeSize = new(64f, 64f);
+
         /// <summary>
         /// 설정 화면 프리팹(없으면 기본 모양으로 만들어 저장)을 캔버스 안에 중첩 프리팹으로 넣는다. 처음에는 닫혀 있다.
         /// </summary>
@@ -83,7 +93,7 @@ namespace GuardVsMannequin.Editor
         }
 
         /// <summary>
-        /// 그래픽 페이지: 화면 모드(◀ ▶), 해상도(스크롤 목록), 언어(◀ ▶).
+        /// 그래픽 페이지: 화면 모드(◀ ▶), 해상도(스크롤 목록), 프레임 제한(◀ ▶), 카메라 흔들림(◀ ▶), 언어(◀ ▶).
         /// </summary>
         private static void BuildGraphicsPage(RectTransform page)
         {
@@ -94,6 +104,9 @@ namespace GuardVsMannequin.Editor
             EditorUiFactory.SetWidth(resolutionLabel, 200f);
             Dropdown resolution = EditorUiFactory.CreateDropdown(resolutionRow, "ResolutionDropdown", 24, 320f);
             EditorUiFactory.SetFlexibleWidth(resolution);
+
+            CreateFrameLimitRow(page);
+            CreateCameraSwayRow(page);
 
             // 언어: strings.csv에 열을 추가하면 목록에 나타남
             CreateSelectorRow(page, "Language", "options.language", out Button previousLanguage, out Text languageValue, out Button nextLanguage);
@@ -238,15 +251,13 @@ namespace GuardVsMannequin.Editor
             Text waiting = EditorUiFactory.CreateText(canvas, "WaitingText", "hud.waiting", 32, TextAnchor.MiddleCenter, EditorUiFactory.TextColor);
             waiting.rectTransform.sizeDelta = new Vector2(900f, 60f);
 
-            // 하단: 관전 안내, 체력과 도구
+            // 하단: 사망·미참가 시 관전 안내 (살아 있을 때의 체력·도구는 아래 영역들이 따로 보여준다)
             RectTransform bottom = EditorUiFactory.CreatePanel(canvas, "BottomPanel", new Vector2(0.18f, 0.02f), new Vector2(0.82f, 0.14f), new Color(0f, 0f, 0f, 0.45f));
             EditorUiFactory.AddVerticalLayout(bottom, 4f, 10);
             Text spectator = EditorUiFactory.CreateText(bottom, "ObjectiveText", string.Empty, 22, TextAnchor.MiddleCenter, EditorUiFactory.TextColor);
             spectator.gameObject.AddComponent<LayoutElement>().flexibleHeight = 1f;
-            Text status = EditorUiFactory.CreateText(bottom, "StatusText", string.Empty, 22, TextAnchor.MiddleCenter, EditorUiFactory.NoticeColor);
-            EditorUiFactory.SetHeight(status, 30f);
 
-            // 좌측 조작 안내, 우측 목표, 하단 스태미나 (결과 화면보다 먼저 만들어 아래에 그린다)
+            // 좌측 조작 안내, 우측 목표, 하단 체력·스태미나 등 (결과 화면보다 먼저 만들어 아래에 그린다)
             AddMissingHudSections(canvas);
 
             // 결과
@@ -274,7 +285,6 @@ namespace GuardVsMannequin.Editor
             HudBottomPanel bottomSection = canvas.gameObject.AddComponent<HudBottomPanel>();
             TestEnvironmentSetupTool.SetField(bottomSection, "bottomPanel", bottom.gameObject);
             TestEnvironmentSetupTool.SetField(bottomSection, "spectatorText", spectator);
-            TestEnvironmentSetupTool.SetField(bottomSection, "statusText", status);
 
             HudResultPanel resultSection = canvas.gameObject.AddComponent<HudResultPanel>();
             TestEnvironmentSetupTool.SetField(resultSection, "resultPanel", result.gameObject);
@@ -286,7 +296,7 @@ namespace GuardVsMannequin.Editor
         }
 
         /// <summary>
-        /// HUD 캔버스에 없는 영역(좌측 조작 안내, 우측 목표, 하단 스태미나)만 만들어 붙인다.
+        /// HUD 캔버스에 없는 영역(좌측 조작 안내, 우측 목표, 하단 체력·스태미나·발각·손전등, 조준점 탄 게이지·쿨타임 바)만 만들어 붙인다.
         /// 이미 있는 프리팹을 고치지 않고 영역만 더할 때도 쓴다. 결과 화면·ESC 메뉴보다 아래에 그려지도록 그 앞에 끼워 넣는다.
         /// </summary>
         /// <returns>새로 추가한 영역 수.</returns>
@@ -308,6 +318,40 @@ namespace GuardVsMannequin.Editor
                 InsertBeforeOverlays(canvas, CreateStaminaSection(canvas));
                 added++;
             }
+            if (canvas.GetComponent<HudHealthBar>() == null)
+            {
+                InsertBeforeOverlays(canvas, CreateHealthSection(canvas));
+                MoveToVitalsLayout(canvas);
+                added++;
+            }
+            if (canvas.GetComponent<HudRevealIndicator>() == null)
+            {
+                InsertBeforeOverlays(canvas, CreateRevealSection(canvas));
+                added++;
+            }
+            if (canvas.GetComponent<HudSwitchToolIndicator>() == null)
+            {
+                InsertBeforeOverlays(canvas, CreateSwitchToolSection(canvas));
+                added++;
+            }
+            if (canvas.GetComponent<HudCooldownBars>() == null)
+            {
+                InsertBeforeOverlays(canvas, CreateCooldownBarsSection(canvas));
+                added++;
+            }
+            HudAmmoDisplay ammoSection = canvas.GetComponent<HudAmmoDisplay>();
+            if (ammoSection == null || !HasAmmoGauge(ammoSection))
+            {
+                CreateAmmoSection(canvas, ammoSection);
+                added++;
+            }
+            if (canvas.GetComponent<HudCooldownRing>() == null)
+            {
+                CreateCooldownRingSection(canvas);
+                added++;
+            }
+            // 예전에 만든 영역의 글자(체력·스태미나·바 이름)를 지우고, 빠진 손전등 아이콘을 넣는다. (지금 모양이면 아무것도 하지 않음)
+            added += RemoveOldHudDecorations(canvas);
             if (canvas.GetComponent<HudTestRoomPanel>() == null)
             {
                 InsertBeforeOverlays(canvas, CreateTestRoomSection(canvas));
@@ -454,28 +498,302 @@ namespace GuardVsMannequin.Editor
         }
 
         /// <summary>
-        /// 하단 중앙 스태미나 막대: 어두운 바탕 위에 채움 막대와 "스태미나" 글자.
+        /// 하단 중앙 체력 게이지: 어두운 바탕 위에 채움 막대(글자 없음). 바로 아래에 스태미나 막대가 온다.
+        /// </summary>
+        private static RectTransform CreateHealthSection(Transform canvas)
+        {
+            RectTransform bar = EditorUiFactory.CreatePanel(canvas, "HealthBar", HealthAnchorMin, HealthAnchorMax, new Color(0f, 0f, 0f, 0.55f));
+            bar.GetComponent<Image>().raycastTarget = false;
+
+            RectTransform fill = EditorUiFactory.CreatePanel(bar, "Fill", Vector2.zero, Vector2.one, new Color(0.85f, 0.25f, 0.25f, 1f));
+            Image fillImage = fill.GetComponent<Image>();
+            fillImage.raycastTarget = false;
+
+            HudHealthBar section = canvas.gameObject.AddComponent<HudHealthBar>();
+            TestEnvironmentSetupTool.SetField(section, "healthPanel", bar.gameObject);
+            TestEnvironmentSetupTool.SetField(section, "fill", fill);
+            TestEnvironmentSetupTool.SetField(section, "fillGraphic", fillImage);
+            return bar;
+        }
+
+        /// <summary>
+        /// 예전에 만든 HUD에서 지금은 쓰지 않는 글자를 지운다: 체력·스태미나 막대와 쿨타임 바 견본의 글자(Label).
+        /// 손전등 표시에 아이콘이 없으면(키만 있던 버전) 다시 넣는다. 이미 지금 모양이면 아무것도 하지 않는다.
+        /// </summary>
+        /// <returns>지우거나 더한 오브젝트 수.</returns>
+        private static int RemoveOldHudDecorations(Transform canvas)
+        {
+            int changed = 0;
+            foreach (string path in new[] { "HealthBar/Label", "StaminaBar/Label", "CooldownBars/BarTemplate/Label" })
+            {
+                Transform target = canvas.Find(path);
+                if (target == null)
+                    continue;
+                Object.DestroyImmediate(target.gameObject, true);
+                changed++;
+            }
+
+            HudSwitchToolIndicator flashlight = canvas.GetComponent<HudSwitchToolIndicator>();
+            Transform indicator = canvas.Find("FlashlightIndicator");
+            // 아이콘이 없거나, 지웠던 그림 파일을 가리켜 비어 있으면 다시 연결한다.
+            if (flashlight != null && indicator != null && !HasFlashlightIcon(flashlight))
+            {
+                AddFlashlightIcon((RectTransform)indicator, flashlight);
+                changed++;
+            }
+            return changed;
+        }
+
+        /// <summary>
+        /// 손전등 표시에 그림이 들어간 아이콘이 연결돼 있는지. (Unity의 == 비교로 사라진 그림도 없는 것으로 본다)
+        /// </summary>
+        private static bool HasFlashlightIcon(HudSwitchToolIndicator section)
+        {
+            Image icon = new SerializedObject(section).FindProperty("icon").objectReferenceValue as Image;
+            return icon != null && icon.sprite != null;
+        }
+
+        /// <summary>
+        /// 손전등 표시 영역 왼쪽에 아이콘을 두고 키 상자를 그 오른쪽으로 옮긴 뒤 영역에 연결한다.
+        /// 예전 아이콘 오브젝트가 남아 있으면 그것을 다시 쓴다.
+        /// </summary>
+        private static void AddFlashlightIcon(RectTransform root, HudSwitchToolIndicator section)
+        {
+            Transform existing = root.Find("Icon");
+            RectTransform iconRect = existing != null ? (RectTransform)existing : EditorUiFactory.CreateRect(root, "Icon");
+            iconRect.anchorMin = iconRect.anchorMax = new Vector2(0f, 0.5f);
+            iconRect.pivot = new Vector2(0f, 0.5f);
+            iconRect.anchoredPosition = Vector2.zero;
+            iconRect.sizeDelta = new Vector2(FlashlightIconSize, FlashlightIconSize);
+            iconRect.SetAsFirstSibling();
+
+            Image icon = iconRect.GetComponent<Image>();
+            if (icon == null)
+                icon = iconRect.gameObject.AddComponent<Image>();
+            icon.sprite = HudSpriteFactory.GetFlashlight();
+            icon.preserveAspect = true;
+            icon.raycastTarget = false;
+
+            Transform key = root.Find("Key");
+            if (key != null)
+                ((RectTransform)key).anchoredPosition = new Vector2(FlashlightIconSize + FlashlightIconGap, 0f);
+            root.sizeDelta = new Vector2(FlashlightIconSize + FlashlightIconGap + FlashlightKeySize.x, FlashlightIconSize);
+
+            TestEnvironmentSetupTool.SetField(section, "icon", icon);
+        }
+
+        /// <summary>
+        /// 예전 배치(스태미나 막대가 하단 패널 위, 체력은 하단 문구)를 새 배치로 옮긴다:
+        /// 스태미나 막대를 체력 게이지 바로 아래로, 하단 패널의 상태 문구 줄은 지운다(체력·도구는 각자 영역이 보여줌).
+        /// </summary>
+        private static void MoveToVitalsLayout(Transform canvas)
+        {
+            HudStaminaBar stamina = canvas.GetComponent<HudStaminaBar>();
+            if (stamina != null && new SerializedObject(stamina).FindProperty("staminaPanel").objectReferenceValue is GameObject staminaPanel)
+            {
+                var rect = (RectTransform)staminaPanel.transform;
+                rect.anchorMin = StaminaAnchorMin;
+                rect.anchorMax = StaminaAnchorMax;
+                rect.offsetMin = Vector2.zero;
+                rect.offsetMax = Vector2.zero;
+            }
+
+            Transform statusText = canvas.Find("BottomPanel/StatusText");
+            if (statusText != null)
+                Object.DestroyImmediate(statusText.gameObject, true);
+        }
+
+        /// <summary>
+        /// 체력 게이지 위 가운데: 수류탄에 맞아 위치가 드러난 동안 깜빡이는 눈 아이콘.
+        /// </summary>
+        private static RectTransform CreateRevealSection(Transform canvas)
+        {
+            RectTransform rect = EditorUiFactory.CreateRect(canvas, "RevealIcon");
+            rect.anchorMin = rect.anchorMax = new Vector2(0.5f, HealthAnchorMax.y);
+            rect.pivot = new Vector2(0.5f, 0f);
+            rect.anchoredPosition = new Vector2(0f, 6f);
+            rect.sizeDelta = new Vector2(44f, 44f);
+            Image icon = rect.gameObject.AddComponent<Image>();
+            icon.sprite = HudSpriteFactory.GetRevealed();
+            icon.preserveAspect = true;
+            icon.raycastTarget = false;
+            rect.gameObject.AddComponent<Shadow>().effectColor = new Color(0f, 0f, 0f, 0.8f);
+
+            HudRevealIndicator section = canvas.gameObject.AddComponent<HudRevealIndicator>();
+            TestEnvironmentSetupTool.SetField(section, "indicator", rect.gameObject);
+            TestEnvironmentSetupTool.SetField(section, "icon", icon);
+            rect.gameObject.SetActive(false);
+            return rect;
+        }
+
+        /// <summary>
+        /// 체력·스태미나 바 오른쪽: 손전등 아이콘과 단축키 상자. (색으로 켜짐·꺼짐·사용 불가를 구분)
+        /// </summary>
+        private static RectTransform CreateSwitchToolSection(Transform canvas)
+        {
+            RectTransform root = EditorUiFactory.CreateRect(canvas, "FlashlightIndicator");
+            float centerY = (StaminaAnchorMin.y + HealthAnchorMax.y) * 0.5f;
+            root.anchorMin = root.anchorMax = new Vector2(HealthAnchorMax.x, centerY);
+            root.pivot = new Vector2(0f, 0.5f);
+            root.anchoredPosition = new Vector2(12f, 0f);
+            root.sizeDelta = FlashlightKeySize;
+
+            RectTransform key = EditorUiFactory.CreatePanel(root, "Key", new Vector2(0f, 0.5f), new Vector2(0f, 0.5f), new Color(0f, 0f, 0f, 0.55f));
+            key.pivot = new Vector2(0f, 0.5f);
+            key.anchoredPosition = Vector2.zero;
+            key.sizeDelta = FlashlightKeySize;
+            key.GetComponent<Image>().raycastTarget = false;
+            key.gameObject.AddComponent<Outline>().effectColor = new Color(1f, 1f, 1f, 0.6f);
+            Text keyText = EditorUiFactory.CreateText(key, "Text", string.Empty, 18, TextAnchor.MiddleCenter, EditorUiFactory.TextColor);
+            EditorUiFactory.Stretch(keyText.rectTransform);
+            keyText.raycastTarget = false;
+            keyText.horizontalOverflow = HorizontalWrapMode.Overflow;
+
+            HudSwitchToolIndicator section = canvas.gameObject.AddComponent<HudSwitchToolIndicator>();
+            TestEnvironmentSetupTool.SetField(section, "indicatorPanel", root.gameObject);
+            TestEnvironmentSetupTool.SetField(section, "keyText", keyText);
+            TestEnvironmentSetupTool.SetField(section, "inputActions", AssetDatabase.LoadAssetAtPath<InputActionAsset>(InputActionsPath));
+            AddFlashlightIcon(root, section);
+            return root;
+        }
+
+        /// <summary>
+        /// 조준점 왼쪽: 쿨타임 세로 바 목록. 오른쪽(조준점 쪽)부터 채우는 가로 줄과, 꺼 둔 바 견본(바탕·채움)을 만든다.
+        /// </summary>
+        private static RectTransform CreateCooldownBarsSection(Transform canvas)
+        {
+            RectTransform list = EditorUiFactory.CreateRect(canvas, "CooldownBars");
+            list.anchorMin = list.anchorMax = new Vector2(0.5f, 0.5f);
+            list.pivot = new Vector2(1f, 0.5f);
+            list.anchoredPosition = new Vector2(-44f, 0f);
+            list.sizeDelta = new Vector2(160f, 84f);
+            HorizontalLayoutGroup layout = list.gameObject.AddComponent<HorizontalLayoutGroup>();
+            layout.spacing = 4f;
+            layout.childAlignment = TextAnchor.MiddleRight;
+            layout.childControlWidth = false;
+            layout.childControlHeight = false;
+            layout.childForceExpandWidth = false;
+            layout.childForceExpandHeight = false;
+
+            RectTransform template = EditorUiFactory.CreateRect(list, "BarTemplate");
+            template.sizeDelta = new Vector2(16f, 84f);
+
+            RectTransform track = EditorUiFactory.CreatePanel(template, "Track", new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Color(0f, 0f, 0f, 0.45f));
+            track.sizeDelta = new Vector2(10f, 62f);
+            track.GetComponent<Image>().raycastTarget = false;
+
+            RectTransform fill = EditorUiFactory.CreatePanel(track, "Fill", Vector2.zero, Vector2.one, Color.white);
+            Image fillImage = fill.GetComponent<Image>();
+            fillImage.raycastTarget = false;
+
+            HudCooldownBarView bar = template.gameObject.AddComponent<HudCooldownBarView>();
+            TestEnvironmentSetupTool.SetField(bar, "fill", fill);
+            TestEnvironmentSetupTool.SetField(bar, "fillGraphic", fillImage);
+            template.gameObject.SetActive(false);
+
+            HudCooldownBars section = canvas.gameObject.AddComponent<HudCooldownBars>();
+            TestEnvironmentSetupTool.SetField(section, "barsPanel", list.gameObject);
+            TestEnvironmentSetupTool.SetField(section, "barTemplate", bar);
+            return list;
+        }
+
+        /// <summary>
+        /// 하단 중앙 스태미나 막대: 어두운 바탕 위에 채움 막대(글자 없음). (체력 게이지 바로 아래)
         /// </summary>
         private static RectTransform CreateStaminaSection(Transform canvas)
         {
-            RectTransform bar = EditorUiFactory.CreatePanel(canvas, "StaminaBar", new Vector2(0.38f, 0.152f), new Vector2(0.62f, 0.174f), new Color(0f, 0f, 0f, 0.55f));
+            RectTransform bar = EditorUiFactory.CreatePanel(canvas, "StaminaBar", StaminaAnchorMin, StaminaAnchorMax, new Color(0f, 0f, 0f, 0.55f));
             bar.GetComponent<Image>().raycastTarget = false;
 
             RectTransform fill = EditorUiFactory.CreatePanel(bar, "Fill", Vector2.zero, Vector2.one, new Color(0.95f, 0.8f, 0.3f, 1f));
             Image fillImage = fill.GetComponent<Image>();
             fillImage.raycastTarget = false;
 
-            // 막대가 줄어도 읽히도록 밝은 글자에 그림자를 둔다.
-            Text label = EditorUiFactory.CreateText(bar, "Label", "hud.stamina", 16, TextAnchor.MiddleCenter, EditorUiFactory.TextColor);
-            EditorUiFactory.Stretch(label.rectTransform);
-            label.raycastTarget = false;
-            label.gameObject.AddComponent<Shadow>().effectColor = new Color(0f, 0f, 0f, 0.9f);
-
             HudStaminaBar section = canvas.gameObject.AddComponent<HudStaminaBar>();
             TestEnvironmentSetupTool.SetField(section, "staminaPanel", bar.gameObject);
             TestEnvironmentSetupTool.SetField(section, "fill", fill);
             TestEnvironmentSetupTool.SetField(section, "fillGraphic", fillImage);
             return bar;
+        }
+
+        /// <summary>
+        /// 탄 영역이 지금 모양(조준점 게이지)인지. 예전 탄환 아이콘 영역이면 false.
+        /// </summary>
+        private static bool HasAmmoGauge(HudAmmoDisplay section)
+        {
+            return new SerializedObject(section).FindProperty("gaugeFill").objectReferenceValue != null;
+        }
+
+        /// <summary>
+        /// 조준점 둘레의 원형 탄 게이지: 옅은 바탕 고리 위에 채움 고리(Radial 360, 위에서 시작, 반시계)를 겹친다.
+        /// 조준점보다 아래에 그려지도록 조준점 바로 앞에 둔다. 예전 탄환 아이콘 영역(AmmoPanel)이 있으면 지우고 같은 컴포넌트를 다시 연결한다.
+        /// </summary>
+        /// <param name="section">이미 붙어 있는 영역 컴포넌트. 없으면 새로 붙인다.</param>
+        private static void CreateAmmoSection(Transform canvas, HudAmmoDisplay section)
+        {
+            Transform oldPanel = canvas.Find("AmmoPanel");
+            if (oldPanel != null)
+                Object.DestroyImmediate(oldPanel.gameObject, true);
+
+            Image fill = CreateCrosshairGauge(canvas, "AmmoGauge");
+
+            if (section == null)
+                section = canvas.gameObject.AddComponent<HudAmmoDisplay>();
+            TestEnvironmentSetupTool.SetField(section, "gaugePanel", fill.transform.parent.gameObject);
+            TestEnvironmentSetupTool.SetField(section, "gaugeFill", fill);
+        }
+
+        /// <summary>
+        /// 조준점 둘레의 원형 쿨타임 고리(구울 공격 등). 탄 게이지와 같은 모양이다.
+        /// </summary>
+        private static void CreateCooldownRingSection(Transform canvas)
+        {
+            Image fill = CreateCrosshairGauge(canvas, "CooldownRing");
+
+            HudCooldownRing section = canvas.gameObject.AddComponent<HudCooldownRing>();
+            TestEnvironmentSetupTool.SetField(section, "ringPanel", fill.transform.parent.gameObject);
+            TestEnvironmentSetupTool.SetField(section, "ringFill", fill);
+        }
+
+        /// <summary>
+        /// 조준점 둘레 원형 게이지를 만든다: 옅은 바탕 고리 위에 채움 고리(Radial 360, 위에서 시작, 반시계)를 겹치고,
+        /// 조준점보다 아래에 그려지도록 조준점 바로 앞에 둔다. 채움 고리를 반환한다.
+        /// </summary>
+        private static Image CreateCrosshairGauge(Transform canvas, string name)
+        {
+            Sprite ring = HudSpriteFactory.GetAmmoGauge();
+            RectTransform gauge = EditorUiFactory.CreateRect(canvas, name);
+            gauge.anchorMin = gauge.anchorMax = new Vector2(0.5f, 0.5f);
+            gauge.sizeDelta = CrosshairGaugeSize;
+
+            CreateGaugeImage(gauge, "Track", ring, new Color(0f, 0f, 0f, 0.35f));
+            Image fill = CreateGaugeImage(gauge, "Fill", ring, Color.white);
+            fill.type = Image.Type.Filled;
+            fill.fillMethod = Image.FillMethod.Radial360;
+            fill.fillOrigin = (int)Image.Origin360.Top;
+            fill.fillClockwise = false;
+            fill.fillAmount = 1f;
+
+            Transform crosshair = canvas.Find("Crosshair");
+            if (crosshair != null)
+                gauge.SetSiblingIndex(crosshair.GetSiblingIndex());
+            else
+                InsertBeforeOverlays(canvas, gauge);
+            return fill;
+        }
+
+        /// <summary>
+        /// 게이지를 꽉 채우는 고리 이미지 하나를 만든다. (클릭을 막지 않음)
+        /// </summary>
+        private static Image CreateGaugeImage(RectTransform gauge, string name, Sprite sprite, Color color)
+        {
+            RectTransform rect = EditorUiFactory.CreateRect(gauge, name);
+            EditorUiFactory.Stretch(rect);
+            Image image = rect.gameObject.AddComponent<Image>();
+            image.sprite = sprite;
+            image.color = color;
+            image.raycastTarget = false;
+            return image;
         }
 
         /// <summary>
@@ -530,6 +848,68 @@ namespace GuardVsMannequin.Editor
             }
             serialized.ApplyModifiedPropertiesWithoutUndo();
             return added;
+        }
+
+        /// <summary>
+        /// 설정 화면의 그래픽 페이지에 없는 줄을 만들어 붙인다: 프레임 제한(해상도 줄 아래), 카메라 흔들림(프레임 제한 줄 아래).
+        /// </summary>
+        /// <param name="settingsPanel">설정 화면 프리팹의 루트.</param>
+        /// <returns>새로 추가한 줄 수. 그래픽 페이지를 찾지 못하면 -1.</returns>
+        public static int AddMissingGraphicsRows(GameObject settingsPanel)
+        {
+            DisplaySettingsSection display = settingsPanel.GetComponentInChildren<DisplaySettingsSection>(true);
+            if (display == null)
+                return -1;
+
+            Transform page = display.transform;
+            int added = 0;
+            if (settingsPanel.GetComponentInChildren<FrameLimitSettingsSection>(true) == null)
+            {
+                InsertAfter(page, CreateFrameLimitRow(page), "ResolutionRow");
+                added++;
+            }
+            if (settingsPanel.GetComponentInChildren<CameraSwaySettingsSection>(true) == null)
+            {
+                InsertAfter(page, CreateCameraSwayRow(page), "FrameLimitRow");
+                added++;
+            }
+            return added;
+        }
+
+        /// <summary>
+        /// 줄을 페이지의 기준 줄 바로 아래로 옮긴다. 기준 줄이 없으면 맨 아래에 그대로 둔다.
+        /// </summary>
+        private static void InsertAfter(Transform page, Transform row, string anchorRowName)
+        {
+            Transform anchorRow = page.Find(anchorRowName);
+            if (anchorRow != null)
+                row.SetSiblingIndex(anchorRow.GetSiblingIndex() + 1);
+        }
+
+        /// <summary>
+        /// 카메라 흔들림 선택 줄을 만들고 설정 묶음을 페이지에 붙인다. 만든 줄을 반환한다.
+        /// </summary>
+        private static Transform CreateCameraSwayRow(Transform page)
+        {
+            CreateSelectorRow(page, "CameraSway", "options.cameraSway", out Button previous, out Text value, out Button next);
+            CameraSwaySettingsSection section = page.gameObject.AddComponent<CameraSwaySettingsSection>();
+            TestEnvironmentSetupTool.SetField(section, "previousCameraSwayButton", previous);
+            TestEnvironmentSetupTool.SetField(section, "nextCameraSwayButton", next);
+            TestEnvironmentSetupTool.SetField(section, "cameraSwayValueText", value);
+            return previous.transform.parent;
+        }
+
+        /// <summary>
+        /// 프레임 제한 선택 줄을 만들고 설정 묶음을 페이지에 붙인다. 만든 줄을 반환한다.
+        /// </summary>
+        private static Transform CreateFrameLimitRow(Transform page)
+        {
+            CreateSelectorRow(page, "FrameLimit", "options.frameLimit", out Button previous, out Text value, out Button next);
+            FrameLimitSettingsSection section = page.gameObject.AddComponent<FrameLimitSettingsSection>();
+            TestEnvironmentSetupTool.SetField(section, "previousFrameLimitButton", previous);
+            TestEnvironmentSetupTool.SetField(section, "nextFrameLimitButton", next);
+            TestEnvironmentSetupTool.SetField(section, "frameLimitValueText", value);
+            return previous.transform.parent;
         }
 
         /// <summary>

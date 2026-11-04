@@ -26,3 +26,8 @@ MonoBehaviour:
     handRotationOffset: {x: 0, y: 0, z: 0}
     gunScale: 1
     ikHandPosition: {x: 0.18, y: -0.15, z: 0.45}
+    holdPivot: {x: 0.05, y: 1.4, z: 0.05}
+    holdOffset: {x: 0.1, y: -0.1, z: 0.4}
+    holdPitchLimit: 60
+    rightElbowHint: {x: 0.35, y: -0.35, z: -0.1}
+    leftElbowHint: {x: -0.3, y: -0.4, z: 0.15}

@@ -9,7 +9,6 @@
 | FishySteamworks | FirstGearGames | 4.1.1 | MIT License | `Assets/FishNet/Plugins/FishySteamworks` | FishNet용 Steam 트랜스포트 |
 | Steamworks.NET | Riley Labrecque | 2025.164.1 | MIT License (`Assets/com.rlabrecque.steamworks.net/LICENSE.md`) | `Assets/com.rlabrecque.steamworks.net` | Steam API 래퍼 |
 | Easy Character Movement 2 | Oscar Gracián | 1.4.3 | Unity Asset Store EULA | `Assets/ECM2` | **유료 에셋. 저장소는 비공개로 유지** |
-| DOTween | Demigiant | - | DOTween License (`Assets/Plugins/Demigiant/DOTween/readme.txt`) | `Assets/Plugins/Demigiant` | 현재 코드에서 미사용 |
 | Universal Render Pipeline, Input System, AI Navigation, uGUI | Unity Technologies | 패키지 | Unity Companion License | Package Manager | 엔진 패키지 |
 
 ## 그래픽 에셋 (게임에서 사용)
@@ -17,23 +16,15 @@
 
 | 에셋 | 제작 | 라이선스 | 위치 | 사용처 |
 |---|---|---|---|---|
-| Abandoned Asylum | lukasbobor | Unity Asset Store EULA (확인 필요) | `Assets/Abandoned_Asylum` | 맵 1 (Show 씬) |
-| RPG/FPS Game Assets - Industrial | (확인 필요) | (확인 필요) | `Assets/RPG_FPS_game_assets_industrial` | 맵 2 (Map_v1 씬) |
-| Horror Hospital Pack | (확인 필요) | (확인 필요) | `Assets/Horror Hospital Pack` | 맵 3 (DemoScene) |
-| Alchemist House | (확인 필요) | (확인 필요) | `Assets/BK_AlchemistHouse` | 맵 4 (Scene) |
 | Human Basic Motions FREE | Kevin Iglesias | Unity Asset Store EULA (확인 필요) | `Assets/Kevin Iglesias` | 마네킹 더미 외형, 휴머노이드 걷기·달리기 애니메이션 |
-| Kawaii Slimes | (확인 필요) | (확인 필요) | `Assets/Kawaii Slimes` | 마네킹 슬라임 외형 |
-| Monster Ghosts FREE | (확인 필요) | (확인 필요) | `Assets/Monster_Ghosts_FREE` | 마네킹 유령 외형 |
-| Standard Assets (Ethan) | Unity Technologies | Unity Asset Store EULA (확인 필요) | `Assets/Standard Assets` | 가드 외형 |
-| Mid Poly Gun Weapons (Revolver) | RyanNein (확인 필요) | (확인 필요) | `Assets/RyanNein` | 가드 리볼버 |
+| Low Poly Character Series 1 - SWAT | (확인 필요) | (확인 필요) | `Assets/Low Poly Character Series 1_SWAT` | 가드 외형, 가드 소총(Recon_M) |
+| Modern Vending Machine | (확인 필요) | (확인 필요) | `Assets/Modern Vending Machine` | 환승역·연구소 맵 자판기 |
 | Master Stylized Projectiles | (확인 필요) | (확인 필요) | `Assets/MasterStylizedProjectiles` | 총알·명중·총구 화염 이펙트 (OrangeGunShot) |
 | Casual Game Sounds U6 | (확인 필요) | (확인 필요) | `Assets/Casual Game Sounds U6` | 게임 소음 (`NoiseLibrary`) |
 | Sci-Fi Weapons - Bullet Hell Sound Effects Pack | (확인 필요) | (확인 필요) | `Assets/Sci-Fi Weapons-Bullet Hell Sound Effects Pack` | 게임 소음 (`NoiseLibrary`) |
+| Horror SFX - 082918 | GWriterStudio (확인 필요) | (확인 필요) | `Assets/Horror SFX - 082918` | 게임 소음 (`NoiseLibrary`) |
 
-## 프로젝트에 있으나 아직 사용하지 않는 에셋
-사용을 시작하면 위 표로 옮기고 크레딧에 추가하세요. 빌드에는 참조된 에셋만 들어갑니다.
-- Flooded_Grounds, Modern Vending Machine, Scalable Grid Prototype Materials
-- 사운드: Doors Small Sound Pack, Horror SFX - 082918 (GWriterStudio), free horror ambience 2
+맵 구조물·소품은 Blender로 직접 만든 MapKit 모델(`Assets/_Project/Art/MapKit`)이고, 사냥 시간 Ghoul 외형은 `Assets/_Project/Art/Skins/Ghoul.fbx`입니다.
 
 ## 사운드
 - 현재 게임 소음은 코드로 만든 **임시 합성음**(`ProceduralNoiseClips`)입니다. 사운드 팩의 클립을 `NoiseLibrary`에 지정하면 교체됩니다.

@@ -1,3 +1,5 @@
+using System.Collections.Generic;
+using System.Text;
 using FishNet.Connection;
 using FishNet.Managing.Scened;
 using FishNet.Object;
@@ -18,12 +20,17 @@ namespace GuardVsMannequin.Room
     /// </summary>
     public class RoomState : NetworkBehaviour, IRoomInfo, ISceneFlow
     {
-        private const int MaxDisplayNameLength = 24;
-
         // 로딩 중인 클라이언트가 "아직 불러오는 중"을 알리는 간격과, 마지막 알림 후 로딩 중으로 인정하는 시간(초).
         // 씬 활성화 순간에는 메인 스레드가 몇 초 멈출 수 있으므로 인정 시간을 간격보다 넉넉히 둔다.
         private const float LoadingReportInterval = 2f;
         private const float LoadingReportTimeout = 10f;
+
+        // 시작을 누른 뒤 게스트들이 모드 확인 결과를 보낼 때까지 기다리는 시간(초). 모드 폴더를 다시 읽는 시간을 포함한다.
+        private const float StartModCheckTimeout = 5f;
+        private const int MaxMapNameLength = 48;
+
+        // 게스트가 맵 변경으로 모드 폴더를 다시 읽는 최소 간격(초). 호스트가 맵을 빠르게 넘겨도 디스크를 계속 읽지 않게 한다.
+        private const float LocalModCheckInterval = 0.25f;
 
         [Tooltip("룸 씬 이름. (빌드 설정에 등록되어 있어야 함)")]
         [SerializeField] private string roomSceneName = "Room";
@@ -36,6 +43,23 @@ namespace GuardVsMannequin.Room
         private readonly SyncVar<bool> isInGame = new();
         // 판을 시작할 때 정한다. 서버는 맵을 다 불러온 뒤에야 게스트에게 로딩을 지시하므로, 게스트는 맵보다 이 값을 먼저 받는다.
         private readonly SyncVar<int> propLayoutSeed = new();
+        // 고른 맵의 ID·이름·필요한 모드. 게스트마다 맵 목록이 달라 GameSettings.mapId(호스트 목록의 번호)로는 알 수 없다.
+        private readonly SyncVar<RoomMapInfo> selectedMap = new();
+
+        // 서버: 시작 전 모드 확인
+        private readonly StartModCheck startModCheck = new();
+        // 서버: selectedMap을 만든 맵 번호와 마지막 확인 차수
+        private int selectedMapIndex = -1;
+        private int lastMapRevision;
+        // 서버: 호스트 화면에 한 번 보여 줄 안내
+        private string hostStartNotice;
+
+        // 클라이언트: 마지막으로 확인한 차수와 이 PC에서 쓸 수 없는 모드
+        private int checkedMapRevision;
+        private float nextLocalModCheckTime;
+        private List<MissingMod> localMissingMods = new();
+        // 클라이언트: 모드가 없어 시작이 중단됐다는 알림을 아직 화면에 보여 주지 않음
+        private bool startBlockedPending;
 
         // 서버: 테스트 방 여부 (방을 만들 때 세션에서 읽음, 게스트에게는 동기화하지 않음)
         private bool isTestRoom;
@@ -65,6 +89,40 @@ namespace GuardVsMannequin.Room
 
         /// <inheritdoc />
         public bool IsTestRoom => isTestRoom;
+
+        /// <summary>이 PC에서 쓸 수 없는, 고른 맵의 모드. 비어 있으면 플레이할 수 있다. (게스트)</summary>
+        public IReadOnlyList<MissingMod> LocalMissingMods => localMissingMods;
+
+        /// <summary>고른 맵의 모드가 없는 게스트가 있는지 여부.</summary>
+        public bool HasMembersMissingMods
+        {
+            get
+            {
+                foreach (RoomMember member in members.Values)
+                {
+                    if (!member.isHost && member.modState == MemberModState.Missing)
+                        return true;
+                }
+                return false;
+            }
+        }
+
+        /// <summary>
+        /// 고른 맵의 표시 이름. 내 PC에 있는 맵이면 내 언어로, 없으면 호스트가 보낸 이름을 정리해 보여 준다.
+        /// </summary>
+        public string SelectedMapDisplayName
+        {
+            get
+            {
+                RoomMapInfo map = selectedMap.Value;
+                ContentRegistry registry = ContentRegistry.Instance;
+                if (registry.TryGetMap(registry.IndexOf(map.mapId), out MapEntry entry))
+                    return entry.DisplayName;
+
+                string hostName = DisplayTextSanitizer.Clean(map.displayName, MaxMapNameLength);
+                return hostName.Length > 0 ? hostName : "?";
+            }
+        }
 
         /// <summary>
         /// 이 클라이언트가 아직 목표 씬(게임 중이면 맵, 아니면 룸)에 도착하지 못했는지 여부. (로딩 화면 표시용)
@@ -132,9 +190,11 @@ namespace GuardVsMannequin.Room
         /// </summary>
         public string GetDisplayName(int clientId)
         {
-            return members.TryGetValue(clientId, out RoomMember member) && !string.IsNullOrEmpty(member.displayName)
-                ? member.displayName
-                : $"Player {clientId}";
+            // 서버가 정리해 보내지만, 호스트가 바꿔 보낼 수 있어 받는 쪽에서도 정리한다.
+            string name = members.TryGetValue(clientId, out RoomMember member)
+                ? DisplayTextSanitizer.Clean(member.displayName, DisplayTextSanitizer.MaxPlayerNameLength)
+                : string.Empty;
+            return name.Length > 0 ? name : $"Player {clientId}";
         }
 
         /// <summary>
@@ -142,6 +202,11 @@ namespace GuardVsMannequin.Room
         /// </summary>
         public bool CanStartGame(out string reason)
         {
+            if (startModCheck.IsRunning)
+            {
+                reason = Loc.Get("room.reason.checkingMods");
+                return false;
+            }
             if (!isTestRoom && !GameSettingsValidator.CanStart(members.Count))
             {
                 reason = Loc.Format("room.reason.playerCount", GameConstants.MinPlayers, GameConstants.MaxPlayers, members.Count);
@@ -195,7 +260,10 @@ namespace GuardVsMannequin.Room
 
         /// <summary>
         /// 조건을 확인하고 모든 플레이어를 게임 씬으로 보낸다. (호스트 전용)
+        /// 모드 맵이면 바로 시작하지 않고 게스트들에게 모드를 다시 확인시킨 뒤, 전원이 가지고 있을 때 시작한다.
         /// </summary>
+        /// <param name="reason">바로 시작하지 않았을 때 보여 줄 문구.</param>
+        /// <returns>바로 시작했는지 여부.</returns>
         [Server]
         public bool TryStartGame(out string reason)
         {
@@ -207,6 +275,61 @@ namespace GuardVsMannequin.Room
             if (!CanStartGame(out reason))
                 return false;
 
+            RoomMapInfo map = selectedMap.Value;
+            if (map.requiredMods == null || map.requiredMods.Length == 0 || !HasGuests())
+            {
+                BeginGame();
+                return true;
+            }
+
+            // 맵을 고른 뒤 게스트가 모드를 지웠거나 새로 설치했을 수 있으므로 지금 다시 확인한다.
+            PublishSelectedMap();
+            startModCheck.Begin(Time.unscaledTime, StartModCheckTimeout);
+            reason = Loc.Get("room.reason.checkingMods");
+            return false;
+        }
+
+        /// <summary>
+        /// 호스트 화면에 한 번 보여 줄 안내를 꺼낸다. 꺼내면 지워진다.
+        /// </summary>
+        public bool TryTakeHostNotice(out string notice)
+        {
+            notice = hostStartNotice;
+            hostStartNotice = null;
+            return !string.IsNullOrEmpty(notice);
+        }
+
+        /// <summary>
+        /// 모드가 없어 시작이 중단됐다는 알림을 꺼낸다. 꺼내면 지워진다. (게스트의 설치 안내 창)
+        /// </summary>
+        public bool TryTakeStartBlocked()
+        {
+            bool blocked = startBlockedPending;
+            startBlockedPending = false;
+            return blocked;
+        }
+
+        /// <summary>
+        /// 모드 폴더를 다시 읽어 고른 맵의 모드를 확인하고 결과를 서버에 알린다. (게스트, 맵이 바뀌었을 때와 "다시 확인"을 눌렀을 때)
+        /// </summary>
+        public void RecheckLocalMods()
+        {
+            if (!IsClientStarted || IsServerStarted)
+                return;
+
+            RoomMapInfo map = selectedMap.Value;
+            checkedMapRevision = map.revision;
+            localMissingMods = ModService.Instance.UseRequiredMods(map.requiredMods);
+            bool hasAll = localMissingMods.Count == 0 && (map.requiredMods == null || map.requiredMods.Length <= RequiredModComparer.MaxRequiredMods);
+            ReportMapModsServerRpc(map.revision, hasAll);
+        }
+
+        /// <summary>
+        /// 모든 플레이어를 게임 씬으로 보낸다.
+        /// </summary>
+        [Server]
+        private void BeginGame()
+        {
             // 게임 중에는 새 참가를 막는다.
             SessionServices.Session?.SetRoomJoinable(false);
             loadingReports.Clear();
@@ -214,7 +337,29 @@ namespace GuardVsMannequin.Room
             // 맵 씬을 불러오기 전에 정해, 모든 PC가 맵을 불러오자마자 같은 배치로 섞게 한다. (0은 "섞지 않음"이라 피함)
             propLayoutSeed.Value = Random.Range(1, int.MaxValue);
             LoadGameScenes(Scenes.ResolveGameScene(settings.Value.mapId));
-            return true;
+        }
+
+        /// <summary>
+        /// 게스트가 고른 맵의 모드를 가지고 있는지 알린다. 지난 확인 차수의 답은 무시한다.
+        /// 게스트가 거짓으로 답할 수 있지만, 그래도 그 게스트만 맵을 불러오지 못한다.
+        /// </summary>
+        [ServerRpc(RequireOwnership = false)]
+        private void ReportMapModsServerRpc(int revision, bool hasAll, NetworkConnection caller = null)
+        {
+            if (caller == null || revision != selectedMap.Value.revision)
+                return;
+            if (members.TryGetValue(caller.ClientId, out RoomMember member) && !member.isHost)
+                SetMemberModState(caller.ClientId, hasAll ? MemberModState.Ready : MemberModState.Missing);
+        }
+
+        /// <summary>
+        /// 시작이 중단됐음을 모드가 없는 게스트에게 알린다. 게스트는 설치 안내 창을 연다.
+        /// </summary>
+        [TargetRpc]
+        private void NotifyStartBlockedTargetRpc(NetworkConnection target)
+        {
+            RecheckLocalMods();
+            startBlockedPending = true;
         }
 
         /// <summary>
@@ -288,28 +433,8 @@ namespace GuardVsMannequin.Room
             if (caller == null || !members.TryGetValue(caller.ClientId, out RoomMember member))
                 return;
 
-            string trimmed = SanitizeDisplayName(displayName);
-            member.displayName = trimmed.Length > MaxDisplayNameLength ? trimmed.Substring(0, MaxDisplayNameLength) : trimmed;
+            member.displayName = DisplayTextSanitizer.Clean(displayName, DisplayTextSanitizer.MaxPlayerNameLength);
             members[caller.ClientId] = member;
-        }
-
-        /// <summary>
-        /// 표시 이름에서 UI 리치 텍스트 태그로 쓰일 수 있는 꺾쇠와 제어 문자를 제거한다.
-        /// (이름에 &lt;size=200&gt; 같은 태그를 넣어 다른 사람의 화면을 깨뜨리는 것을 막는다)
-        /// </summary>
-        private static string SanitizeDisplayName(string displayName)
-        {
-            if (string.IsNullOrWhiteSpace(displayName))
-                return string.Empty;
-
-            var builder = new System.Text.StringBuilder(displayName.Length);
-            foreach (char c in displayName)
-            {
-                if (c == '<' || c == '>' || char.IsControl(c))
-                    continue;
-                builder.Append(c);
-            }
-            return builder.ToString().Trim();
         }
 
         /// <summary>
@@ -333,6 +458,7 @@ namespace GuardVsMannequin.Room
                 return;
 
             loadingReports.Remove(conn.ClientId);
+            // 시작 확인 중 나간 사람은 판정에서 자연스럽게 빠진다.
             if (members.Remove(conn.ClientId))
                 ApplySettings(settings.Value);
         }
@@ -354,12 +480,135 @@ namespace GuardVsMannequin.Room
         }
 
         /// <summary>
-        /// 매 프레임 호스트 표시를 확정하고, 게스트라면 로딩 상태를 알린다.
+        /// 매 프레임 호스트 표시를 확정하고 시작 전 모드 확인을 진행한다. 게스트라면 로딩 상태를 알리고 맵의 모드를 확인한다.
         /// </summary>
         private void Update()
         {
             ConfirmHostMember();
+            UpdateStartModCheck();
             ReportLoadingIfPending();
+            CheckLocalModsIfMapChanged();
+        }
+
+        /// <summary>
+        /// 게스트: 확인 차수가 바뀌었으면 맵의 모드를 확인한다. (접속 직후 처음 받은 맵도 여기서 확인)
+        /// </summary>
+        private void CheckLocalModsIfMapChanged()
+        {
+            if (!IsClientStarted || IsServerStarted || isInGame.Value)
+                return;
+
+            int revision = selectedMap.Value.revision;
+            if (revision == 0 || revision == checkedMapRevision || Time.unscaledTime < nextLocalModCheckTime)
+                return;
+
+            nextLocalModCheckTime = Time.unscaledTime + LocalModCheckInterval;
+            RecheckLocalMods();
+        }
+
+        /// <summary>
+        /// 서버: 시작 전 모드 확인 결과를 판정해 게임을 시작하거나 중단한다.
+        /// </summary>
+        private void UpdateStartModCheck()
+        {
+            if (!startModCheck.IsRunning || !this.IsServerReady())
+                return;
+
+            switch (startModCheck.Evaluate(members.Values, Time.unscaledTime))
+            {
+                case StartModCheckResult.Passed:
+                    // 기다리는 동안 준비를 풀었거나 인원이 바뀌었을 수 있다.
+                    if (CanStartGame(out string reason))
+                        BeginGame();
+                    else
+                        hostStartNotice = reason;
+                    break;
+                case StartModCheckResult.Failed:
+                    BlockStart();
+                    break;
+            }
+        }
+
+        /// <summary>
+        /// 서버: 모드가 없거나 답하지 않은 게스트에게 알리고, 호스트에게 누구 때문인지 안내한다.
+        /// </summary>
+        private void BlockStart()
+        {
+            var names = new StringBuilder();
+            foreach (int clientId in new List<int>(members.Keys))
+            {
+                RoomMember member = members[clientId];
+                if (member.isHost || member.modState == MemberModState.Ready)
+                    continue;
+
+                SetMemberModState(clientId, MemberModState.Missing);
+                if (names.Length > 0)
+                    names.Append(", ");
+                names.Append(GetDisplayName(clientId));
+                if (ServerManager.Clients.TryGetValue(clientId, out NetworkConnection connection))
+                    NotifyStartBlockedTargetRpc(connection);
+            }
+            hostStartNotice = Loc.Format("room.reason.modsMissing", names.ToString());
+        }
+
+        /// <summary>
+        /// 서버: 지금 맵이 바뀌었으면 맵 정보를 새로 보낸다.
+        /// </summary>
+        private void SyncSelectedMap()
+        {
+            if (settings.Value.mapId != selectedMapIndex)
+                PublishSelectedMap();
+        }
+
+        /// <summary>
+        /// 서버: 고른 맵의 정보를 새 확인 차수로 보내고 게스트들의 답을 초기화한다. 진행 중인 시작 확인은 취소된다.
+        /// </summary>
+        private void PublishSelectedMap()
+        {
+            selectedMapIndex = settings.Value.mapId;
+            ContentRegistry.Instance.TryGetMap(selectedMapIndex, out MapEntry map);
+            selectedMap.Value = new RoomMapInfo
+            {
+                mapId = map?.Id ?? string.Empty,
+                displayName = map?.DisplayName ?? string.Empty,
+                requiredMods = ModService.Instance.BuildRequirements(map).ToArray(),
+                revision = ++lastMapRevision
+            };
+
+            startModCheck.Cancel();
+            foreach (int clientId in new List<int>(members.Keys))
+            {
+                if (!members[clientId].isHost)
+                    SetMemberModState(clientId, MemberModState.Unknown);
+            }
+
+            MapSettingRules.AllowsPlayerCount(settings.Value, 0, out _, out int maxPlayers);
+            SessionServices.Session?.UpdateRoomListing(selectedMap.Value.mapId, maxPlayers);
+        }
+
+        /// <summary>
+        /// 서버: 참가자의 모드 상태를 바꾼다. 같은 값이면 보내지 않는다.
+        /// </summary>
+        private void SetMemberModState(int clientId, MemberModState state)
+        {
+            RoomMember member = members[clientId];
+            if (member.modState == state)
+                return;
+            member.modState = state;
+            members[clientId] = member;
+        }
+
+        /// <summary>
+        /// 호스트 말고 다른 참가자가 있는지 확인한다.
+        /// </summary>
+        private bool HasGuests()
+        {
+            foreach (RoomMember member in members.Values)
+            {
+                if (!member.isHost)
+                    return true;
+            }
+            return false;
         }
 
         /// <summary>
@@ -390,6 +639,7 @@ namespace GuardVsMannequin.Room
         {
             // 맵 범위로 먼저 맞추고, 인원에 따른 관계 규칙(가드 수, 목표 < 전원 장치 등)을 마지막에 적용한다.
             settings.Value = GameSettingsValidator.Validate(MapSettingRules.Clamp(newSettings), Mathf.Max(GameConstants.MinPlayers, members.Count));
+            SyncSelectedMap();
         }
 
         /// <summary>

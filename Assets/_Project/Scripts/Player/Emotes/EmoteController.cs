@@ -20,7 +20,7 @@ namespace GuardVsMannequin.Player.Emotes
         /// </summary>
         private void Awake()
         {
-            // 컴포넌트 순서가 우선순위다. (애니메이터 → 절차적 움직임)
+            // 컴포넌트 순서가 우선순위다. (처음 성공한 뷰 하나만 재생)
             emoteViews = GetComponents<IEmoteView>();
             playerInput = GetComponent<IPlayerInput>();
             emoteBlocker = GetComponent<IEmoteBlocker>();

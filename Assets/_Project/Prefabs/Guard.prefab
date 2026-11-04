@@ -153,6 +153,7 @@ Transform:
   - {fileID: 8522724368732855940}
   - {fileID: 8764221185249543946}
   - {fileID: 7057873072725720214}
+  - {fileID: 9026349189377418366}
   m_Father: {fileID: 6441984490329226975}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &3154698559590718275
@@ -189,6 +190,9 @@ GameObject:
   - component: {fileID: 2438291166181811712}
   - component: {fileID: 8943094649544016654}
   - component: {fileID: 400117237004093162}
+  - component: {fileID: 7713920465182736401}
+  - component: {fileID: 7713920465182736403}
+  - component: {fileID: 7713920465182736420}
   m_Layer: 0
   m_Name: Guard
   m_TagString: Untagged
@@ -363,6 +367,11 @@ MonoBehaviour:
   cameraPivot: {fileID: 364191669701804959}
   minPitch: -80
   maxPitch: 80
+  thirdPersonOffset: {x: 0.5, y: 0.3, z: -3}
+  cameraCollisionMask:
+    serializedVersion: 2
+    m_Bits: 4294967295
+  cameraCollisionRadius: 0.2
 --- !u!114 &5982477161353681102
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -393,22 +402,33 @@ MonoBehaviour:
   _spectatorInterpolation: 2
   _enableTeleport: 0
   _teleportThreshold: 1
-  <PrefabId>k__BackingField: 65535
+  <PrefabId>k__BackingField: 9
   <SpawnableCollectionId>k__BackingField: 0
   <AssetPathHash>k__BackingField: 9613717569316391230
   SceneId: 0
   SerializedTransformProperties:
     Position: {x: 0, y: 0, z: 0}
-    Rotation: {x: 0, y: 0, z: 0, w: 0}
-    Scale: {x: 0, y: 0, z: 0}
-    IsValid: 0
+    Rotation: {x: 0, y: 0, z: 0, w: 1}
+    Scale: {x: 1, y: 1, z: 1}
+    IsValid: 1
   <IsNested>k__BackingField: 0
   WasActiveDuringEdit: 0
   WasActiveDuringEdit_Set1: 1
   <ComponentIndex>k__BackingField: 0
   <PredictedSpawn>k__BackingField: {fileID: 0}
   <PredictedOwner>k__BackingField: {fileID: 0}
-  NetworkBehaviours: []
+  NetworkBehaviours:
+  - {fileID: 7101474927794631319}
+  - {fileID: 3987307489940972741}
+  - {fileID: 6612599555056097774}
+  - {fileID: 4545166632837510194}
+  - {fileID: 6090368242269027633}
+  - {fileID: 6292148516769558274}
+  - {fileID: 6610813240673784941}
+  - {fileID: 7421086410035561181}
+  - {fileID: 5390217533131719041}
+  - {fileID: 7077973463211331629}
+  - {fileID: 400117237004093162}
   InitializedParentNetworkBehaviour: {fileID: 0}
   InitializedNestedNetworkObjects: []
   RuntimeParentNetworkBehaviour: {fileID: 0}
@@ -419,7 +439,7 @@ MonoBehaviour:
   _initializeOrder: 0
   _preventDespawnOnDisconnect: 0
   _defaultDespawnType: 0
-  _initializedTimestamp: 0
+  _initializedTimestamp: -8584082572679660021
 --- !u!114 &7101474927794631319
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -432,9 +452,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: a2836e36774ca1c4bbbee976e17b649c, type: 3}
   m_Name: 
   m_EditorClassIdentifier: FishNet.Runtime::FishNet.Component.Transforming.NetworkTransform
-  _componentIndexCache: 255
+  _componentIndexCache: 0
   _addedNetworkObject: {fileID: 5982477161353681102}
-  _networkObjectCache: {fileID: 0}
+  _networkObjectCache: {fileID: 5982477161353681102}
   _componentConfiguration: 0
   _synchronizeParent: 0
   _packing:
@@ -478,9 +498,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 131520701ad529845811bf964b41fb88, type: 3}
   m_Name: 
   m_EditorClassIdentifier: GuardVsMannequin.Runtime::GuardVsMannequin.Player.PlayerIdentity
-  _componentIndexCache: 255
+  _componentIndexCache: 1
   _addedNetworkObject: {fileID: 5982477161353681102}
-  _networkObjectCache: {fileID: 0}
+  _networkObjectCache: {fileID: 5982477161353681102}
 --- !u!114 &6612599555056097774
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -493,9 +513,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 6de6d4443c6f3d44980bbc64a595f322, type: 3}
   m_Name: 
   m_EditorClassIdentifier: GuardVsMannequin.Runtime::GuardVsMannequin.Player.PlayerHealth
-  _componentIndexCache: 255
+  _componentIndexCache: 2
   _addedNetworkObject: {fileID: 5982477161353681102}
-  _networkObjectCache: {fileID: 0}
+  _networkObjectCache: {fileID: 5982477161353681102}
 --- !u!114 &6530848944518144842
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -534,10 +554,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: c95072ef33e015f418f0b1402ba96bb8, type: 3}
   m_Name: 
   m_EditorClassIdentifier: GuardVsMannequin.Runtime::GuardVsMannequin.Player.PlayerOwnershipSetup
-  _componentIndexCache: 255
+  _componentIndexCache: 3
   _addedNetworkObject: {fileID: 5982477161353681102}
-  _networkObjectCache: {fileID: 0}
-  character: {fileID: 2251875300951767263}
+  _networkObjectCache: {fileID: 5982477161353681102}
   playerCamera: {fileID: 3009823042062335779}
   ownerOnlyBehaviours:
   - {fileID: 6530848944518144842}
@@ -572,9 +591,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 769a5d60e2758164ba119ef4b0f2ab45, type: 3}
   m_Name: 
   m_EditorClassIdentifier: GuardVsMannequin.Runtime::GuardVsMannequin.Player.MovementValidator
-  _componentIndexCache: 255
+  _componentIndexCache: 4
   _addedNetworkObject: {fileID: 5982477161353681102}
-  _networkObjectCache: {fileID: 0}
+  _networkObjectCache: {fileID: 5982477161353681102}
   speedTolerance: 1.3
   maxBurstSeconds: 3
   extraSlack: 1
@@ -593,6 +612,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: GuardVsMannequin.Runtime::GuardVsMannequin.Player.CharacterSkinView
   role: 1
   defaultSkin: {fileID: 11400000, guid: 3ddc39a61e4ec8e4eb1d81ebbc80b099, type: 2}
+  huntSkin: {fileID: 0}
   visualRoot: {fileID: 6441984490329226975}
   fallbackRenderers:
   - {fileID: 5266408112472218372}
@@ -621,21 +641,27 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: c87c1756ac9549c4fa3684b32fef2f84, type: 3}
   m_Name: 
   m_EditorClassIdentifier: GuardVsMannequin.Runtime::GuardVsMannequin.Player.Guard.GuardWeaponView
-  _componentIndexCache: 255
+  _componentIndexCache: 5
   _addedNetworkObject: {fileID: 5982477161353681102}
-  _networkObjectCache: {fileID: 0}
+  _networkObjectCache: {fileID: 5982477161353681102}
   firstPersonGun: {fileID: 8764221185249543946}
   thirdPersonGunPrefab: {fileID: 3553825433406614452, guid: d266346ac73803740a659f82a3b20130, type: 3}
   aimPivot: {fileID: 364191669701804959}
   firstPersonPosition: {x: 0.18, y: -0.2, z: 0.3}
   firstPersonRotation: {x: 0, y: 0, z: 0}
   firstPersonScale: 1
+  firstPersonSwayScale: 1
   fallbackGrip:
     followHandRotation: 0
     handPositionOffset: {x: 0, y: 0.02, z: 0.06}
     handRotationOffset: {x: 0, y: 0, z: 0}
     gunScale: 1
     ikHandPosition: {x: 0.18, y: -0.15, z: 0.45}
+    holdPivot: {x: 0.05, y: 1.4, z: 0.05}
+    holdOffset: {x: 0.1, y: -0.1, z: 0.4}
+    holdPitchLimit: 60
+    rightElbowHint: {x: 0.35, y: -0.35, z: -0.1}
+    leftElbowHint: {x: -0.3, y: -0.4, z: 0.15}
 --- !u!114 &3184271152891881263
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -661,9 +687,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 0c53966364f0cad4c88e7ef48d4d52ac, type: 3}
   m_Name: 
   m_EditorClassIdentifier: GuardVsMannequin.Runtime::GuardVsMannequin.Audio.NoiseEmitter
-  _componentIndexCache: 255
+  _componentIndexCache: 6
   _addedNetworkObject: {fileID: 5982477161353681102}
-  _networkObjectCache: {fileID: 0}
+  _networkObjectCache: {fileID: 5982477161353681102}
   library: {fileID: 11400000, guid: ee319f26cc7916e48ba986d566c211df, type: 2}
 --- !u!114 &7421086410035561181
 MonoBehaviour:
@@ -677,9 +703,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: b0e7689f080edee489148f3a044ed541, type: 3}
   m_Name: 
   m_EditorClassIdentifier: GuardVsMannequin.Runtime::GuardVsMannequin.Player.Guard.GunTool
-  _componentIndexCache: 255
+  _componentIndexCache: 7
   _addedNetworkObject: {fileID: 5982477161353681102}
-  _networkObjectCache: {fileID: 0}
+  _networkObjectCache: {fileID: 5982477161353681102}
   tracerView: {fileID: 3403385563672256298}
 --- !u!114 &5390217533131719041
 MonoBehaviour:
@@ -693,9 +719,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: fb8929cf2fcb73f408b2bbb3cd2428d1, type: 3}
   m_Name: 
   m_EditorClassIdentifier: GuardVsMannequin.Runtime::GuardVsMannequin.Player.PlayerViewSync
-  _componentIndexCache: 255
+  _componentIndexCache: 8
   _addedNetworkObject: {fileID: 5982477161353681102}
-  _networkObjectCache: {fileID: 0}
+  _networkObjectCache: {fileID: 5982477161353681102}
   pitchPivot: {fileID: 364191669701804959}
   remoteSmoothing: 15
 --- !u!114 &1658422639008677458
@@ -727,9 +753,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 6ef3c779519f16d468bee03f8f58ad2e, type: 3}
   m_Name: 
   m_EditorClassIdentifier: GuardVsMannequin.Runtime::GuardVsMannequin.Player.Guard.FlashlightTool
-  _componentIndexCache: 255
+  _componentIndexCache: 9
   _addedNetworkObject: {fileID: 5982477161353681102}
-  _networkObjectCache: {fileID: 0}
+  _networkObjectCache: {fileID: 5982477161353681102}
   spotLight: {fileID: 7826898903791666731}
 --- !u!114 &2438291166181811712
 MonoBehaviour:
@@ -772,10 +798,28 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 64734b6607c4e4441b5e9e1ac0082492, type: 3}
   m_Name: 
   m_EditorClassIdentifier: GuardVsMannequin.Runtime::GuardVsMannequin.Player.Guard.GrenadeTool
-  _componentIndexCache: 255
+  _componentIndexCache: 10
   _addedNetworkObject: {fileID: 5982477161353681102}
-  _networkObjectCache: {fileID: 0}
+  _networkObjectCache: {fileID: 5982477161353681102}
   view: {fileID: 8943094649544016654}
+--- !u!114 &7713920465182736401
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 3154698559590718275}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 51d68deaf56e47c0bf6ff65f5d5692ce, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: GuardVsMannequin.Runtime::GuardVsMannequin.Player.CharacterSway
+  viewCamera: {fileID: 3009823042062335779}
+  smoothTime: 0.35
+  axisWeights: {x: 0.6, y: 1, z: 0.3}
+  maxOffset: 0.08
+  debugBone: {fileID: 0}
+  debugWorldOffset: {x: 0, y: 0, z: 0}
 --- !u!1 &4523014314682797257
 GameObject:
   m_ObjectHideFlags: 0
@@ -1162,11 +1206,11 @@ Transform:
   m_GameObject: {fileID: 7201990657220987551}
   serializedVersion: 2
   m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
-  m_LocalPosition: {x: 0.0117, y: 0.050000027, z: 0.3023}
+  m_LocalPosition: {x: 0.1917, y: -0.15, z: 0.6023}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
-  m_Father: {fileID: 8764221185249543946}
+  m_Father: {fileID: 364191669701804959}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!108 &7826898903791666731
 Light:
@@ -1453,10 +1497,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
-    m_AddedGameObjects:
-    - targetCorrespondingSourceObject: {fileID: 2923423802053708048, guid: d266346ac73803740a659f82a3b20130, type: 3}
-      insertIndex: -1
-      addedObject: {fileID: 9026349189377418366}
+    m_AddedGameObjects: []
     m_AddedComponents: []
   m_SourcePrefab: {fileID: 100100000, guid: d266346ac73803740a659f82a3b20130, type: 3}
 --- !u!4 &8764221185249543946 stripped
@@ -1464,3 +1505,34 @@ Transform:
   m_CorrespondingSourceObject: {fileID: 2923423802053708048, guid: d266346ac73803740a659f82a3b20130, type: 3}
   m_PrefabInstance: {fileID: 5850970648894361114}
   m_PrefabAsset: {fileID: 0}
+--- !u!114 &7713920465182736403
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 3154698559590718275}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5696d3f6d3164d408245b745d5b23d1a, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: GuardVsMannequin.Runtime::GuardVsMannequin.Player.FirstPersonBodyView
+--- !u!114 &7713920465182736420
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 3154698559590718275}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 869afaeaedd64a049260c38a96140fdf, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: GuardVsMannequin.Runtime::GuardVsMannequin.Player.Guard.GuardDreadEffect
+  maxGrain: 1
+  maxChromatic: 0.8
+  maxDesaturate: -60
+  blendSpeed: 2.5
+  maxHeartbeatPitch: 1.8
+  shakeDuration: 0.8
+  shakeAngle: 2.5

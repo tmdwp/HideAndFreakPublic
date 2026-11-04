@@ -16,10 +16,10 @@ using static GuardVsMannequin.Editor.MapAssets;
 namespace GuardVsMannequin.Editor
 {
     /// <summary>
-    /// 테스트 맵(Game_Test 씬)을 "지하 연구소"로 만든다. 다시 실행하면 씬을 덮어써서 항상 같은 결과가 된다.
+    /// "지하 연구소" 맵(Scenes/Custom/Map_Laboratory)과 같은 구성의 테스트 맵(Game_Test)을 만든다. 다시 실행하면 씬을 덮어써서 항상 같은 결과가 된다.
     /// 구조: 48×40m 한 층, 4m 격자. 가운데 6m 높이 중앙 실험실(통제실 발코니 + 표본 수조), 둘레 3×3 구역을 '#' 모양 복도가 잇는다.
     /// 구역: 표본 연구실 / 기계실 / 수술실 / 격리 병동 / 사무·서버실 / 창고 / 휴게실 / 시체 안치실.
-    /// 벽·바닥·천장·계단은 MapKit 모델(Art/MapKit), 가구·소품은 프로젝트의 에셋 팩을 쓴다.
+    /// 구조물·가구·소품 모두 Blender로 만든 MapKit 모델(Art/MapKit, 지하철 소품 포함)만 쓴다.
     /// 가드는 동쪽(엘리베이터 쪽), 마네킹은 서쪽에서 나와 서로 20m 이상 떨어진다.
     /// 만든 뒤 맵 최적화(NavMesh·오클루전)를 실행하고, Temp/UndergroundLab에 배치도·장면 사진과 에셋 크기 목록을 남긴다.
     /// </summary>
@@ -27,6 +27,7 @@ namespace GuardVsMannequin.Editor
     {
         private const string MapName = "Underground Lab";
         internal const string PreviewFolder = "Temp/UndergroundLab";
+        private static string LabScenePath => $"{MapCatalog.CustomMapFolder}/Map_Laboratory.unity";
 
         private const float Cell = 4f;
         private const float MinX = -24f, MaxX = 24f, MinZ = -20f, MaxZ = 20f;
@@ -106,12 +107,17 @@ namespace GuardVsMannequin.Editor
 
         #region 메뉴
 
-        [MenuItem(EditorMenus.Root + "맵 생성/지하 연구소 (Game_Test)")]
+        /// <summary>
+        /// 게임 맵(Map_Laboratory)을 만들고, 같은 구성으로 테스트 맵(Game_Test)도 다시 만든다.
+        /// </summary>
+        [MenuItem(EditorMenus.Root + "맵 생성/지하 연구소 (Map_Laboratory)")]
         private static void BuildFromMenu()
         {
             if (!EditorSceneManager.SaveCurrentModifiedScenesIfUserWantsTo())
                 return;
-            BuildScene(TestEnvironmentSetupTool.ScenePath, capturePreview: true);
+            BuildScene(LabScenePath, capturePreview: true);
+            BuildScene(TestEnvironmentSetupTool.ScenePath, capturePreview: false);
+            EditorSceneManager.OpenScene(LabScenePath, OpenSceneMode.Single);
         }
 
         #endregion
@@ -295,14 +301,14 @@ namespace GuardVsMannequin.Editor
                 c.placer.Place(Kit.Railing, group, new Vector3(x, 2f, 4.1f), c.lengthYaw, remap: true, name: "Railing");
             PlaceStairsRisingNorth(c, group, new Vector3(0f, 0f, 2.5f));
 
-            // 발코니 위 관제 책상
-            GameObject desk = c.Prop(group, Asylum.OfficeTable, -4f, 6.6f, 180f, 0.8f, baseY: 2f);
-            c.Decorate(desk, Asylum.Monitor, Vector2.zero, 180f, 0.45f);
-            c.Prop(group, Asylum.OfficeChair, -4f, 5.3f, 0f, 1f, baseY: 2f);
-            GameObject desk2 = c.Prop(group, Asylum.OfficeTable, 3.5f, 6.6f, 180f, 0.8f, baseY: 2f);
-            c.Decorate(desk2, Asylum.Monitor, new Vector2(-0.3f, 0f), 180f, 0.45f);
+            // 발코니 위 관제 책상 (앉는 쪽이 남쪽)
+            GameObject desk = c.Prop(group, Subway.OfficeDesk, -4f, 6.6f, 0f, 0.8f, baseY: 2f);
+            c.Decorate(desk, Subway.Monitor, Vector2.zero, 180f, 0.45f);
+            c.Prop(group, Subway.OfficeChair, -4f, 5.3f, 0f, 1f, baseY: 2f);
+            GameObject desk2 = c.Prop(group, Subway.OfficeDesk, 3.5f, 6.6f, 0f, 0.8f, baseY: 2f);
+            c.Decorate(desk2, Subway.Monitor, new Vector2(-0.3f, 0f), 180f, 0.45f);
             c.Prop(group, Kit.Cabinet, 6.8f, 7.4f, 180f, 1f, baseY: 2f);
-            c.Prop(group, Industrial.ElectricBox1, 0f, 7.6f, 180f, 1.5f, baseY: 2f, transformable: false);
+            c.Prop(group, Subway.ElectricPanel, 0f, 7.6f, 180f, 1.5f, baseY: 2f, transformable: false);
 
             // 표본 수조
             CreateSpecimenTube(c, group, new Vector3(-3.5f, 0f, -1f));
@@ -310,10 +316,10 @@ namespace GuardVsMannequin.Editor
             CreateSpecimenTube(c, group, new Vector3(0f, 0f, -4.5f));
 
             // 바닥 소품
-            GameObject bench = c.Prop(group, Asylum.WhiteTable, -6f, -5.5f, 90f, 0.8f);
-            c.Decorate(bench, Alchemy.LabSetup1, Vector2.zero, 90f, 0.6f);
-            c.Prop(group, Hospital.Trolley, 5.5f, -6f, 0f, 1f);
-            c.Prop(group, Asylum.MetalCase, -6.5f, -2.5f, 90f, 1f);
+            GameObject bench = c.Prop(group, Kit.Table, -6f, -5.5f, 90f, 0.8f);
+            c.Decorate(bench, Subway.Monitor, Vector2.zero, 90f, 0.45f);
+            c.Prop(group, Subway.CleaningCart, 5.5f, -6f, 0f, 1f);
+            c.Prop(group, Kit.Cabinet, -6.5f, -2.5f, 90f, 1f);
             c.Against(group, Kit.Cabinet, MapSide.South, -AtriumHalf, -2f, 1f);
             c.Prop(group, Kit.BoxStack, 2f, -7f, 15f, 0.7f);
         }
@@ -324,20 +330,20 @@ namespace GuardVsMannequin.Editor
         private static void BuildSpecimenLab(Context c)
         {
             Transform group = c.Group("SpecimenLab");
-            GameObject table1 = c.Against(group, Asylum.WhiteTable, MapSide.North, MaxZ, -22f, 0.8f);
-            c.Decorate(table1, Alchemy.LabSetup2, new Vector2(-0.2f, 0f), 180f, 0.6f);
-            c.Decorate(table1, Alchemy.JarBrain, new Vector2(0.45f, 0f), 180f, 0.3f);
-            GameObject table2 = c.Against(group, Asylum.WhiteTable, MapSide.North, MaxZ, -18.5f, 0.8f);
-            c.Decorate(table2, Alchemy.LabSetup3, Vector2.zero, 180f, 0.6f);
-            c.Decorate(table2, Alchemy.Flask1, new Vector2(0.5f, 0.1f), 0f, 0.25f);
+            GameObject table1 = c.Against(group, Kit.Table, MapSide.North, MaxZ, -22f, 0.8f);
+            c.Decorate(table1, Subway.Monitor, new Vector2(-0.2f, 0f), 180f, 0.45f);
+            c.Decorate(table1, Kit.Bucket, new Vector2(0.45f, 0f), 180f, 0.3f);
+            GameObject table2 = c.Against(group, Kit.Table, MapSide.North, MaxZ, -18.5f, 0.8f);
+            c.Decorate(table2, Kit.CrateSmall, Vector2.zero, 180f, 0.6f);
+            c.Decorate(table2, Kit.Box, new Vector2(0.5f, 0.1f), 0f, 0.35f);
 
-            c.Against(group, Asylum.MedRack2, MapSide.West, MinX, 16f, 1.9f);
+            c.Against(group, Kit.Shelf, MapSide.West, MinX, 16f, 1.9f);
             c.Against(group, Kit.Shelf, MapSide.West, MinX, 13.4f, 1.9f);
             GameObject table3 = c.Prop(group, Kit.Table, -15f, 17.5f, 90f, 0.75f);
-            c.Decorate(table3, Alchemy.JarBaby, new Vector2(0f, 0.3f), 0f, 0.3f);
-            c.Decorate(table3, Alchemy.Flask2, new Vector2(0.1f, -0.4f), 0f, 0.25f);
-            c.Prop(group, Asylum.OfficeChair, -21f, 17.4f, 0f, 1f);
-            c.Against(group, Asylum.MetalCase, MapSide.East, -12f, 18.5f, 1f);
+            c.Decorate(table3, Kit.Bucket, new Vector2(0f, 0.3f), 0f, 0.3f);
+            c.Decorate(table3, Kit.Box, new Vector2(0.1f, -0.4f), 0f, 0.35f);
+            c.Prop(group, Subway.OfficeChair, -21f, 17.4f, 0f, 1f);
+            c.Against(group, Kit.Cabinet, MapSide.East, -12f, 18.5f, 1f);
             c.Against(group, Kit.Cabinet, MapSide.South, 12f, -22.5f, 1f);
         }
 
@@ -347,12 +353,12 @@ namespace GuardVsMannequin.Editor
         private static void BuildMachineRoom(Context c)
         {
             Transform group = c.Group("MachineRoom");
-            c.Against(group, Asylum.Boiler, MapSide.North, MaxZ, -4f, 2.5f, transformable: false);
-            c.Against(group, Industrial.ElectricBox1, MapSide.North, MaxZ, 1.5f, 1.5f);
-            c.Against(group, Industrial.ElectricBox2, MapSide.North, MaxZ, 4f, 1.5f);
-            c.Against(group, Industrial.ElectricBox1, MapSide.North, MaxZ, 6.5f, 1.5f);
-            c.Prop(group, Industrial.Barrel, -7f, 13f, 0f, 0.9f);
-            c.Prop(group, Industrial.Barrel, -6.1f, 13.4f, 40f, 0.9f);
+            c.Against(group, Subway.AirHandler, MapSide.North, MaxZ, -4f, 2.5f, transformable: false);
+            c.Against(group, Subway.ElectricPanel, MapSide.North, MaxZ, 1.5f, 1.5f);
+            c.Against(group, Subway.EmergencyBox, MapSide.North, MaxZ, 4f, 1.5f);
+            c.Against(group, Subway.ElectricPanel, MapSide.North, MaxZ, 6.5f, 1.5f);
+            c.Prop(group, Kit.Barrel, -7f, 13f, 0f, 0.9f);
+            c.Prop(group, Kit.Barrel, -6.1f, 13.4f, 40f, 0.9f);
             c.Prop(group, Kit.Barrel, -7.1f, 14.2f, 0f, 0.9f);
             GameObject crate = c.Prop(group, Kit.Crate, 5f, 13.6f, 10f, 1f);
             c.Decorate(crate, Kit.CrateSmall, Vector2.zero, 35f, 0.6f);
@@ -366,12 +372,12 @@ namespace GuardVsMannequin.Editor
         private static void BuildSurgery(Context c)
         {
             Transform group = c.Group("Surgery");
-            c.Prop(group, Asylum.SurgeryTable, 19.5f, 16.5f, 90f, 1f);
-            c.Against(group, Asylum.MedRack2, MapSide.North, MaxZ, 22f, 1.9f);
-            c.Against(group, Asylum.Sink, MapSide.North, MaxZ, 15f, 0.9f);
-            c.Against(group, Hospital.Stretcher, MapSide.East, MaxX, 14.5f, 1f);
-            c.Prop(group, Hospital.Trolley, 21.5f, 14.2f, 0f, 1f);
-            c.Prop(group, Asylum.SurgeryBed, 14.5f, 13.6f, 90f, 1f);
+            c.Prop(group, Kit.Bed, 19.5f, 16.5f, 90f, 1f);
+            c.Against(group, Kit.Shelf, MapSide.North, MaxZ, 22f, 1.9f);
+            c.Against(group, Subway.WashBasin, MapSide.North, MaxZ, 15f, 0.9f);
+            c.Against(group, Kit.Bed, MapSide.East, MaxX, 14.5f, 1f);
+            c.Prop(group, Subway.CleaningCart, 21.5f, 14.2f, 0f, 1f);
+            c.Prop(group, Kit.Bed, 14.5f, 13.6f, 90f, 1f);
             c.Prop(group, Kit.TrashBin, 23.3f, 19.3f, 0f, 0.65f);
             c.Against(group, Kit.Bed, MapSide.East, MaxX, 17.8f, 1f);
             c.Against(group, Kit.Shelf, MapSide.West, 12f, 13.6f, 1.9f);
@@ -388,22 +394,21 @@ namespace GuardVsMannequin.Editor
             for (int i = 0; i < cells.Length; i++)
             {
                 float cz = cells[i];
-                string bed = i == 3 ? Hospital.Bed : Kit.Bed;
-                c.Against(group, bed, MapSide.West, MinX, cz - 0.8f, 1f, yaw: 90f);
+                c.Against(group, Kit.Bed, MapSide.West, MinX, cz - 0.8f, 1f, yaw: 90f);
                 if (i == 1)
-                    c.Against(group, Asylum.Toilet, MapSide.West, MinX, cz + 1.3f, 0.8f);
+                    c.Against(group, Subway.Toilet, MapSide.West, MinX, cz + 1.3f, 0.8f);
                 else
                     c.Prop(group, Kit.Bucket, -21f, cz + 1.3f, 0f, 0.3f);
             }
 
-            GameObject desk = c.Prop(group, Asylum.OfficeTable, -15f, 5.6f, 0f, 0.8f);
-            c.Decorate(desk, Asylum.Monitor, Vector2.zero, 180f, 0.45f);
-            c.Prop(group, Asylum.OfficeChair, -15f, 4.4f, 0f, 1f);
+            GameObject desk = c.Prop(group, Subway.OfficeDesk, -15f, 5.6f, 0f, 0.8f);
+            c.Decorate(desk, Subway.Monitor, Vector2.zero, 180f, 0.45f);
+            c.Prop(group, Subway.OfficeChair, -15f, 4.4f, 0f, 1f);
             c.Against(group, Kit.LockerRow, MapSide.North, 8f, -13.9f, 1.9f);
-            c.Prop(group, Asylum.WheelChair, -17f, -6f, 30f, 1f);
-            c.Prop(group, Asylum.Bench, -18.6f, 0f, 90f, 0.5f);
-            c.Prop(group, Asylum.MorgueBed, -16.5f, -2.8f, 0f, 1f);
-            c.Against(group, Asylum.Cupboard, MapSide.South, -8f, -14f, 2f);
+            c.Prop(group, Kit.Chair, -17f, -6f, 30f, 1f);
+            c.Prop(group, Subway.Bench, -18.6f, 0f, 90f, 0.5f);
+            c.Prop(group, Kit.Bed, -16.5f, -2.8f, 0f, 1f);
+            c.Against(group, Kit.Locker, MapSide.South, -8f, -14f, 2f);
             c.Prop(group, Kit.BoxStack, -18.5f, -6.8f, -10f, 0.7f);
         }
 
@@ -415,19 +420,19 @@ namespace GuardVsMannequin.Editor
             Transform group = c.Group("Office");
             foreach (float z in new[] { 5.5f, -1.5f })
             {
-                GameObject desk = c.Prop(group, Asylum.OfficeTable, 16.5f, z, 0f, 0.8f);
-                c.Decorate(desk, Asylum.Monitor, new Vector2(0.2f, 0f), 180f, 0.45f);
-                c.Prop(group, Asylum.OfficeChair, 16.5f, z - 1.1f, 0f, 1f);
+                GameObject desk = c.Prop(group, Subway.OfficeDesk, 16.5f, z, 0f, 0.8f);
+                c.Decorate(desk, Subway.Monitor, new Vector2(0.2f, 0f), 180f, 0.45f);
+                c.Prop(group, Subway.OfficeChair, 16.5f, z - 1.1f, 0f, 1f);
             }
             c.Against(group, Kit.Cabinet, MapSide.South, -8f, 15f, 1f);
             c.Against(group, Kit.Cabinet, MapSide.South, -8f, 17f, 1f);
-            c.Against(group, Asylum.MetalCase, MapSide.North, 8f, 18f, 1f);
+            c.Against(group, Kit.Cabinet, MapSide.North, 8f, 18f, 1f);
             c.Prop(group, Kit.Box, 18.8f, -6.8f, 20f, 0.35f);
 
             c.Against(group, Kit.LockerRow, MapSide.East, MaxX, 4.5f, 1.9f);
             c.Against(group, Kit.LockerRow, MapSide.East, MaxX, -4.5f, 1.9f);
-            c.Against(group, Industrial.ElectricBox1, MapSide.East, MaxX, 0f, 1.5f);
-            c.Against(group, Industrial.Conditioner, MapSide.North, 8f, 22f, 1f);
+            c.Against(group, Subway.ElectricPanel, MapSide.East, MaxX, 0f, 1.5f);
+            c.Against(group, Subway.AirHandler, MapSide.North, 8f, 22f, 1f);
         }
 
         /// <summary>
@@ -438,15 +443,15 @@ namespace GuardVsMannequin.Editor
             Transform group = c.Group("Storage");
             c.Against(group, Kit.Shelf, MapSide.West, MinX, -14.5f, 1.9f);
             c.Against(group, Kit.Shelf, MapSide.West, MinX, -17.5f, 1.9f);
-            c.Against(group, Asylum.StockShelf, MapSide.South, MinZ, -21f, 2.2f);
+            c.Against(group, Kit.Shelf, MapSide.South, MinZ, -21f, 2.2f);
             GameObject crate = c.Against(group, Kit.Crate, MapSide.South, MinZ, -17f, 1f);
             c.Decorate(crate, Kit.Crate, Vector2.zero, 8f, 1f);
             c.Against(group, Kit.CrateSmall, MapSide.South, MinZ, -15.8f, 0.6f);
             GameObject pallet = c.Prop(group, Kit.Pallet, -19.5f, -15.5f, 0f, 0.15f, transformable: false);
             c.Decorate(pallet, Kit.BoxStack, Vector2.zero, 0f, 0.7f);
-            c.Prop(group, Industrial.WoodBox, -17.5f, -13.6f, 90f, 1f);
-            c.Prop(group, Industrial.Barrel3, -14.6f, -19.1f, 0f, 0.9f);
-            c.Against(group, Industrial.BagsPallet, MapSide.North, -12f, -21f, 1.2f, yaw: 0f);
+            c.Prop(group, Kit.Crate, -17.5f, -13.6f, 90f, 1f);
+            c.Prop(group, Kit.Barrel, -14.6f, -19.1f, 0f, 0.9f);
+            c.Against(group, Kit.SandbagWall, MapSide.North, -12f, -21f, 1.2f, yaw: 0f);
         }
 
         /// <summary>
@@ -456,11 +461,11 @@ namespace GuardVsMannequin.Editor
         {
             Transform group = c.Group("BreakRoom");
             c.Against(group, VendingMachine, MapSide.South, MinZ, -6f, 2f);
-            c.Against(group, Asylum.Fridge, MapSide.South, MinZ, -3.6f, 1.8f);
-            c.Against(group, Asylum.Sofa, MapSide.South, MinZ, 3f, 0.9f);
-            c.Prop(group, Asylum.KitchenTable, -1f, -15.5f, 0f, 0.8f);
-            c.Prop(group, Asylum.WhiteChair, -2.2f, -15.5f, 90f, 0.9f);
-            c.Prop(group, Asylum.WhiteChair, 0.2f, -15.5f, -90f, 0.9f);
+            c.Against(group, Kit.Locker, MapSide.South, MinZ, -3.6f, 1.8f);
+            c.Against(group, Subway.Bench, MapSide.South, MinZ, 3f, 0.9f);
+            c.Prop(group, Kit.Table, -1f, -15.5f, 0f, 0.8f);
+            c.Prop(group, Kit.Chair, -2.2f, -15.5f, 90f, 0.9f);
+            c.Prop(group, Kit.Chair, 0.2f, -15.5f, -90f, 0.9f);
             c.Against(group, Kit.LockerRow, MapSide.East, 8f, -14f, 1.9f);
             c.Prop(group, Kit.TrashBin, -7.3f, -17.2f, 0f, 0.65f);
             c.Prop(group, Kit.Stool, 2.6f, -13.6f, 0f, 0.65f);
@@ -475,10 +480,10 @@ namespace GuardVsMannequin.Editor
             // 냉동 보관함 대신 쓰는 사물함 묶음 (MorgueBox 에셋은 3m 가까운 밋밋한 상자라 쓰지 않음)
             c.Against(group, Kit.LockerRow, MapSide.South, MinZ, 15.5f, 1.9f);
             c.Against(group, Kit.LockerRow, MapSide.South, MinZ, 20.5f, 1.9f);
-            c.Against(group, Asylum.MedRack2, MapSide.East, MaxX, -14f, 1.9f);
-            c.Prop(group, Asylum.MorgueBed, 15f, -15f, 90f, 1f);
-            c.Prop(group, Asylum.MorgueBed, 22.4f, -13.8f, 0f, 1f);
-            c.Against(group, Hospital.Stretcher, MapSide.East, MaxX, -17.5f, 1f);
+            c.Against(group, Kit.Shelf, MapSide.East, MaxX, -14f, 1.9f);
+            c.Prop(group, Kit.Bed, 15f, -15f, 90f, 1f);
+            c.Prop(group, Kit.Bed, 22.4f, -13.8f, 0f, 1f);
+            c.Against(group, Kit.Bed, MapSide.East, MaxX, -17.5f, 1f);
             c.Against(group, Kit.Cabinet, MapSide.West, 12f, -18.5f, 1f);
             c.Prop(group, Kit.Bucket, 13.2f, -12.9f, 0f, 0.3f);
         }
@@ -495,22 +500,22 @@ namespace GuardVsMannequin.Editor
             c.Against(group, Kit.CrateSmall, MapSide.North, MaxZ, -9.2f, 0.6f);
             c.Prop(group, Kit.Barrel, -9.3f, 17.6f, 0f, 0.9f);
             c.Against(group, Kit.BoxStack, MapSide.West, -12f, 5f, 0.7f, yaw: 90f);
-            c.Against(group, Hospital.Trolley, MapSide.West, -12f, -5.5f, 1f);
+            c.Against(group, Subway.CleaningCart, MapSide.West, -12f, -5.5f, 1f);
             c.Prop(group, Kit.Pallet, -10f, -19f, 0f, 0.15f);
             c.Prop(group, Kit.Cone, -9f, -14f, 0f, 0.6f);
 
-            // 동쪽 복도: 북쪽 끝 엘리베이터
-            c.Against(group, Asylum.Elevator, MapSide.North, MaxZ, 10f, 3f, transformable: false);
+            // 동쪽 복도: 북쪽 끝 엘리베이터 문 (막힌 벽 앞에 문 달린 벽을 세워 문처럼 보이게 한다)
+            c.Against(group, Kit.WallDoor, MapSide.North, MaxZ, 10f, 3f, yaw: 180f + c.lengthYaw, transformable: false);
             c.Against(group, Kit.CrateSmall, MapSide.East, 12f, -2.5f, 0.6f);
             c.Against(group, Kit.Box, MapSide.East, 12f, 5.5f, 0.35f);
-            c.Against(group, Industrial.Barrel, MapSide.East, 12f, -19f, 0.9f);
+            c.Against(group, Kit.Barrel, MapSide.East, 12f, -19f, 0.9f);
 
             // 북쪽 복도
             c.Against(group, Kit.Shelf, MapSide.West, MinX, 10f, 1.9f);
-            c.Against(group, Asylum.Bench, MapSide.North, 12f, -5f, 0.5f);
+            c.Against(group, Subway.Bench, MapSide.North, 12f, -5f, 0.5f);
             c.Against(group, Kit.CrateSmall, MapSide.South, 8f, 6f, 0.6f);
             c.Prop(group, Kit.Cone, 16f, 11.2f, 0f, 0.6f);
-            c.Against(group, Industrial.Barrel, MapSide.East, MaxX, 10f, 0.9f);
+            c.Against(group, Kit.Barrel, MapSide.East, MaxX, 10f, 0.9f);
 
             // 남쪽 복도
             c.Against(group, Kit.Locker, MapSide.West, MinX, -10f, 1.9f);

@@ -35,6 +35,12 @@ namespace GuardVsMannequin.Settings
         /// <summary>화면 모드. (<see cref="DisplaySettings.Modes"/>의 번호, 0 = 전체 화면 창)</summary>
         public int screenMode;
 
+        /// <summary>프레임 제한. (<see cref="FrameRateSettings.Modes"/>의 번호, 0 = 모니터 주사율 수직 동기화)</summary>
+        public int frameLimit;
+
+        /// <summary>카메라 흔들림. (<see cref="CameraSwaySettings.Modes"/>의 번호, 0 = 보통)</summary>
+        public int cameraSway;
+
         /// <summary>
         /// 화면 설정이 같은지 비교한다. (다를 때만 해상도를 다시 적용하기 위함)
         /// </summary>

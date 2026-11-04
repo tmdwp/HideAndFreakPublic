@@ -17,8 +17,7 @@
 - 유료 캐릭터 이동 에셋 Easy Character Movement 2(ECM2)
   - 이동 코드는 인터페이스(`ICharacterMotor`)로 분리되어 있어 ECM2가 없어도 게임 코드는 컴파일됩니다. 다만 아바타가 움직이지 않습니다.
   - ECM2를 직접 설치하면 `GVM_ECM2` 기호가 자동으로 켜지고(`Ecm2DefineSync`), 이동 어셈블리(`Assets/_Project/Scripts/MovementEcm2`)가 컴파일되어 동작합니다.
-- 에셋 스토어의 맵·캐릭터·무기·사운드·이펙트 팩
-- Standard Assets, DOTween
+- 에셋 스토어의 캐릭터·무기·소품·사운드·이펙트 팩
 - Mixamo 감정 표현 애니메이션(`Assets/_Project/Animation/*.fbx`)
 - Ghoul 모델·텍스처(`Assets/_Project/Art/Skins/Ghoul.fbx`, `Ghoul_Scribble.png`)
 
@@ -60,16 +59,12 @@
 ## 맵
 | 번호 | 씬 | 내용 |
 |---|---|---|
-| 0 | Map_Asylum | 버려진 정신병원 (Abandoned Asylum 데모 씬에서 생성) |
-| 1 | Map_Industrial | 공장 지대, 실외 (RPG/FPS Industrial 데모 씬에서 생성) |
-| 2 | Map_Hospital | 공포 병원 (Horror Hospital Pack 데모 씬에서 생성) |
-| 3 | Map_AlchemistHouse | 연금술사의 집 (Alchemist House 데모 씬에서 생성) |
-| 4 | Map_Laboratory | 지하 연구소. MapKit + 에셋 팩 소품으로 직접 설계했습니다. 6m 높이 중앙 실험실을 8개 구역이 둘러싸고 '#' 모양 복도로 이어집니다. (`Scenes/Custom`) |
-| 5 | Map_TransferStation | 환승역. 지하 2호선(B2 승강장·B1 대합실)과 지상 1호선(승강장·선로 위 다리형 대합실)이 환승 계단으로 이어진 4층 구조입니다. (`Scenes/Custom`, 메뉴 **맵 생성 → 환승역**) |
+| 0 | Map_Forest | 숲. Terrain 지형과 나무, 변신용 덤불 4종 (`Scenes/Custom`, 메뉴 **맵 생성 → 숲 덤불 배치**) |
+| 1 | Map_Laboratory | 지하 연구소. MapKit 모델만으로 직접 설계했습니다. 6m 높이 중앙 실험실을 8개 구역이 둘러싸고 '#' 모양 복도로 이어집니다. (`Scenes/Custom`, 메뉴 **맵 생성 → 지하 연구소**) |
+| 2 | Map_TransferStation | 환승역. 지하 2호선(B2 승강장·B1 대합실)과 지상 1호선(승강장·선로 위 다리형 대합실)이 환승 계단으로 이어진 4층 구조입니다. (`Scenes/Custom`, 메뉴 **맵 생성 → 환승역**) |
 
-- 데모 씬 맵: **GameSettingTools → 맵 생성** 메뉴로 다시 만듭니다.
-- 직접 만든 맵: `Assets/_Project/Scenes/Custom`에 두면 맵 목록 뒤에 자동으로 붙습니다. 맵 제작 도우미의 **맵 목록 갱신**을 누르세요.
-- `Game_Test`는 게임에 넣지 않는 시험용 씬입니다(모드 SDK 시험 원본). **맵 생성 → 지하 연구소 (Game_Test)** 가 이 씬에 연구소 맵을 새로 만듭니다.
+- 직접 만든 맵: `Assets/_Project/Scenes/Custom`에 두면 맵 목록에 파일 이름 순서로 자동으로 붙습니다. 맵 제작 도우미의 **맵 목록 갱신**을 누르세요.
+- `Game_Test`는 게임에 넣지 않는 시험용 씬입니다(모드 SDK 시험 원본). **맵 생성 → 지하 연구소 (Map_Laboratory)** 가 연구소 맵과 함께 이 씬도 새로 만듭니다.
 
 ## 테스트 방법
 1. Unity에서 프로젝트를 엽니다. (이 저장소에서는 빠진 외부 에셋을 먼저 임포트해야 합니다)
@@ -120,7 +115,7 @@ Assets/_Project/          게임 코드와 에셋
 UiDefaults/               UI 프리팹 초기화 기준본
 Docs/                     개발 계획서, 모드 제작 가이드, UI·맵 가이드, 에셋 라이선스
 Assets/FishNet, com.rlabrecque.steamworks.net   공개 라이선스 라이브러리
-Assets/ECM2 및 그 밖의 에셋 팩                  외부 에셋 (이 저장소에는 없음)
+Assets/ECM2 및 그 밖의 에셋 팩                  외부 에셋 (public 브랜치에는 없음)
 ```
 
 ## 문서
@@ -130,6 +125,6 @@ Assets/ECM2 및 그 밖의 에셋 팩                  외부 에셋 (이 저장
 - [Docs/AssetLicenses.md](Docs/AssetLicenses.md): 사용 에셋과 라이선스
 
 ## 서드파티 라이선스
-- **ECM2와 에셋 스토어 에셋은 Unity Asset Store EULA**를 따르며, 공개 저장소에 올릴 수 없습니다. 그래서 이 저장소에서는 제외했습니다.
+- **ECM2와 에셋 스토어 에셋은 Unity Asset Store EULA**를 따르며, 공개 저장소에 올릴 수 없습니다. 그래서 `public` 브랜치에서는 제외했습니다.
 - FishNet(FishNet License), FishySteamworks(MIT), Steamworks.NET(MIT)은 각 라이선스를 따릅니다.
 - UI 폰트 NeoDunggeunmo Pro는 해당 폰트의 라이선스를 따릅니다.

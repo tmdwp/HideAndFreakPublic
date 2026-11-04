@@ -16,6 +16,11 @@ namespace GuardVsMannequin.UI
 
         private IRoomNotice notice;
 
+        // 마지막으로 표시한 방 코드와 언어. 바뀔 때만 문구를 다시 만든다.
+        private string shownCode;
+        private string shownLanguage;
+        private bool shownIsPublic;
+
         /// <summary>
         /// 버튼 동작을 연결한다. 복사 안내는 같은 캔버스의 <see cref="IRoomNotice"/>로 띄운다.
         /// </summary>
@@ -34,9 +39,26 @@ namespace GuardVsMannequin.UI
             ISessionService session = SessionServices.Session;
             bool isSteamRoom = session != null && session.IsSteamRoom;
 
-            roomCodeText.text = session != null ? Loc.Format("room.code", session.RoomCode) : string.Empty;
+            string code = session?.RoomCode;
+            bool isPublic = session != null && session.IsPublicRoom;
+            if (code != shownCode || Loc.CurrentLanguage != shownLanguage || isPublic != shownIsPublic)
+            {
+                shownCode = code;
+                shownLanguage = Loc.CurrentLanguage;
+                shownIsPublic = isPublic;
+                roomCodeText.text = session != null ? DescribeRoom(code, isSteamRoom, isPublic) : string.Empty;
+            }
             copyCodeButton.interactable = isSteamRoom;
             inviteButton.interactable = isSteamRoom;
+        }
+
+        /// <summary>
+        /// 방 코드 문구. Steam 방이면 공개 범위를 함께 보여 준다.
+        /// </summary>
+        private static string DescribeRoom(string code, bool isSteamRoom, bool isPublic)
+        {
+            string text = Loc.Format("room.code", code);
+            return isSteamRoom ? $"{text}  ({Loc.Get(isPublic ? "room.visibility.public" : "room.visibility.friends")})" : text;
         }
 
         /// <summary>

@@ -93,7 +93,7 @@ namespace GuardVsMannequin.Room
             new(GameSettingId.GunDamage, 1f, 1f, 500f, string.Empty),
             new(GameSettingId.MannequinAttackDamage, 1f, 1f, 500f, string.Empty),
             new(GameSettingId.GunMagazineSize, 1f, 1f, 10f, "unit.rounds"),
-            new(GameSettingId.GunReloadTime, 0.5f, 1f, 15f, "unit.seconds")
+            new(GameSettingId.GunReloadTime, 0.5f, 0.5f, 5f, "unit.seconds")
         };
 
         /// <summary>
@@ -245,7 +245,7 @@ namespace GuardVsMannequin.Room
         {
             float value = GetValue(settings, id);
             if (id == GameSettingId.Map)
-                return ContentRegistry.Instance.TryGetMap(Mathf.RoundToInt(value), out MapEntry map) ? map.DisplayName : "?";
+                return RoomState.Instance != null ? RoomState.Instance.SelectedMapDisplayName : "?";
 
             Definition definition = Get(id);
             string number = Mathf.Approximately(value, Mathf.Round(value)) ? Mathf.RoundToInt(value).ToString() : value.ToString("0.0");

@@ -17,7 +17,7 @@ namespace GuardVsMannequin.Player.Mannequin
     /// 조준한 사물 찾기 <see cref="PropTargetFinder"/>, 번호로 사물 찾기 <see cref="PropRegistry"/>,
     /// 쿨타임 <see cref="ToolCooldown"/>, 외형 복사·적용 <see cref="PropDisguiseView"/>.
     /// </summary>
-    public class MannequinTransformer : NetworkBehaviour, ITool, IEmoteBlocker
+    public class MannequinTransformer : NetworkBehaviour, ICooldownGauge, IEmoteBlocker
     {
         // 서버 거리 검증 여유(m). 클라이언트 조준 판정은 몸-명중 지점 거리, 서버는 몸-사물 경계 거리라 조금 다르다.
         private const float ServerRangeTolerance = 1.5f;
@@ -44,6 +44,9 @@ namespace GuardVsMannequin.Player.Mannequin
         public string DisplayName => Loc.Get("tool.disguise");
         public float CooldownRemaining => cooldown.LocalRemaining;
         public bool IsReady => CooldownRemaining <= 0f && CanTransformIn(GameServices.CurrentStateOrWaiting);
+
+        /// <inheritdoc />
+        public float CooldownProgress => cooldown.LocalProgress;
 
         /// <summary>
         /// 입력·사물 찾기 구현을 만들고 동기화 콜백을 연결한다.

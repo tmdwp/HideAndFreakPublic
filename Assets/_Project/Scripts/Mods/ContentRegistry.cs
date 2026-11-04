@@ -6,8 +6,8 @@ namespace GuardVsMannequin.Mods
 {
     /// <summary>
     /// 게임이 쓸 수 있는 맵 목록을 모은다. 내장 콘텐츠가 먼저, 그 뒤에 켜진 모드의 맵이 모드 ID 순으로 붙는다.
-    /// 목록의 번호가 룸 설정의 맵 번호이며, 맵 ID(문자열)는 번호가 바뀌어도 같은 맵을 가리킨다.
-    /// 모드 목록은 로비에서만 바뀐다(<see cref="SetModSources"/>). 방에 들어간 뒤에는 바뀌지 않는다.
+    /// 목록의 번호는 호스트의 룸 설정에만 쓰고(게스트마다 목록이 다르다), PC끼리는 맵 ID(문자열)로 같은 맵을 가리킨다.
+    /// 모드 목록은 로비에서 켜고 끌 때와 게스트가 맵의 모드를 확인할 때 바뀐다(<see cref="SetModSources"/>). 호스트는 방에 들어간 뒤 바뀌지 않는다.
     /// </summary>
     public sealed class ContentRegistry : IMapCatalog
     {

@@ -13,10 +13,14 @@ namespace GuardVsMannequin.Player
         public const float Tolerance = 0.15f;
 
         private float localEnd;
+        private float localDuration;
         private float serverReadyTime;
 
         /// <summary>소유자 화면의 남은 쿨타임(초).</summary>
         public float LocalRemaining => Mathf.Max(0f, localEnd - Time.time);
+
+        /// <summary>소유자 화면의 쿨타임 진행도. 시작 직후 0, 끝나면 1. (HUD 게이지용)</summary>
+        public float LocalProgress => localDuration > 0f ? Mathf.Clamp01(1f - LocalRemaining / localDuration) : 1f;
 
         /// <summary>서버에서 다시 사용할 수 있는지 여부. (허용 오차 포함)</summary>
         public bool IsServerReady => Time.time >= serverReadyTime;
@@ -27,6 +31,7 @@ namespace GuardVsMannequin.Player
         public void StartLocal(float duration)
         {
             localEnd = Time.time + duration;
+            localDuration = duration;
         }
 
         /// <summary>

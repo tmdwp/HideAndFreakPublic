@@ -22,6 +22,7 @@ namespace GuardVsMannequin.UI
 
         private string notice;
         private float noticeUntil;
+        private RefreshTimer refreshTimer;
 
         /// <summary>
         /// 버튼 동작을 연결한다.
@@ -33,11 +34,17 @@ namespace GuardVsMannequin.UI
         }
 
         /// <summary>
-        /// 방 상태에 맞게 버튼과 상태 문구를 갱신한다.
+        /// 방 상태에 맞게 버튼과 상태 문구를 갱신한다. (시작 불가 이유 문구를 새로 만들므로 일정 간격으로만 갱신)
         /// </summary>
         private void Update()
         {
             RoomState room = RoomState.Instance;
+            if (room != null && room.TryTakeHostNotice(out string hostNotice))
+                ShowNotice(hostNotice);
+
+            if (!refreshTimer.Tick())
+                return;
+
             if (room == null)
             {
                 statusText.text = Loc.Get("room.status.loading");
@@ -55,6 +62,7 @@ namespace GuardVsMannequin.UI
             notice = message;
             noticeUntil = Time.unscaledTime + NoticeDuration;
             statusText.text = message;
+            refreshTimer.Reset();
         }
 
         /// <summary>
@@ -65,7 +73,10 @@ namespace GuardVsMannequin.UI
             bool canStart = room.CanStartGame(out string reason);
             primaryButtonLabel.text = Loc.Get("room.start");
             primaryButton.interactable = canStart;
-            return canStart ? Loc.Get("room.status.allReady") : reason;
+            if (!canStart)
+                return reason;
+            // 모드가 없는 게스트가 있어도 누를 수 있다. 그동안 설치했을 수 있어 누를 때 다시 확인한다.
+            return Loc.Get(room.HasMembersMissingMods ? "room.status.guestsMissingMods" : "room.status.allReady");
         }
 
         /// <summary>
@@ -76,6 +87,8 @@ namespace GuardVsMannequin.UI
             bool isReady = RoomClient.IsLocalReady(room);
             primaryButtonLabel.text = Loc.Get(isReady ? "room.unready" : "room.ready");
             primaryButton.interactable = true;
+            if (room.LocalMissingMods.Count > 0)
+                return Loc.Get("room.status.localMissingMods");
             return Loc.Get(isReady ? "room.status.waitingHost" : "room.status.pressReady");
         }
 
@@ -96,6 +109,7 @@ namespace GuardVsMannequin.UI
             }
 
             room.SetReadyServerRpc(!RoomClient.IsLocalReady(room));
+            refreshTimer.Reset();
         }
     }
 }

@@ -13,7 +13,7 @@ using UnityEngine.SceneManagement;
 namespace GuardVsMannequin.Editor
 {
     /// <summary>
-    /// 생성된 맵 씬을 가볍게 만든다. (<see cref="MapSceneBuilder"/>가 만든 맵 대상, 수동으로 옮긴 배치는 유지)
+    /// 맵 씬을 가볍게 만든다. (맵 빌더·맵 제작 도우미로 만든 맵 대상, 수동으로 옮긴 배치는 유지)
     /// 1. 플레이어가 갈 수 없는 곳(투명 경계 밖 + 여유 거리)에 있는 환경 오브젝트와 꺼져 있는 오브젝트를 지운다.
     /// 2. 남은 환경에 정적 플래그를 준다: 가려질 수 있음(Occludee), 큰 불투명 메시는 가리개(Occluder), 정적 배칭.
     /// 3. 플레이 영역에 Occlusion Area를 두고 오클루전 컬링을 굽는다. (보이지 않는 오브젝트를 실행 중에 그리지 않음)
@@ -21,8 +21,8 @@ namespace GuardVsMannequin.Editor
     /// </summary>
     public static class MapOptimizer
     {
-        private const string EnvironmentPath = "Map/Environment";
-        private const string BoundaryName = "Boundary (Invisible)";
+        internal const string EnvironmentPath = "Map/Environment";
+        internal const string BoundaryName = "Boundary (Invisible)";
 
         // 경계 밖이라도 창문 등으로 보일 수 있는 거리
         private const float IndoorMargin = 3f;
@@ -32,16 +32,6 @@ namespace GuardVsMannequin.Editor
         private const float OccluderMinSize = 1f;
 
         #region 메뉴
-
-        [MenuItem(EditorMenus.Root + "맵 최적화/전체 맵 최적화")]
-        private static void OptimizeAllMaps()
-        {
-            if (!EditorSceneManager.SaveCurrentModifiedScenesIfUserWantsTo())
-                return;
-
-            foreach (MapCatalog.Entry map in MapCatalog.Maps.Where(m => !string.IsNullOrEmpty(m.sourceScenePath)))
-                OptimizeSceneFile(map);
-        }
 
         /// <summary>
         /// 열려 있는 맵 씬(직접 만든 맵 포함)을 최적화하고 저장한다. 먼저 씬을 저장해야 한다. (맵 제작 도우미의 "현재 맵 최적화")
@@ -57,31 +47,13 @@ namespace GuardVsMannequin.Editor
             if (!EditorSceneManager.SaveCurrentModifiedScenesIfUserWantsTo())
                 return;
 
-            // 목록에 없는 씬은 실내 맵으로 본다. (경계 밖 여유 거리가 짧음)
-            MapCatalog.Entry entry = MapCatalog.FindByScenePath(scene.path);
-            Optimize(scene, entry == null || entry.indoor);
+            // 맵 목록의 씬은 실외 기준(경계 밖 여유 거리가 김), 목록에 없는 씬은 실내 맵으로 본다.
+            Optimize(scene, indoor: MapCatalog.FindByScenePath(scene.path) == null);
             EditorSceneManager.MarkSceneDirty(scene);
             EditorSceneManager.SaveScene(scene);
         }
 
         #endregion
-
-        /// <summary>
-        /// 맵 씬 파일을 열어 최적화하고 저장한다.
-        /// </summary>
-        private static void OptimizeSceneFile(MapCatalog.Entry map)
-        {
-            if (!File.Exists(map.ScenePath))
-            {
-                Debug.LogWarning($"[MapOptimizer] 맵 씬이 없어 건너뜁니다: {map.ScenePath} ('맵 생성'을 먼저 실행하세요)");
-                return;
-            }
-
-            Scene scene = EditorSceneManager.OpenScene(map.ScenePath, OpenSceneMode.Single);
-            Optimize(scene, map.indoor);
-            EditorSceneManager.MarkSceneDirty(scene);
-            EditorSceneManager.SaveScene(scene);
-        }
 
         /// <summary>
         /// 열려 있는 맵 씬을 최적화한다. 오클루전을 굽기 전에 씬이 저장된 경로를 가지고 있어야 한다.
@@ -432,7 +404,7 @@ namespace GuardVsMannequin.Editor
         /// <summary>
         /// 씬 루트부터 "부모/자식" 경로로 오브젝트를 찾는다.
         /// </summary>
-        private static GameObject FindByPath(Scene scene, string path)
+        internal static GameObject FindByPath(Scene scene, string path)
         {
             string[] parts = path.Split('/');
             GameObject root = scene.GetRootGameObjects().FirstOrDefault(r => r.name == parts[0]);
@@ -448,7 +420,7 @@ namespace GuardVsMannequin.Editor
         /// <summary>
         /// 투명 경계(벽·천장 충돌체)가 둘러싼 영역.
         /// </summary>
-        private static Bounds GetBoundaryBounds(Transform boundary)
+        internal static Bounds GetBoundaryBounds(Transform boundary)
         {
             List<BoxCollider> boxes = boundary.GetComponentsInChildren<BoxCollider>(true).ToList();
             Bounds bounds = boxes[0].bounds;

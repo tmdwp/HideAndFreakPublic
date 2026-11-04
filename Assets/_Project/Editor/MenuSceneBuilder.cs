@@ -166,7 +166,8 @@ namespace GuardVsMannequin.Editor
         #region 로비 UI
 
         /// <summary>
-        /// 로비 캔버스에 없는 영역(왼쪽 아래 버전 표시, "모드" 화면, 모드 불일치 경고 창)만 만들어 붙인다. 이미 있는 프리팹을 고치지 않고 더할 때도 쓴다.
+        /// 로비 캔버스에 없는 영역(왼쪽 아래 버전 표시, "모드" 화면)만 만들어 붙인다. 이미 있는 프리팹을 고치지 않고 더할 때도 쓴다.
+        /// 없어진 입장 거부 경고 창이 남아 있으면 지운다. (모드 확인이 게임 시작 때로 옮겨짐)
         /// </summary>
         /// <returns>새로 추가한 영역 수.</returns>
         public static int AddMissingLobbySections(GameObject canvas)
@@ -185,9 +186,12 @@ namespace GuardVsMannequin.Editor
                 CreateModsScreen(canvas);
                 added++;
             }
-            if (canvas.GetComponent<LobbyModMismatchPopup>() == null && canvas.GetComponent<LobbyView>() != null)
+            added += RemoveOldModMismatchPopup(canvas);
+            if (canvas.GetComponent<LobbyCreateMenu>() != null && AddSteamRoomOptions(canvas))
+                added++;
+            if (canvas.GetComponent<LobbyJoinMenu>() != null && !HasLobbyScreen(canvas.GetComponent<LobbyView>(), LobbyScreen.Browse))
             {
-                CreateModMismatchPopup(canvas);
+                CreateBrowseScreen(canvas);
                 added++;
             }
             if (canvas.GetComponent<LobbyCreateMenu>() != null && !HasLobbyScreen(canvas.GetComponent<LobbyView>(), LobbyScreen.DirectCreate))
@@ -269,42 +273,188 @@ namespace GuardVsMannequin.Editor
         }
 
         /// <summary>
-        /// 모드가 달라 입장이 거부됐을 때 뜨는 경고 창(어두운 배경 + 경고문, 부족한 모드 목록, 모드 화면 열기 / 닫기)을 만든다.
+        /// 스팀 방 만들기 화면에 방 이름 입력칸과 공개방 토글을 더한다. 기본 위치에 있는 기존 요소는 자리를 만들려고 옮기고, 사용자가 옮긴 요소는 그대로 둔다.
+        /// </summary>
+        /// <returns>추가했는지 여부. 이미 있으면 false.</returns>
+        private static bool AddSteamRoomOptions(GameObject canvas)
+        {
+            LobbyCreateMenu menu = canvas.GetComponent<LobbyCreateMenu>();
+            var serialized = new SerializedObject(menu);
+            if (serialized.FindProperty("roomNameInput").objectReferenceValue != null
+                || !(serialized.FindProperty("hostPasswordInput").objectReferenceValue is InputField password))
+                return false;
+
+            Transform screen = password.transform.parent;
+            MoveIfAtDefault(screen.Find("PasswordHint"), 130f, 100f);
+            MoveIfAtDefault(screen.Find("CreateButton"), -60f, -90f);
+
+            InputField roomName = CreateInput(screen, "RoomNameInput", "lobby.roomName.placeholder", 160f);
+            Toggle publicToggle = EditorUiFactory.CreateToggle(screen, "PublicRoomToggle", "lobby.steamCreate.public", true);
+            EditorUiFactory.Place(publicToggle, Center, new Vector2(0f, -20f), new Vector2(480f, 40f));
+
+            TestEnvironmentSetupTool.SetField(menu, "roomNameInput", roomName);
+            TestEnvironmentSetupTool.SetField(menu, "publicRoomToggle", publicToggle);
+            return true;
+        }
+
+        /// <summary>
+        /// 요소가 기본 세로 위치에 그대로 있을 때만 옮긴다.
+        /// </summary>
+        private static void MoveIfAtDefault(Transform target, float defaultY, float newY)
+        {
+            if (target is RectTransform rect && Mathf.Approximately(rect.anchoredPosition.y, defaultY))
+                rect.anchoredPosition = new Vector2(rect.anchoredPosition.x, newY);
+        }
+
+        /// <summary>
+        /// 공개방 찾기 화면(필터, 방 목록, 새로고침, 빠른 참가, 뒤로)과 참가 화면의 "공개방 찾기" 버튼을 만들어 로비 화면 목록에 등록한다.
+        /// </summary>
+        private static void CreateBrowseScreen(GameObject canvas)
+        {
+            LobbyJoinMenu joinMenu = canvas.GetComponent<LobbyJoinMenu>();
+            var serializedJoin = new SerializedObject(joinMenu);
+            Transform joinScreen = (serializedJoin.FindProperty("steamJoinMenuButton").objectReferenceValue as Button)?.transform.parent;
+            Button openButton = CreateMenuButton(joinScreen != null ? joinScreen : canvas.transform, "BrowseRoomsButton", "lobby.browse.open", 175f, EditorUiFactory.AccentColor);
+
+            RectTransform screen = CreateScreen(canvas.transform, "BrowsePanel", null);
+            EditorUiFactory.Place(screen, Center, new Vector2(0f, -30f), new Vector2(1000f, 620f));
+            Text header = EditorUiFactory.CreateText(screen, "Header", "lobby.browse.title", 36, TextAnchor.MiddleCenter, EditorUiFactory.AccentColor);
+            header.fontStyle = FontStyle.Bold;
+            EditorUiFactory.Place(header, Center, new Vector2(0f, 265f), new Vector2(640f, 60f));
+
+            Toggle hidePassword = EditorUiFactory.CreateToggle(screen, "HidePasswordToggle", "lobby.browse.hidePassword", false);
+            EditorUiFactory.Place(hidePassword, Center, new Vector2(-240f, 205f), new Vector2(440f, 40f));
+            Toggle hideMissingMap = EditorUiFactory.CreateToggle(screen, "HideMissingMapToggle", "lobby.browse.hideMissingMap", false);
+            EditorUiFactory.Place(hideMissingMap, Center, new Vector2(240f, 205f), new Vector2(440f, 40f));
+
+            RectTransform listContent = EditorUiFactory.CreateScrollList(screen, "RoomList", 6f);
+            EditorUiFactory.Place(listContent.parent.parent, Center, new Vector2(0f, 10f), new Vector2(940f, 330f));
+            Button rowTemplate = EditorUiFactory.CreateButton(listContent, "RoomRowTemplate", string.Empty, EditorUiFactory.ButtonColor, out Text rowLabel);
+            rowLabel.alignment = TextAnchor.MiddleLeft;
+            rowLabel.fontSize = 22;
+            EditorUiFactory.StretchWithPadding(rowLabel.rectTransform, 14f);
+            EditorUiFactory.SetHeight(rowTemplate, 56f);
+            rowTemplate.gameObject.SetActive(false);
+
+            Text status = EditorUiFactory.CreateText(screen, "Status", string.Empty, 20, TextAnchor.MiddleCenter, HintColor);
+            EditorUiFactory.Place(status, Center, new Vector2(0f, -185f), new Vector2(940f, 40f));
+
+            Button refreshButton = EditorUiFactory.CreateButton(screen, "RefreshButton", "lobby.browse.refresh", EditorUiFactory.ButtonColor);
+            EditorUiFactory.Place(refreshButton, Center, new Vector2(-320f, -255f), new Vector2(290f, 64f));
+            Button quickJoinButton = EditorUiFactory.CreateButton(screen, "QuickJoinButton", "lobby.browse.quickJoin", EditorUiFactory.AccentColor);
+            EditorUiFactory.Place(quickJoinButton, Center, new Vector2(0f, -255f), new Vector2(290f, 64f));
+            Button backButton = EditorUiFactory.CreateButton(screen, "BackButton", "lobby.back", EditorUiFactory.ButtonColor);
+            EditorUiFactory.Place(backButton, Center, new Vector2(320f, -255f), new Vector2(290f, 64f));
+
+            PlaceBeforeOverlayPanels(canvas, screen);
+            screen.gameObject.SetActive(false);
+            RegisterLobbyScreen(canvas.GetComponent<LobbyView>(), LobbyScreen.Browse, screen.gameObject, LobbyScreen.Join, backButton);
+
+            LobbyRoomBrowserView view = canvas.AddComponent<LobbyRoomBrowserView>();
+            TestEnvironmentSetupTool.SetField(view, "openButton", openButton);
+            TestEnvironmentSetupTool.SetField(view, "listContent", listContent);
+            TestEnvironmentSetupTool.SetField(view, "rowTemplate", rowTemplate);
+            TestEnvironmentSetupTool.SetField(view, "refreshButton", refreshButton);
+            TestEnvironmentSetupTool.SetField(view, "quickJoinButton", quickJoinButton);
+            TestEnvironmentSetupTool.SetField(view, "hidePasswordToggle", hidePassword);
+            TestEnvironmentSetupTool.SetField(view, "hideMissingMapToggle", hideMissingMap);
+            TestEnvironmentSetupTool.SetField(view, "statusText", status);
+        }
+
+        /// <summary>
+        /// 없어진 입장 거부 경고 창의 오브젝트와, 스크립트가 지워져 빈 컴포넌트를 없앤다.
+        /// </summary>
+        /// <returns>지운 것이 있으면 1, 없으면 0. (프리팹을 저장할지 정하는 데 쓴다)</returns>
+        private static int RemoveOldModMismatchPopup(GameObject canvas)
+        {
+            int removed = GameObjectUtility.RemoveMonoBehavioursWithMissingScript(canvas);
+            Transform oldPopup = canvas.transform.Find("ModMismatchPopup");
+            if (oldPopup != null)
+            {
+                UnityEngine.Object.DestroyImmediate(oldPopup.gameObject);
+                removed++;
+            }
+            return removed > 0 ? 1 : 0;
+        }
+
+        /// <summary>
+        /// 룸 캔버스에 없는 영역(모드 설치 안내 창)만 만들어 붙인다. 이미 있는 프리팹을 고치지 않고 더할 때도 쓴다.
+        /// </summary>
+        /// <returns>새로 추가한 영역 수.</returns>
+        public static int AddMissingRoomSections(GameObject canvas)
+        {
+            if (canvas.GetComponent<RoomModRequiredPopup>() != null || canvas.GetComponent<RoomFooterView>() == null)
+                return 0;
+
+            CreateRoomModRequiredPopup(canvas);
+            return 1;
+        }
+
+        /// <summary>
+        /// 고른 맵의 모드가 없을 때의 설치 안내(위쪽 안내 버튼, 모드 목록 창, 링크 열기 확인 창)를 만든다.
         /// 다른 화면 위에 그려지도록 캔버스 맨 뒤에 둔다.
         /// </summary>
-        private static void CreateModMismatchPopup(GameObject canvas)
+        private static void CreateRoomModRequiredPopup(GameObject canvas)
         {
-            RectTransform dim = EditorUiFactory.CreatePanel(canvas.transform, "ModMismatchPopup", Vector2.zero, Vector2.one, new Color(0f, 0f, 0f, 0.65f));
+            Button openButton = EditorUiFactory.CreateButton(canvas.transform, "ModRequiredButton", "room.modRequired.openButton", EditorUiFactory.AccentColor);
+            EditorUiFactory.Place(openButton, new Vector2(0.5f, 0.975f), Vector2.zero, new Vector2(560f, 44f));
 
-            RectTransform box = EditorUiFactory.CreatePanel(dim, "Box", new Vector2(0.3f, 0.22f), new Vector2(0.7f, 0.78f), EditorUiFactory.PanelColor);
+            RectTransform dim = EditorUiFactory.CreatePanel(canvas.transform, "ModRequiredPopup", Vector2.zero, Vector2.one, new Color(0f, 0f, 0f, 0.65f));
+            RectTransform box = EditorUiFactory.CreatePanel(dim, "Box", new Vector2(0.25f, 0.18f), new Vector2(0.75f, 0.82f), EditorUiFactory.PanelColor);
             EditorUiFactory.AddVerticalLayout(box, 12f, 28);
 
-            Text title = EditorUiFactory.CreateText(box, "Title", "lobby.modMismatch.title", 34, TextAnchor.MiddleCenter, EditorUiFactory.NoticeColor);
+            Text title = EditorUiFactory.CreateText(box, "Title", "room.modRequired.title", 34, TextAnchor.MiddleCenter, EditorUiFactory.NoticeColor);
             title.fontStyle = FontStyle.Bold;
             EditorUiFactory.SetHeight(title, 48f);
-            Text warning = EditorUiFactory.CreateText(box, "Warning", "lobby.modMismatch.warning", 22, TextAnchor.MiddleCenter, EditorUiFactory.TextColor);
-            EditorUiFactory.SetHeight(warning, 70f);
-            Text listHeader = EditorUiFactory.CreateText(box, "ListHeader", "lobby.modMismatch.listHeader", 22, TextAnchor.MiddleLeft, EditorUiFactory.AccentColor);
-            EditorUiFactory.SetHeight(listHeader, 32f);
+            Text warning = EditorUiFactory.CreateText(box, "Warning", "room.modRequired.warning", 22, TextAnchor.MiddleCenter, EditorUiFactory.TextColor);
+            EditorUiFactory.SetHeight(warning, 100f);
 
-            // 부족한 모드가 많아도 넘치지 않도록 스크롤한다.
-            Text list = EditorUiFactory.CreateScrollText(box, "MissingList", string.Empty, 22, TextAnchor.UpperLeft, EditorUiFactory.TextColor);
-            EditorUiFactory.FillRemainingHeight(list.transform.parent, 140f);
+            // 모드가 많아도 넘치지 않도록 스크롤한다.
+            RectTransform listContent = EditorUiFactory.CreateScrollList(box, "MissingList", 6f);
+            EditorUiFactory.FillRemainingHeight(listContent, 200f);
+            Button rowTemplate = EditorUiFactory.CreateButton(listContent, "ModRowTemplate", string.Empty, EditorUiFactory.ButtonColor, out Text rowLabel);
+            rowLabel.alignment = TextAnchor.MiddleLeft;
+            rowLabel.fontSize = 20;
+            EditorUiFactory.StretchWithPadding(rowLabel.rectTransform, 14f);
+            EditorUiFactory.SetHeight(rowTemplate, 72f);
+            rowTemplate.gameObject.SetActive(false);
 
             RectTransform buttons = EditorUiFactory.CreateRow(box, "Buttons", 56f, 12f);
-            Button openMods = EditorUiFactory.CreateButton(buttons, "OpenModsButton", "lobby.modMismatch.openMods", EditorUiFactory.ButtonColor);
-            Button close = EditorUiFactory.CreateButton(buttons, "CloseButton", "lobby.modMismatch.close", EditorUiFactory.AccentColor);
-            EditorUiFactory.SetFlexibleWidth(openMods);
+            Button recheck = EditorUiFactory.CreateButton(buttons, "RecheckButton", "room.modRequired.recheck", EditorUiFactory.ButtonColor);
+            Button close = EditorUiFactory.CreateButton(buttons, "CloseButton", "room.modRequired.close", EditorUiFactory.AccentColor);
+            EditorUiFactory.SetFlexibleWidth(recheck);
             EditorUiFactory.SetFlexibleWidth(close);
+
+            // 링크 열기 확인 창: 전체 주소를 보여 주고 한 번 더 묻는다.
+            RectTransform confirm = EditorUiFactory.CreatePanel(dim, "LinkConfirm", new Vector2(0.3f, 0.32f), new Vector2(0.7f, 0.68f), EditorUiFactory.PanelColor);
+            EditorUiFactory.AddVerticalLayout(confirm, 12f, 24);
+            Text confirmTitle = EditorUiFactory.CreateText(confirm, "Title", "room.modRequired.confirm.title", 28, TextAnchor.MiddleCenter, EditorUiFactory.NoticeColor);
+            EditorUiFactory.SetHeight(confirmTitle, 40f);
+            Text confirmWarning = EditorUiFactory.CreateText(confirm, "Warning", "room.modRequired.confirm.warning", 20, TextAnchor.MiddleCenter, EditorUiFactory.TextColor);
+            EditorUiFactory.SetHeight(confirmWarning, 76f);
+            Text confirmUrl = EditorUiFactory.CreateText(confirm, "Url", string.Empty, 20, TextAnchor.MiddleCenter, EditorUiFactory.AccentColor);
+            EditorUiFactory.SetHeight(confirmUrl, 76f);
+            RectTransform confirmButtons = EditorUiFactory.CreateRow(confirm, "Buttons", 52f, 12f);
+            Button confirmCancel = EditorUiFactory.CreateButton(confirmButtons, "CancelButton", "room.modRequired.confirm.cancel", EditorUiFactory.ButtonColor);
+            Button confirmOpen = EditorUiFactory.CreateButton(confirmButtons, "OpenButton", "room.modRequired.confirm.open", EditorUiFactory.AccentColor);
+            EditorUiFactory.SetFlexibleWidth(confirmCancel);
+            EditorUiFactory.SetFlexibleWidth(confirmOpen);
+            confirm.gameObject.SetActive(false);
 
             dim.SetAsLastSibling();
             dim.gameObject.SetActive(false);
 
-            LobbyModMismatchPopup popup = canvas.AddComponent<LobbyModMismatchPopup>();
+            RoomModRequiredPopup popup = canvas.AddComponent<RoomModRequiredPopup>();
             TestEnvironmentSetupTool.SetField(popup, "popupPanel", dim.gameObject);
-            TestEnvironmentSetupTool.SetField(popup, "missingListText", list);
+            TestEnvironmentSetupTool.SetField(popup, "openButton", openButton);
+            TestEnvironmentSetupTool.SetField(popup, "listContent", listContent);
+            TestEnvironmentSetupTool.SetField(popup, "rowTemplate", rowTemplate);
+            TestEnvironmentSetupTool.SetField(popup, "recheckButton", recheck);
             TestEnvironmentSetupTool.SetField(popup, "closeButton", close);
-            TestEnvironmentSetupTool.SetField(popup, "openModsButton", openMods);
+            TestEnvironmentSetupTool.SetField(popup, "confirmPanel", confirm.gameObject);
+            TestEnvironmentSetupTool.SetField(popup, "confirmUrlText", confirmUrl);
+            TestEnvironmentSetupTool.SetField(popup, "confirmOpenButton", confirmOpen);
+            TestEnvironmentSetupTool.SetField(popup, "confirmCancelButton", confirmCancel);
         }
 
         /// <summary>
@@ -644,6 +794,7 @@ namespace GuardVsMannequin.Editor
 
             // ESC 메뉴: 룸에서는 커서를 잠그지 않는다.
             SharedUiBuilder.CreatePauseMenu(canvas.transform, lockCursorOnClose: false);
+            AddMissingRoomSections(canvas.gameObject);
             return canvas.gameObject;
         }
 

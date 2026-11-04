@@ -10,9 +10,10 @@ namespace GuardVsMannequin.Player.Mannequin
     /// <summary>
     /// 사냥 시간 마네킹의 근접 공격. 좌클릭 시 공격 동작을 시작하고, 외형의 맞는 순간에 서버가 공격 범위(호스트 설정) 안의 가드를 판정한다.
     /// 탐색 단계의 좌클릭(전원 장치 파괴)과는 게임 상태로 구분된다. 변신 중에는 공격할 수 없다.
+    /// 공격을 시작하면 <see cref="GameTuning.MannequinAttackMoveLock"/> 동안 이동 속도 배율이 0이 된다. (휘두르며 쫓아가지 못하게)
     /// </summary>
     [RequireComponent(typeof(NoiseEmitter), typeof(MannequinTransformer))]
-    public class MannequinAttackTool : NetworkBehaviour, ITool
+    public class MannequinAttackTool : NetworkBehaviour, ICrosshairCooldown, IMoveSpeedModifier
     {
         /// <summary>비정상 원점을 대체할 눈 높이(m).</summary>
         private const float EyeHeight = 1.5f;
@@ -27,10 +28,17 @@ namespace GuardVsMannequin.Player.Mannequin
         private CharacterSkinView skinView;
         private PlayerViewSync viewSync;
         private PlayerHealth health;
+        private float moveLockEndTime;
 
         public string DisplayName => Loc.Get("tool.attack");
+
+        /// <inheritdoc />
+        public float SpeedMultiplier => Time.time < moveLockEndTime ? 0f : 1f;
         public float CooldownRemaining => cooldown.LocalRemaining;
         public bool IsReady => CooldownRemaining <= 0f && CanAttackNow;
+
+        /// <inheritdoc />
+        public float CooldownProgress => cooldown.LocalProgress;
 
         /// <summary>사냥 시간이고 변신하지 않은 상태인지 여부.</summary>
         private bool CanAttackNow => GameServices.CurrentStateOrWaiting == GameState.Hunting && !transformer.IsDisguised;
@@ -85,7 +93,17 @@ namespace GuardVsMannequin.Player.Mannequin
 
             Ray aim = aimProvider.GetAimRay();
             cooldown.StartLocal(GameTuning.MannequinAttackCooldown);
+            // 이동은 소유자 권한이므로 누른 순간 바로 멈춘다. (서버 응답을 기다리면 그사이 움직임)
+            LockMovement();
             AttackServerRpc(aim.origin, aim.direction);
+        }
+
+        /// <summary>
+        /// 공격 동작 동안 이동을 막는다.
+        /// </summary>
+        private void LockMovement()
+        {
+            moveLockEndTime = Time.time + GameTuning.MannequinAttackMoveLock;
         }
 
         /// <summary>

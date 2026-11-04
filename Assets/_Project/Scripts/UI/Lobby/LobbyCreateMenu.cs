@@ -17,6 +17,10 @@ namespace GuardVsMannequin.UI
 
         [Header("스팀 방 만들기 화면")]
         [SerializeField] private InputField hostPasswordInput;
+        [Tooltip("방 이름 입력칸. 비우면 '<Steam 이름>의 방'.")]
+        [SerializeField] private InputField roomNameInput;
+        [Tooltip("공개방 토글. 끄면 친구 전용. 비우면(예전 프리팹) 공개방.")]
+        [SerializeField] private Toggle publicRoomToggle;
         [SerializeField] private Button hostSteamButton;
 
         [Header("직접 방 만들기 화면")]
@@ -33,13 +37,28 @@ namespace GuardVsMannequin.UI
             navigator = UiLookup.FindInParent<ILobbyNavigator>(this);
             steamCreateMenuButton.onClick.AddListener(() => navigator?.Show(LobbyScreen.SteamCreate));
             hostDirectButton.onClick.AddListener(OnDirectCreatePressed);
-            hostSteamButton.onClick.AddListener(() => SessionServices.Session?.HostSteamRoom(hostPasswordInput.text));
+            hostSteamButton.onClick.AddListener(HostSteamRoom);
             if (hostDirectNormalButton != null)
                 hostDirectNormalButton.onClick.AddListener(() => SessionServices.Session?.HostDirectRoom());
             if (hostTestButton != null)
                 hostTestButton.onClick.AddListener(() => SessionServices.Session?.HostTestRoom());
 
             hostPasswordInput.contentType = InputField.ContentType.Password;
+            if (roomNameInput != null)
+                roomNameInput.characterLimit = SteamRoomOptions.MaxNameLength;
+        }
+
+        /// <summary>
+        /// 화면에서 고른 값으로 Steam 방을 만든다.
+        /// </summary>
+        private void HostSteamRoom()
+        {
+            SessionServices.Session?.HostSteamRoom(new SteamRoomOptions
+            {
+                password = hostPasswordInput.text,
+                isPublic = publicRoomToggle == null || publicRoomToggle.isOn,
+                roomName = roomNameInput != null ? roomNameInput.text : string.Empty
+            });
         }
 
         /// <summary>

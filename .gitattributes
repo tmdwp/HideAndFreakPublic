@@ -169,3 +169,6 @@ Packages/packages-lock.json linguist-generated
 
 # Exceptions for .asset files such as lightning pre-baking
 LightingData.asset     binary
+# Terrain 데이터·NavMesh는 Unity가 바이너리로 저장하므로 줄바꿈 변환(eol=lf)을 하면 손상된다
+*Terrain*.asset        binary
+NavMesh*.asset         binary

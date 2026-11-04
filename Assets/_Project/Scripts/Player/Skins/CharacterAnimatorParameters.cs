@@ -9,6 +9,7 @@ namespace GuardVsMannequin.Player
     /// | Speed | Float | 매 프레임, 수평 이동 속도(m/s) |
     /// | MoveX, MoveZ | Float | 매 프레임, 캐릭터 기준 좌우/앞뒤 속도(m/s) |
     /// | Attack | Trigger | 마네킹 근접 공격 |
+    /// | Shriek | Trigger | 사냥 외형(구울) 비명 (사냥 시간 시작) |
     /// | Shoot | Trigger | 가드 사격 |
     /// | Throw | Trigger | 가드 수류탄 투척 |
     /// | Reload | Trigger | 가드 총 장전 (탄창을 다 쓴 순간) |
@@ -17,7 +18,7 @@ namespace GuardVsMannequin.Player
     /// | Emote + EmoteId | Trigger + Int | 감정 표현 (트리거 하나 + 번호, 번호별 트리거가 없을 때) |
     /// | Interact | Bool | 전원 장치 등과 상호작용하는 동안 켜짐 |
     ///
-    /// 감정 표현 트리거가 하나도 없으면 절차적 움직임(ProceduralEmoteView)으로 대신한다.
+    /// 감정 표현 트리거가 하나도 없는 외형(구울 등)은 감정 표현 키를 눌러도 아무 동작도 하지 않는다.
     /// </summary>
     public static class CharacterAnimatorParameters
     {
@@ -25,6 +26,7 @@ namespace GuardVsMannequin.Player
         public const string MoveX = "MoveX";
         public const string MoveZ = "MoveZ";
         public const string Attack = "Attack";
+        public const string Shriek = "Shriek";
         public const string Shoot = "Shoot";
         public const string Throw = "Throw";
         public const string Reload = "Reload";

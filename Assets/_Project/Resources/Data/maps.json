@@ -1,37 +1,10 @@
 {
     "maps": [
         {
-            "id": "builtin.map_asylum",
-            "scene": "Map_Asylum",
-            "nameKey": "map.0",
-            "name": "Abandoned Asylum",
-            "minPlayers": 0,
-            "maxPlayers": 0,
-            "settings": []
-        },
-        {
-            "id": "builtin.map_industrial",
-            "scene": "Map_Industrial",
-            "nameKey": "map.1",
-            "name": "Industrial",
-            "minPlayers": 0,
-            "maxPlayers": 0,
-            "settings": []
-        },
-        {
-            "id": "builtin.map_hospital",
-            "scene": "Map_Hospital",
-            "nameKey": "map.2",
-            "name": "Horror Hospital",
-            "minPlayers": 0,
-            "maxPlayers": 0,
-            "settings": []
-        },
-        {
-            "id": "builtin.map_alchemisthouse",
-            "scene": "Map_AlchemistHouse",
-            "nameKey": "map.3",
-            "name": "Alchemist House",
+            "id": "builtin.map_forest",
+            "scene": "Map_Forest",
+            "nameKey": "map.6",
+            "name": "Forest",
             "minPlayers": 0,
             "maxPlayers": 0,
             "settings": []

@@ -161,6 +161,17 @@ namespace GuardVsMannequin.Editor
         }
 
         /// <summary>
+        /// 다운로드 주소를 읽고, 게임에서 열 수 없는 주소면 제작자에게 경고한다.
+        /// </summary>
+        private static string GetCheckedUrl(ModProject project)
+        {
+            string url = (project.downloadUrl ?? string.Empty).Trim();
+            if (url.Length > 0 && !ModLinkPolicy.TryGetSafeUrl(url, out _))
+                Debug.LogWarning($"[모드 내보내기] 다운로드 주소 '{url}'는 게임에서 열 수 없습니다. https://github.com/... 또는 Steam 창작마당 주소를 쓰세요. 다른 플레이어에게는 모드 이름과 ID만 보입니다.");
+            return url;
+        }
+
+        /// <summary>
         /// 모드 설정으로 mod.json 내용을 만든다.
         /// </summary>
         private static ModManifest CreateManifest(ModProject project, string assetBundle, string sceneBundle)
@@ -172,6 +183,7 @@ namespace GuardVsMannequin.Editor
                 version = project.version,
                 author = project.author,
                 description = project.description,
+                url = GetCheckedUrl(project),
                 gameVersion = project.minGameVersion,
                 unityVersion = Application.unityVersion,
                 dependencies = project.dependencies.Where(d => !string.IsNullOrWhiteSpace(d)).ToList(),

@@ -1,0 +1,107 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!1001 &6600200123896508885
+PrefabInstance:
+  m_ObjectHideFlags: 0
+  serializedVersion: 2
+  m_Modification:
+    serializedVersion: 3
+    m_TransformParent: {fileID: 0}
+    m_Modifications:
+    - target: {fileID: -8679921383154817045, guid: 33528d9aa9048fd4daf5e14fbfa57fd8, type: 3}
+      propertyPath: m_LocalPosition.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: -8679921383154817045, guid: 33528d9aa9048fd4daf5e14fbfa57fd8, type: 3}
+      propertyPath: m_LocalPosition.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: -8679921383154817045, guid: 33528d9aa9048fd4daf5e14fbfa57fd8, type: 3}
+      propertyPath: m_LocalPosition.z
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: -8679921383154817045, guid: 33528d9aa9048fd4daf5e14fbfa57fd8, type: 3}
+      propertyPath: m_LocalRotation.w
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: -8679921383154817045, guid: 33528d9aa9048fd4daf5e14fbfa57fd8, type: 3}
+      propertyPath: m_LocalRotation.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: -8679921383154817045, guid: 33528d9aa9048fd4daf5e14fbfa57fd8, type: 3}
+      propertyPath: m_LocalRotation.y
+      value: -0
+      objectReference: {fileID: 0}
+    - target: {fileID: -8679921383154817045, guid: 33528d9aa9048fd4daf5e14fbfa57fd8, type: 3}
+      propertyPath: m_LocalRotation.z
+      value: -0
+      objectReference: {fileID: 0}
+    - target: {fileID: -8679921383154817045, guid: 33528d9aa9048fd4daf5e14fbfa57fd8, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: -8679921383154817045, guid: 33528d9aa9048fd4daf5e14fbfa57fd8, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: -8679921383154817045, guid: 33528d9aa9048fd4daf5e14fbfa57fd8, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.z
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 919132149155446097, guid: 33528d9aa9048fd4daf5e14fbfa57fd8, type: 3}
+      propertyPath: m_Name
+      value: Tree_Pine_B
+      objectReference: {fileID: 0}
+    m_RemovedComponents: []
+    m_RemovedGameObjects: []
+    m_AddedGameObjects: []
+    m_AddedComponents:
+    - targetCorrespondingSourceObject: {fileID: 919132149155446097, guid: 33528d9aa9048fd4daf5e14fbfa57fd8, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: -272718499736510157}
+    - targetCorrespondingSourceObject: {fileID: 919132149155446097, guid: 33528d9aa9048fd4daf5e14fbfa57fd8, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: -7434226453430270988}
+  m_SourcePrefab: {fileID: 100100000, guid: 33528d9aa9048fd4daf5e14fbfa57fd8, type: 3}
+--- !u!1 &6294333374473047172 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: 919132149155446097, guid: 33528d9aa9048fd4daf5e14fbfa57fd8, type: 3}
+  m_PrefabInstance: {fileID: 6600200123896508885}
+  m_PrefabAsset: {fileID: 0}
+--- !u!136 &-272718499736510157
+CapsuleCollider:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 6294333374473047172}
+  m_Material: {fileID: 0}
+  m_IncludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_ExcludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_LayerOverridePriority: 0
+  m_IsTrigger: 0
+  m_ProvidesContacts: 0
+  m_Enabled: 1
+  serializedVersion: 2
+  m_Radius: 0.3
+  m_Height: 9.054233
+  m_Direction: 1
+  m_Center: {x: 0, y: 4.5271163, z: 0}
+--- !u!114 &-7434226453430270988
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 6294333374473047172}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 9333f459f261e274691ac12c3ee3ed97, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: GuardVsMannequin.Content::GuardVsMannequin.Props.TransformableProp
+  index: -1
+  isWall: 0

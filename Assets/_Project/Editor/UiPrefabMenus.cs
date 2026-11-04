@@ -67,14 +67,16 @@ namespace GuardVsMannequin.Editor
 
             int hudAdded = EditPrefab(UiPrefabLibrary.HudCanvasPath, root => SharedUiBuilder.AddMissingHudSections(root.transform));
             int rowsAdded = EditPrefab(UiPrefabLibrary.SettingsPanelPath, SharedUiBuilder.AddMissingRebindRows);
+            int graphicsRowsAdded = EditPrefab(UiPrefabLibrary.SettingsPanelPath, SharedUiBuilder.AddMissingGraphicsRows);
             int lobbyAdded = EditPrefab(UiPrefabLibrary.LobbyCanvasPath, MenuSceneBuilder.AddMissingLobbySections);
+            int roomAdded = EditPrefab(UiPrefabLibrary.RoomCanvasPath, MenuSceneBuilder.AddMissingRoomSections);
             // 새 게임 설정 항목(예: 총 탄창·장전)의 줄: 룸 설정 화면과 HUD 테스트 메뉴
             int roomRowsAdded = EditPrefab(UiPrefabLibrary.RoomCanvasPath, root =>
                 MenuSceneBuilder.AddMissingSettingRows(root.GetComponentInChildren<RoomSettingsView>(true), GameSettingDefinitions.IsShownInRoom));
             int testRowsAdded = EditPrefab(UiPrefabLibrary.HudCanvasPath, root =>
                 MenuSceneBuilder.AddMissingSettingRows(root.GetComponentInChildren<HudTestRoomPanel>(true), id => id != GameSettingId.Map));
 
-            Debug.Log($"[UiPrefabMenus] HUD 영역 {Describe(hudAdded)}, 키 설정 줄 {Describe(rowsAdded)}, 로비 영역(버전 표시·모드 화면·모드 경고 창) {Describe(lobbyAdded)}, " +
+            Debug.Log($"[UiPrefabMenus] HUD 영역 {Describe(hudAdded)}, 키 설정 줄 {Describe(rowsAdded)}, 그래픽 설정 줄 {Describe(graphicsRowsAdded)}, 로비 영역(버전 표시·모드 화면·방 이름·공개방 찾기) {Describe(lobbyAdded)}, 룸 영역(모드 설치 안내) {Describe(roomAdded)}, " +
                       $"룸 설정 줄 {Describe(roomRowsAdded)}, 테스트 메뉴 설정 줄 {Describe(testRowsAdded)}. " +
                       "모양이 마음에 들면 '현재 UI를 초기화 기준으로 저장'으로 기준본도 갱신하세요.");
         }

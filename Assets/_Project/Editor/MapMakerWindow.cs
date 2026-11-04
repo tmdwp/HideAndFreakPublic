@@ -44,7 +44,11 @@ namespace GuardVsMannequin.Editor
                 "게임 시스템·UI·경계·기본 지점이 들어 있는 빈 맵을 Scenes/Custom에 만듭니다.");
             newMapName = EditorGUILayout.TextField("맵 이름 (영문)", newMapName);
             if (GUILayout.Button("새 맵 만들기"))
+            {
                 MapAuthoringTools.CreateNewMap(newMapName);
+                // 버튼 처리 중에 씬이 바뀌어 남은 레이아웃이 어긋나므로, 이번 GUI 그리기를 여기서 끝낸다.
+                GUIUtility.ExitGUI();
+            }
 
             using (new EditorGUI.DisabledScope(!isMap))
             {

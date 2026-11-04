@@ -16,6 +16,13 @@ namespace GuardVsMannequin.UI
 
         private HudContext context;
 
+        // 마지막으로 표시한 값. 하나라도 바뀔 때만 문구를 다시 만든다. (시간은 초 단위라 1초에 한 번)
+        private GameState shownState = GameState.Waiting;
+        private int shownSeconds = -1;
+        private int shownAlive = -1;
+        private int shownTotal = -1;
+        private string shownLanguage;
+
         /// <inheritdoc />
         public void Bind(HudContext hudContext)
         {
@@ -39,8 +46,17 @@ namespace GuardVsMannequin.UI
             int alive = context.PlayerRegistry.AliveMannequinCount;
             // 참가 인원이 아직 동기화되지 않았으면 생존 인원을 대신 쓴다.
             int total = Mathf.Max(alive, context.PlayerRegistry.MatchMannequinCount);
+            float remaining = context.State.RemainingTime;
+            int seconds = Mathf.CeilToInt(Mathf.Max(0f, remaining));
+            if (state == shownState && seconds == shownSeconds && alive == shownAlive && total == shownTotal && Loc.CurrentLanguage == shownLanguage)
+                return;
 
-            topText.text = $"{HudText.GetPhaseName(state)}  |  {HudText.FormatTime(context.State.RemainingTime)}\n" +
+            shownState = state;
+            shownSeconds = seconds;
+            shownAlive = alive;
+            shownTotal = total;
+            shownLanguage = Loc.CurrentLanguage;
+            topText.text = $"{HudText.GetPhaseName(state)}  |  {HudText.FormatTime(remaining)}\n" +
                            Loc.Format("hud.remainingMannequins", alive, total);
         }
     }

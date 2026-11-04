@@ -11,10 +11,14 @@ namespace GuardVsMannequin.Player.Guard
     /// 가드의 손전등. 사냥 시간에만 E키로 켜고 끌 수 있고, 배터리는 무제한이다.
     /// 켜짐 상태는 서버가 관리해 모든 플레이어에게 보이며, 사냥 시간이 끝나면 자동으로 꺼진다.
     /// </summary>
-    public class FlashlightTool : NetworkBehaviour, ITool
+    public class FlashlightTool : NetworkBehaviour, ISwitchableTool
     {
         [Tooltip("카메라 피벗 아래에 둔 스포트라이트. 원격 가드는 PlayerViewSync로 상하 방향이 맞춰진다.")]
         [SerializeField] private Light spotLight;
+
+        [Tooltip("본인 손전등의 그림자에서 뺄 가까운 거리(m). 1인칭에서 보이지 않는 본인 몸(머리·모자·팔·장갑)은 그림자만 그리므로,\n" +
+                 "손전등 바로 앞의 몸 그림자가 빛을 막지 않도록 이 거리 안의 물체는 그림자를 만들지 않게 한다.")]
+        [SerializeField] private float ownerShadowNearPlane = 0.8f;
 
         private readonly SyncVar<bool> isOn = new();
         private readonly ToolCooldown cooldown = new();
@@ -26,7 +30,7 @@ namespace GuardVsMannequin.Player.Guard
         public float CooldownRemaining => cooldown.LocalRemaining;
         public bool IsReady => GameServices.CurrentStateOrWaiting == GameState.Hunting && CooldownRemaining <= 0f;
 
-        /// <summary>현재 켜져 있는지 여부.</summary>
+        /// <inheritdoc />
         public bool IsOn => isOn.Value;
 
         /// <summary>
@@ -55,10 +59,15 @@ namespace GuardVsMannequin.Player.Guard
 
         /// <summary>
         /// 소유자만 손전등 키 입력을 구독한다.
+        /// 다른 가드의 손전등은 그림자를 끈다. (그림자 조명마다 그림자 맵을 따로 그려야 해서, 가드가 여럿이면 비용이 크다)
         /// </summary>
         public override void OnStartClient()
         {
             base.OnStartClient();
+            if (!IsOwner)
+                spotLight.shadows = LightShadows.None;
+            else
+                spotLight.shadowNearPlane = Mathf.Max(spotLight.shadowNearPlane, ownerShadowNearPlane);
             if (IsOwner && playerInput != null)
                 playerInput.FlashlightPressed += OnFlashlightPressed;
         }

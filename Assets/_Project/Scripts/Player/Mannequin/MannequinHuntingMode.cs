@@ -1,4 +1,5 @@
 using FishNet.Object;
+using GuardVsMannequin.Audio;
 using GuardVsMannequin.Core;
 using UnityEngine;
 using UnityEngine.Rendering;
@@ -7,9 +8,9 @@ namespace GuardVsMannequin.Player.Mannequin
 {
     /// <summary>
     /// 사냥 시간 진입 시 마네킹을 사냥 모드로 바꾼다.
-    /// - 모든 피어: 외형을 사냥 외형(맵 지정, 없으면 기본 Ghoul)으로 교체 (<see cref="CharacterSkinView.UseHuntSkin"/>)
+    /// - 모든 피어: 외형을 사냥 외형(맵 지정, 없으면 기본 Ghoul)으로 교체 (<see cref="CharacterSkinView.UseHuntSkin"/>)하고, 다음 프레임에 비명(애니메이션 + 소리)
     /// - 서버: 강제 변신 해제(이후 다시 변신 가능), 최대 체력 = 기본 체력 × huntHealthMultiplier (가득 채움)
-    /// - 소유자: 1인칭 전환(본인 몸은 그림자만), 제한된 시야(HuntVisionEffect)
+    /// - 소유자: 1인칭 전환(본인 몸은 그림자만, 팔다리는 FirstPersonBodyView로 보임), 제한된 시야(HuntVisionEffect)
     /// 동기화된 게임 상태를 보고 각자 한 번씩 적용한다.
     /// </summary>
     [RequireComponent(typeof(MannequinTransformer), typeof(PlayerHealth))]
@@ -24,7 +25,10 @@ namespace GuardVsMannequin.Player.Mannequin
         private HuntVisionEffect huntVision;
         private PropDisguiseView disguiseView;
         private CharacterSkinView skinView;
+        private FirstPersonBodyView firstPersonBody;
+        private NoiseEmitter noiseEmitter;
         private bool skinApplied;
+        private bool shriekPending;
         private bool serverApplied;
         private bool ownerApplied;
 
@@ -39,6 +43,8 @@ namespace GuardVsMannequin.Player.Mannequin
             huntVision = GetComponent<HuntVisionEffect>();
             disguiseView = GetComponent<PropDisguiseView>();
             skinView = GetComponent<CharacterSkinView>();
+            firstPersonBody = GetComponent<FirstPersonBodyView>();
+            noiseEmitter = GetComponent<NoiseEmitter>();
         }
 
         /// <summary>
@@ -52,6 +58,8 @@ namespace GuardVsMannequin.Player.Mannequin
 
             if (!skinApplied)
                 ApplyHuntSkin();
+            else if (shriekPending)
+                Shriek();
 
             if (IsServerInitialized && !serverApplied)
                 ApplyOnServer();
@@ -66,8 +74,24 @@ namespace GuardVsMannequin.Player.Mannequin
         private void ApplyHuntSkin()
         {
             skinApplied = true;
+            shriekPending = true;
             if (skinView != null)
                 skinView.UseHuntSkin();
+        }
+
+        /// <summary>
+        /// 사냥 시간이 시작되면 구울이 머리를 젖히고 비명을 지른다. (외형을 바꾼 다음 프레임: 새 애니메이터가 준비된 뒤)
+        /// 변신 중이거나 죽었으면 건너뛴다.
+        /// </summary>
+        private void Shriek()
+        {
+            shriekPending = false;
+            if (transformer.IsDisguised || !health.IsAlive)
+                return;
+            if (skinView != null)
+                skinView.TryPlayTrigger(CharacterAnimatorParameters.Shriek);
+            if (noiseEmitter != null)
+                noiseEmitter.PlayLocal(NoiseType.GhoulShriek);
         }
 
         /// <summary>
@@ -94,6 +118,10 @@ namespace GuardVsMannequin.Player.Mannequin
 
             foreach (Renderer bodyRenderer in CharacterSkinView.ResolveBodyRenderers(this, bodyRenderers))
                 bodyRenderer.shadowCastingMode = ShadowCastingMode.ShadowsOnly;
+
+            // 휘두르는 팔이 보이도록 팔다리만 남긴 복제 몸을 보인다.
+            if (firstPersonBody != null)
+                firstPersonBody.Show();
 
             // 사냥 시간에 다시 변신해도 사물이 1인칭 시야를 가리지 않게 한다.
             if (disguiseView != null)

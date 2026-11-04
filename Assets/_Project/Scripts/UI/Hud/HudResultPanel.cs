@@ -19,6 +19,7 @@ namespace GuardVsMannequin.UI
 
         private readonly StringBuilder builder = new();
         private HudContext context;
+        private RefreshTimer refreshTimer;
 
         /// <summary>
         /// 룸으로 이동 버튼을 연결한다. (호스트만 가능, <see cref="IMatchControl"/>)
@@ -41,6 +42,13 @@ namespace GuardVsMannequin.UI
             bool visible = state == GameState.Ended;
             resultPanel.SetActive(visible);
             if (!visible)
+            {
+                // 다시 보일 때 바로 최신 문구를 보여주도록 한다.
+                refreshTimer.Reset();
+                return;
+            }
+            // 결과·참가자 목록 문구를 새로 만드므로 일정 간격으로만 갱신한다.
+            if (!refreshTimer.Tick())
                 return;
 
             resultHeadlineText.text = GetResultHeadline();
@@ -49,7 +57,7 @@ namespace GuardVsMannequin.UI
             foreach (ParticipantResult participant in context.MatchResult.Participants)
             {
                 string status = Loc.Get(participant.survived ? "result.survived" : "result.eliminated");
-                builder.AppendLine($"{participant.displayName}  ·  {HudText.GetRoleName(participant.role)}  ·  {status}");
+                builder.AppendLine($"{DisplayTextSanitizer.Clean(participant.displayName, DisplayTextSanitizer.MaxPlayerNameLength)}  ·  {HudText.GetRoleName(participant.role)}  ·  {status}");
             }
             resultParticipantsText.text = builder.ToString();
 

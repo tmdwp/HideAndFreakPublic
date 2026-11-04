@@ -12,7 +12,7 @@ namespace GuardVsMannequin.Player.Guard
     /// 판정은 서버가 한다: 클라이언트는 조준만 보내고, 서버가 궤적·폭발 지점을 정해 모두에게 같은 연출(<see cref="GrenadeView"/>)을 보낸다.
     /// 궤적이 결정적이므로 수류탄을 네트워크 오브젝트로 만들지 않는다.
     /// </summary>
-    public class GrenadeTool : NetworkBehaviour, ITool
+    public class GrenadeTool : NetworkBehaviour, ICooldownGauge
     {
         /// <summary>비정상 원점을 대체할 눈 높이(m).</summary>
         private const float EyeHeight = 1.6f;
@@ -36,6 +36,9 @@ namespace GuardVsMannequin.Player.Guard
         // 출발 보호(탐색 시작 직후 도구 잠금)도 쿨타임처럼 남은 시간으로 보여준다.
         public float CooldownRemaining => Mathf.Max(cooldown.LocalRemaining, DamageRules.GetGuardToolLockRemaining(GameServices.State));
         public bool IsReady => CooldownRemaining <= 0f && DamageRules.CanUseGuardTools(GameServices.State);
+
+        /// <inheritdoc />
+        public float CooldownProgress => cooldown.LocalProgress;
 
         /// <summary>호스트 설정의 수류탄 쿨타임.</summary>
         private static float Cooldown => GameServices.CurrentSettingsOrDefault.grenadeCooldown;

@@ -24,6 +24,7 @@ namespace GuardVsMannequin.Player
         private InputAction primaryAction;
         private InputAction secondaryAction;
         private InputAction flashlightAction;
+        private InputAction reloadAction;
         private InputAction rotateAction;
         private InputAction sprintAction;
         private InputAction jumpAction;
@@ -43,6 +44,7 @@ namespace GuardVsMannequin.Player
         public event Action SecondaryPressed;
         public event Action<int> EmotePressed;
         public event Action FlashlightPressed;
+        public event Action ReloadPressed;
         public event Action<int> SpectateCycled;
 
         /// <summary>
@@ -59,6 +61,7 @@ namespace GuardVsMannequin.Player
             primaryAction = map.FindAction("Primary", true);
             secondaryAction = map.FindAction("Secondary", true);
             flashlightAction = map.FindAction("Flashlight", true);
+            reloadAction = map.FindAction("Reload", true);
             rotateAction = map.FindAction("Rotate", true);
             sprintAction = map.FindAction("Sprint", true);
             jumpAction = map.FindAction("Jump", true);
@@ -77,6 +80,7 @@ namespace GuardVsMannequin.Player
             primaryAction.canceled += OnPrimaryCanceled;
             secondaryAction.performed += OnSecondaryPerformed;
             flashlightAction.performed += OnFlashlightPerformed;
+            reloadAction.performed += OnReloadPerformed;
             spectatePreviousAction.performed += OnSpectatePreviousPerformed;
             spectateNextAction.performed += OnSpectateNextPerformed;
             foreach (InputAction emote in emoteActions)
@@ -98,6 +102,7 @@ namespace GuardVsMannequin.Player
             primaryAction.canceled -= OnPrimaryCanceled;
             secondaryAction.performed -= OnSecondaryPerformed;
             flashlightAction.performed -= OnFlashlightPerformed;
+            reloadAction.performed -= OnReloadPerformed;
             spectatePreviousAction.performed -= OnSpectatePreviousPerformed;
             spectateNextAction.performed -= OnSpectateNextPerformed;
             foreach (InputAction emote in emoteActions)
@@ -154,6 +159,13 @@ namespace GuardVsMannequin.Player
         {
             if (GameCursor.IsLocked)
                 FlashlightPressed?.Invoke();
+        }
+
+        /// <summary>장전 키를 전달한다.</summary>
+        private void OnReloadPerformed(InputAction.CallbackContext context)
+        {
+            if (GameCursor.IsLocked)
+                ReloadPressed?.Invoke();
         }
 
         /// <summary>이전 관전 대상 키를 전달한다.</summary>
