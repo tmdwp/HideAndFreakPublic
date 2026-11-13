@@ -31,3 +31,6 @@ MonoBehaviour:
     holdPitchLimit: 60
     rightElbowHint: {x: 0.35, y: -0.35, z: -0.1}
     leftElbowHint: {x: -0.3, y: -0.4, z: 0.15}
+    lockHandRotation: 1
+    rightHandRotationOffset: {x: 0, y: -61.77, z: 0}
+    leftHandRotationOffset: {x: 15.54, y: 85.1, z: 42.16}

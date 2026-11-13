@@ -4,10 +4,7 @@ using UnityEngine;
 
 namespace GuardVsMannequin.Player.Emotes
 {
-    /// <summary>
-    /// 감정 표현을 네트워크로 동기화한다.
-    /// 마네킹이 1~6번 키를 누르면 서버가 검증한 뒤 <see cref="ServerPlay"/>로 모든 클라이언트에 재생한다.
-    /// </summary>
+    /// <summary>모두가 보도록 서버가 검증한 감정 표현을 모든 클라이언트에 재생한다.</summary>
     public class EmoteController : NetworkBehaviour
     {
         private IEmoteView[] emoteViews;
@@ -15,19 +12,16 @@ namespace GuardVsMannequin.Player.Emotes
         private IEmoteBlocker emoteBlocker;
         private float serverEmoteEndTime;
 
-        /// <summary>
-        /// 뷰, 입력, 차단 조건 구현을 캐시한다.
-        /// </summary>
+        /// <summary>재생마다 찾지 않도록 미리 찾아 두고, 컴포넌트 순서를 뷰 우선순위로 쓴다.</summary>
         private void Awake()
         {
-            // 컴포넌트 순서가 우선순위다. (처음 성공한 뷰 하나만 재생)
             emoteViews = GetComponents<IEmoteView>();
             playerInput = GetComponent<IPlayerInput>();
             emoteBlocker = GetComponent<IEmoteBlocker>();
         }
 
         /// <summary>
-        /// 소유자만 감정 표현 입력을 구독한다.
+        /// 남의 아바타가 내 키에 반응하지 않도록 소유자만 입력을 듣는다.
         /// </summary>
         public override void OnStartClient()
         {
@@ -37,7 +31,7 @@ namespace GuardVsMannequin.Player.Emotes
         }
 
         /// <summary>
-        /// 입력 구독을 해제한다.
+        /// 아바타가 사라진 뒤 입력 이벤트가 이 객체를 부르지 않도록 구독을 끊는다.
         /// </summary>
         public override void OnStopClient()
         {
@@ -47,7 +41,7 @@ namespace GuardVsMannequin.Player.Emotes
         }
 
         /// <summary>
-        /// 차단 조건(변신 중 등)이 아니면 서버에 재생을 요청한다.
+        /// 막힌 상태에서 RPC를 보내 봐야 거부되므로 소유자에서 먼저 거른다.
         /// </summary>
         private void OnEmotePressed(int emoteId)
         {
@@ -58,7 +52,7 @@ namespace GuardVsMannequin.Player.Emotes
         }
 
         /// <summary>
-        /// 서버에서 요청을 검증하고 재생한다.
+        /// 클라이언트 확인은 조작할 수 있으므로 서버에서 차단 조건을 다시 본다.
         /// </summary>
         [ServerRpc]
         private void RequestEmoteServerRpc(int emoteId)
@@ -69,9 +63,7 @@ namespace GuardVsMannequin.Player.Emotes
             ServerPlay(emoteId);
         }
 
-        /// <summary>
-        /// 모든 클라이언트에서 감정 표현을 재생한다. 재생 중이면 무시한다. (서버 전용)
-        /// </summary>
+        /// <summary>연타로 동작이 끊기거나 네트워크가 넘치지 않도록 재생 중에는 무시한다.</summary>
         /// <returns>재생을 시작했는지 여부.</returns>
         [Server]
         public bool ServerPlay(int emoteId)
@@ -85,7 +77,7 @@ namespace GuardVsMannequin.Player.Emotes
         }
 
         /// <summary>
-        /// 각 클라이언트에서 뷰를 순서대로 시도해 처음 성공한 것 하나만 재생한다.
+        /// 여러 뷰가 동시에 재생되면 겹쳐 보이므로 순서대로 시도해 처음 성공한 하나만 재생한다.
         /// </summary>
         [ObserversRpc]
         private void PlayObserversRpc(int emoteId)
@@ -98,12 +90,9 @@ namespace GuardVsMannequin.Player.Emotes
         }
     }
 
-    /// <summary>
-    /// 감정 표현을 막는 조건. (마네킹: 변신 중)
-    /// </summary>
+    /// <summary>감정 표현을 막는 조건.</summary>
     public interface IEmoteBlocker
     {
-        /// <summary>지금 감정 표현이 막혀 있는지 여부.</summary>
         bool IsEmoteBlocked { get; }
     }
 }

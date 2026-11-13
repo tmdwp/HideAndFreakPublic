@@ -8,17 +8,11 @@ using UnityEngine;
 
 namespace GuardVsMannequin.Player.Mannequin
 {
-    /// <summary>
-    /// 변신한 마네킹이 총에 맞으면 진짜 사물처럼 날아가게 한다("사물 모드"). 진짜 사물과 같은 물리·시점·동기화를 쓰도록 서버가 직접 시뮬레이션한다.
-    /// 1. 서버가 변신 외형과 같은 대리 물체(<see cref="KnockbackProxy"/>)를 놓고 충격을 준다. 이동 검증은 잠시 멈춘다.
-    /// 2. 날아가는 동안 소유자는 이동·변신이 잠기고(<see cref="IActionLock"/>), 모든 피어가 대리 물체 자세로 외형을 보여준다.
-    /// 3. 멈추면 서버가 그 자리로 아바타를 옮기고, 넘어진 모습은 움직이거나 돌기 전까지 유지한다.
-    /// 사람 모습·구울은 날아가지 않는다.
-    /// </summary>
+    /// <summary>변신한 마네킹이 총에 맞으면 진짜 사물처럼 날아가도록 서버가 직접 시뮬레이션한다.</summary>
     [RequireComponent(typeof(MannequinTransformer), typeof(PropDisguiseView))]
     public class DisguiseKnockback : NetworkBehaviour, IImpactReceiver, IActionLock
     {
-        // 멈춘 뒤 넘어진 모습을 풀 이동 거리(m, 수평)와 회전 각도(도). 원격 화면의 위치 보간이 따라올 시간도 준다(초).
+        // 멈춘 뒤 넘어진 모습을 푸는 이동 거리·회전 각도와 보간 대기 시간.
         private const float RestBreakDistance = 0.15f;
         private const float RestBreakAngle = 2f;
         private const float RestBreakGrace = 0.5f;
@@ -49,14 +43,14 @@ namespace GuardVsMannequin.Player.Mannequin
         private Pose? restRootPose;
         private float restStartTime;
 
-        /// <summary>변신한 사물과 같은 질량 규칙. (진짜 사물과 같은 세기로 날아가도록)</summary>
+        /// <summary>진짜 사물과 같은 세기로 날아가도록 같은 질량 규칙을 쓴다.</summary>
         public float ImpactMass => PropPhysicsRules.GetMass(disguiseView.DisguiseBounds);
 
-        /// <summary>날아가는 중에는 변신·해제를 할 수 없다.</summary>
+        /// <summary>날아가는 중에 변신·해제하면 외형과 대리 물체가 어긋나므로 잠근다.</summary>
         public bool IsActionLocked => isKnocked.Value;
 
         /// <summary>
-        /// 구성 요소를 캐시하고 상태 변경을 구독한다.
+        /// 매번 조회하지 않도록 구성 요소를 찾아 두고, 날아가기·변신 변화를 듣는다.
         /// </summary>
         private void Awake()
         {
@@ -70,7 +64,7 @@ namespace GuardVsMannequin.Player.Mannequin
         }
 
         /// <summary>
-        /// 구독을 해제하고 남은 대리 물체를 없앤다.
+        /// 대리 물체는 별도 오브젝트라 아바타와 함께 지워지지 않으므로 직접 없앤다.
         /// </summary>
         private void OnDestroy()
         {
@@ -79,9 +73,7 @@ namespace GuardVsMannequin.Player.Mannequin
             DestroyProxy();
         }
 
-        /// <summary>
-        /// 총알·날아온 사물의 충격을 받는다. 날아가는 중이면 충격을 더하고, 변신 중이면 사물 모드를 시작한다. (서버)
-        /// </summary>
+        /// <summary>연속으로 맞아도 자연스럽도록 이미 날아가는 중이면 충격만 더한다.</summary>
         public void ReceiveImpact(Vector3 point, Vector3 impulse)
         {
             if (!IsServerStarted)
@@ -104,14 +96,13 @@ namespace GuardVsMannequin.Player.Mannequin
             slowTime = 0f;
             nextSendTime = 0f;
 
+            // 물리로 날아가는 거리는 이동 속도 규칙을 따르지 않으므로 검증을 잠시 멈춘다.
             if (validator != null)
                 validator.SetSuspended(true);
             isKnocked.Value = true;
         }
 
-        /// <summary>
-        /// 서버: 날아가는 대리 물체의 멈춤·추락·중단 조건을 확인하고 자세를 보낸다.
-        /// </summary>
+        /// <summary>물리와 같은 주기로 확인하도록 FixedUpdate에서 하고, 대역폭을 아끼려고 정해진 비율로만 보낸다.</summary>
         private void FixedUpdate()
         {
             if (!IsServerStarted || proxy == null)
@@ -131,13 +122,14 @@ namespace GuardVsMannequin.Player.Mannequin
             Rigidbody body = proxy.Body;
             if (body.position.y < knockStartPose.position.y - GameTuning.PropKillDepth)
             {
-                // 맵 밖으로 떨어지면 맞은 자리로 되돌린다.
+                // 맵 밖으로 떨어지면 다시 돌아올 수 없으므로 맞은 자리로 되돌린다.
                 body.position = knockStartPose.position;
                 body.rotation = knockStartPose.rotation;
                 EndKnockback(place: true);
                 return;
             }
 
+            // 계속 아주 느리게 구르는 경우에도 끝나도록 최대 시간을 함께 둔다.
             slowTime = PropPhysicsRules.IsSlow(body) ? slowTime + Time.fixedDeltaTime : 0f;
             if (slowTime >= GameTuning.PropSettleTime || Time.time - knockStartTime >= GameTuning.DisguiseKnockbackMaxTime)
             {
@@ -152,20 +144,17 @@ namespace GuardVsMannequin.Player.Mannequin
             }
         }
 
-        /// <summary>
-        /// 모든 피어: 날아가는 동안 외형을 서버 물리 자세에 놓고(소유자는 카메라가 따라가도록 아바타도 옮김),
-        /// 멈춘 뒤에는 움직이거나 돌면 넘어진 모습을 푼다.
-        /// </summary>
+        /// <summary>날아가는 동안 외형을 물리 자세에 놓고, 멈춘 뒤 움직이면 넘어진 모습을 푼다.</summary>
         private void LateUpdate()
         {
             if (isKnocked.Value)
             {
-                if (!TryGetFlightPose(out Pose pose))
+                if (!TryGetFlightPose(out Pose flightPose))
                     return;
 
-                disguiseView.SetWorldPose(pose);
+                disguiseView.SetWorldPose(flightPose);
                 if (IsOwner && motor != null)
-                    motor.Teleport(GetFootPoint(pose), GetYaw(pose.rotation));
+                    motor.Teleport(GetFootPoint(flightPose), GetYaw(flightPose.rotation));
                 return;
             }
 
@@ -177,7 +166,7 @@ namespace GuardVsMannequin.Player.Mannequin
         }
 
         /// <summary>
-        /// 날아가는 동안 보여줄 자세. 서버(호스트)는 대리 물체를 그대로, 클라이언트는 받은 자세를 보간한다.
+        /// 호스트는 대리 물체를 직접 갖고 있으므로 그대로 쓰고, 클라이언트는 띄엄띄엄 받은 자세를 보간해 부드럽게 보여 준다.
         /// </summary>
         private bool TryGetFlightPose(out Pose pose)
         {
@@ -196,11 +185,12 @@ namespace GuardVsMannequin.Player.Mannequin
         }
 
         /// <summary>
-        /// 사물 모드를 끝낸다. <paramref name="place"/>면 멈춘 자리로 아바타를 옮기고 넘어진 모습을 모든 피어에 알린다. (서버)
+        /// <summary>이동 검증을 다시 켜고 멈춘 자리 바닥으로 아바타를 옮긴 뒤 넘어진 모습을 알린다.</summary>
+        /// 아바타는 세로로 서 있어야 해서, 기울어진 모습은 외형에만 남기고 아바타 회전은 좌우 방향만 쓴다. (서버)
         /// </summary>
         private void EndKnockback(bool place)
         {
-            Pose final = new Pose(proxy.Body.position, proxy.Body.rotation);
+            Pose finalPose = new Pose(proxy.Body.position, proxy.Body.rotation);
             DestroyProxy();
 
             if (validator != null)
@@ -208,23 +198,21 @@ namespace GuardVsMannequin.Player.Mannequin
 
             if (place)
             {
-                Vector3 rootPosition = FindGround(final);
-                Quaternion rootRotation = GetYaw(final.rotation);
-                Quaternion inverse = Quaternion.Inverse(rootRotation);
-                var local = new Pose(inverse * (final.position - rootPosition), inverse * final.rotation);
+                Vector3 rootPosition = FindGround(finalPose);
+                Quaternion rootRotation = GetYaw(finalPose.rotation);
+                Quaternion inverseRoot = Quaternion.Inverse(rootRotation);
+                var localPose = new Pose(inverseRoot * (finalPose.position - rootPosition), inverseRoot * finalPose.rotation);
 
                 if (validator != null)
                     validator.ServerTeleport(rootPosition, rootRotation);
                 else
                     transform.SetPositionAndRotation(rootPosition, rootRotation);
-                RestObserversRpc(rootPosition, rootRotation, local.position, local.rotation, transformer.IsDisguised);
+                RestObserversRpc(rootPosition, rootRotation, localPose.position, localPose.rotation, transformer.IsDisguised);
             }
             isKnocked.Value = false;
         }
 
-        /// <summary>
-        /// 날아가는 자세를 받는다. (클라이언트, 비신뢰 전송)
-        /// </summary>
+        /// <summary>날아가는 자세는 하나쯤 빠져도 다음 값이 오므로 비신뢰로 받는다.</summary>
         [ObserversRpc]
         private void PoseObserversRpc(uint tick, Vector3 position, Quaternion rotation, Channel channel = Channel.Unreliable)
         {
@@ -235,9 +223,7 @@ namespace GuardVsMannequin.Player.Mannequin
             poses.Add(serverTime, new Pose(position, rotation));
         }
 
-        /// <summary>
-        /// 멈춘 자리와 넘어진 모습을 받는다. (모든 피어) 변신이 풀린 채 끝났으면 기본 자세로 둔다.
-        /// </summary>
+        /// <summary>모든 화면에서 같은 넘어진 모습이 보이도록 멈춘 자리와 기울기를 받는다.</summary>
         [ObserversRpc]
         private void RestObserversRpc(Vector3 rootPosition, Quaternion rootRotation, Vector3 localPosition, Quaternion localRotation, bool keepTilt)
         {
@@ -254,26 +240,22 @@ namespace GuardVsMannequin.Player.Mannequin
             disguiseView.SetLocalPose(new Pose(localPosition, localRotation));
         }
 
-        /// <summary>
-        /// 날아가기 상태가 바뀌면 소유자의 이동을 멈추거나 다시 시작한다. (피어마다 한 번)
-        /// </summary>
-        private void OnKnockedChanged(bool prev, bool next, bool asServer)
+        /// <summary>입력·중력이 물리 자세와 어긋나지 않도록 날아가는 동안 소유자 이동을 멈춘다.</summary>
+        private void OnKnockedChanged(bool previousValue, bool nextValue, bool asServer)
         {
             if (asServer && IsClientInitialized)
                 return;
 
-            if (next)
+            if (nextValue)
             {
                 poses.Clear();
                 restRootPose = null;
             }
             if (IsOwner && motor != null)
-                motor.SetFrozen(next);
+                motor.SetFrozen(nextValue);
         }
 
-        /// <summary>
-        /// 변신이 바뀌면 넘어진 모습 기준을 지운다. 서버는 날아가는 중 변신이 풀리면(사냥 시간 진입) 그 자리에서 멈춘다.
-        /// </summary>
+        /// <summary>다른 외형의 넘어진 모습이 남지 않도록 기준을 지운다.</summary>
         private void OnDisguiseChanged(int propIndex)
         {
             restRootPose = null;
@@ -282,7 +264,7 @@ namespace GuardVsMannequin.Player.Mannequin
         }
 
         /// <summary>
-        /// 사물 모드를 시작할 수 있는지. (살아 있고, 변신해 외형이 보이며, 탐색·사냥 시간)
+        /// 외형이 보이지 않는 상태(사람 모습·구울)에서 날아가면 아무것도 보이지 않으므로, 변신해 외형이 보일 때만 허용한다.
         /// </summary>
         private bool CanKnock()
         {
@@ -290,7 +272,7 @@ namespace GuardVsMannequin.Player.Mannequin
         }
 
         /// <summary>
-        /// 날아갈 수 있는 단계인지. (탐색, 사냥 시간)
+        /// 준비·결과 단계에서 날아가면 판 밖에서 위치가 바뀌므로 탐색·사냥 시간에만 허용한다.
         /// </summary>
         private static bool IsPlayableState()
         {
@@ -299,17 +281,17 @@ namespace GuardVsMannequin.Player.Mannequin
         }
 
         /// <summary>
-        /// 아바타 자리가 멈춘 자리에서 벗어났는지. (수평 거리, 좌우 방향)
+        /// 위치 보간으로 생기는 작은 흔들림에는 넘어진 모습이 풀리지 않도록, 수평 거리와 좌우 방향이 기준을 넘었을 때만 참이다.
         /// </summary>
-        private bool HasLeftRestPose(Pose rest)
+        private bool HasLeftRestPose(Pose restPose)
         {
-            Vector3 offset = transform.position - rest.position;
+            Vector3 offset = transform.position - restPose.position;
             offset.y = 0f;
-            return offset.magnitude > RestBreakDistance || Quaternion.Angle(transform.rotation, rest.rotation) > RestBreakAngle;
+            return offset.magnitude > RestBreakDistance || Quaternion.Angle(transform.rotation, restPose.rotation) > RestBreakAngle;
         }
 
         /// <summary>
-        /// 외형 자세의 대략적인 발 위치. (경계 가운데에서 경계 높이의 절반 아래 — 날아가는 동안 카메라 기준)
+        /// 날아가는 동안 카메라가 사물 중심 근처를 따라가도록, 경계 가운데에서 경계 높이의 절반 아래를 발 위치로 본다.
         /// </summary>
         private Vector3 GetFootPoint(Pose pose)
         {
@@ -318,29 +300,25 @@ namespace GuardVsMannequin.Player.Mannequin
             return center - Vector3.up * bounds.extents.y;
         }
 
-        /// <summary>
-        /// 멈춘 외형 가운데 아래의 바닥 위치. 바닥이 없으면 대략적인 발 위치.
-        /// </summary>
+        /// <summary>아바타가 공중에 뜨지 않도록 멈춘 외형 아래 바닥을 찾는다.</summary>
         private Vector3 FindGround(Pose pose)
         {
             Vector3 center = pose.position + pose.rotation * disguiseView.DisguiseBounds.center;
             int count = Physics.RaycastNonAlloc(center, Vector3.down, groundHits, GroundProbeDistance, Physics.DefaultRaycastLayers, QueryTriggerInteraction.Ignore);
 
-            float nearest = float.MaxValue;
-            Vector3 ground = GetFootPoint(pose);
+            float nearestDistance = float.MaxValue;
+            Vector3 groundPoint = GetFootPoint(pose);
             for (int i = 0; i < count; i++)
             {
-                if (groundHits[i].transform.IsChildOf(transform) || groundHits[i].distance >= nearest)
+                if (groundHits[i].transform.IsChildOf(transform) || groundHits[i].distance >= nearestDistance)
                     continue;
-                nearest = groundHits[i].distance;
-                ground = groundHits[i].point;
+                nearestDistance = groundHits[i].distance;
+                groundPoint = groundHits[i].point;
             }
-            return ground;
+            return groundPoint;
         }
 
-        /// <summary>
-        /// 회전에서 좌우 방향만 남긴다. (아바타는 세로로 서 있어야 함)
-        /// </summary>
+        /// <summary>아바타는 세로로 서 있어야 하므로 좌우 방향만 남긴다.</summary>
         private Quaternion GetYaw(Quaternion rotation)
         {
             Vector3 forward = Vector3.ProjectOnPlane(rotation * Vector3.forward, Vector3.up);
@@ -350,7 +328,7 @@ namespace GuardVsMannequin.Player.Mannequin
         }
 
         /// <summary>
-        /// 대리 물체를 없앤다.
+        /// 여러 곳에서 끝낼 수 있어서 null 검사와 정리를 한곳에 모은다.
         /// </summary>
         private void DestroyProxy()
         {

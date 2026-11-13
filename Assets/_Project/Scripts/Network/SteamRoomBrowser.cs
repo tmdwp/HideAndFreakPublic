@@ -6,10 +6,7 @@ using UnityEngine;
 
 namespace GuardVsMannequin.Network
 {
-    /// <summary>
-    /// Steam 로비 검색으로 공개방을 찾는다. 내 로비 관리는 <see cref="SteamLobbyService"/>가 맡는다(SRP).
-    /// 로비 데이터는 주인이 마음대로 적을 수 있으므로, 이름을 정리하고 숫자 범위를 확인한 뒤 목록에 넣는다.
-    /// </summary>
+    /// <summary>로비 데이터가 조작될 수 있어 값을 검사하며 Steam 로비 검색으로 공개방을 찾는다.</summary>
     public sealed class SteamRoomBrowser : IRoomBrowser
     {
         // Steam 요청을 남발하지 않게 하는 새로고침 간격(초)
@@ -35,8 +32,9 @@ namespace GuardVsMannequin.Network
         /// <inheritdoc />
         public event Action<string> Failed;
 
-        /// <param name="getCurrentLobbyId">내가 들어가 있는 로비 ID를 구하는 함수. (목록에서 뺀다)</param>
-        /// <param name="hasMap">맵 ID로 내 PC에 그 맵이 있는지 확인하는 함수.</param>
+        /// <summary>로비 서비스와 모드 서비스에 직접 의존하지 않도록 필요한 조회만 함수로 받는다.</summary>
+        /// <param name="getCurrentLobbyId">내 방이 목록에 보이지 않도록 지금 로비 ID를 구한다.</param>
+        /// <param name="hasMap">맵 ID로 내 PC에 그 맵이 있는지 확인한다.</param>
         public SteamRoomBrowser(Func<ulong> getCurrentLobbyId, Func<string, bool> hasMap)
         {
             this.getCurrentLobbyId = getCurrentLobbyId;
@@ -58,19 +56,19 @@ namespace GuardVsMannequin.Network
             IsRefreshing = true;
             nextRefreshTime = Time.unscaledTime + RefreshInterval;
 
+            // 다른 게임·다른 버전·판 중인 방·가득 찬 방은 들어가도 거부되므로 Steam 쪽에서 먼저 거른다.
             SteamMatchmaking.AddRequestLobbyListStringFilter(SteamLobbyKeys.Game, SteamLobbyKeys.GameValue, ELobbyComparison.k_ELobbyComparisonEqual);
             SteamMatchmaking.AddRequestLobbyListStringFilter(SteamLobbyKeys.Version, GameVersion.Current, ELobbyComparison.k_ELobbyComparisonEqual);
+            SteamMatchmaking.AddRequestLobbyListStringFilter(SteamLobbyKeys.State, SteamLobbyKeys.StateRoom, ELobbyComparison.k_ELobbyComparisonEqual);
             SteamMatchmaking.AddRequestLobbyListFilterSlotsAvailable(1);
-            // 초기 사용자 수가 적으므로 전 세계에서 찾는다. (사용자가 늘면 기본 거리로)
+            // 초기 사용자 수가 적으므로 전 세계에서 찾는다.
             SteamMatchmaking.AddRequestLobbyListDistanceFilter(ELobbyDistanceFilter.k_ELobbyDistanceFilterWorldwide);
             SteamMatchmaking.AddRequestLobbyListResultCountFilter(MaxResults);
             matchListResult.Set(SteamMatchmaking.RequestLobbyList());
             return true;
         }
 
-        /// <summary>
-        /// 검색 결과를 목록으로 만든다.
-        /// </summary>
+        /// <summary>검색 결과는 콜백으로 오므로 여기서 목록을 만들고 내가 있는 방은 뺀다.</summary>
         private void OnMatchList(LobbyMatchList_t result, bool ioFailure)
         {
             IsRefreshing = false;
@@ -92,9 +90,7 @@ namespace GuardVsMannequin.Network
             ListUpdated?.Invoke();
         }
 
-        /// <summary>
-        /// 로비 데이터를 읽어 방 하나를 만든다. 우리 게임의 로비가 아니면 false.
-        /// </summary>
+        /// <summary>다른 게임 로비가 섞일 수 있어 게임 표시를 한 번 더 보고, 조작될 수 있는 값은 검사해 넣는다.</summary>
         private bool TryReadListing(CSteamID lobby, out RoomListing listing)
         {
             listing = default;
@@ -119,7 +115,7 @@ namespace GuardVsMannequin.Network
         }
 
         /// <summary>
-        /// 표시할 최대 인원. 적힌 값이 게임 범위를 벗어나면 로비 인원 상한을 쓴다.
+        /// 적힌 값은 조작될 수 있으므로 게임 범위를 벗어나면 Steam이 관리하는 로비 인원 상한을 대신 쓴다.
         /// </summary>
         private static int ReadMaxPlayers(CSteamID lobby, int memberLimit)
         {
@@ -128,17 +124,15 @@ namespace GuardVsMannequin.Network
             return isValid ? maxPlayers : Mathf.Clamp(memberLimit, GameConstants.MinPlayers, GameConstants.MaxPlayers);
         }
 
-        /// <summary>
-        /// 호스트의 핑 위치로 예상 핑을 구한다. 모르면 <see cref="RoomListing.UnknownPing"/>.
-        /// </summary>
+        /// <summary>접속하지 않고도 핑을 보여 주도록 호스트의 핑 위치로 예상 핑을 구한다.</summary>
         private static int EstimatePing(CSteamID lobby)
         {
             string location = SteamMatchmaking.GetLobbyData(lobby, SteamLobbyKeys.PingLocation);
-            if (string.IsNullOrEmpty(location) || !SteamNetworkingUtils.ParsePingLocationString(location, out SteamNetworkPingLocation_t remote))
+            if (string.IsNullOrEmpty(location) || !SteamNetworkingUtils.ParsePingLocationString(location, out SteamNetworkPingLocation_t remoteLocation))
                 return RoomListing.UnknownPing;
 
-            int ping = SteamNetworkingUtils.EstimatePingTimeFromLocalHost(ref remote);
-            return ping >= 0 ? ping : RoomListing.UnknownPing;
+            int pingMs = SteamNetworkingUtils.EstimatePingTimeFromLocalHost(ref remoteLocation);
+            return pingMs >= 0 ? pingMs : RoomListing.UnknownPing;
         }
     }
 }

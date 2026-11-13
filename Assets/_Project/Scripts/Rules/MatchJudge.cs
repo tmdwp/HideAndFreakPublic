@@ -7,10 +7,10 @@ namespace GuardVsMannequin.Rules
     /// </summary>
     public readonly struct MatchVerdict
     {
-        /// <summary>판정 없음. (현재 단계 계속)</summary>
+        /// <summary>현재 단계를 계속하는 판정.</summary>
         public static readonly MatchVerdict Continue = new(null, MatchWinner.None, WinReason.None);
 
-        /// <summary>바꿀 다음 상태. null이면 그대로.</summary>
+        /// <summary>바꿀 다음 상태(null이면 그대로).</summary>
         public readonly GameState? NextState;
 
         /// <summary>판이 끝났을 때의 승리 진영.</summary>
@@ -22,6 +22,7 @@ namespace GuardVsMannequin.Rules
         /// <summary>이 판정으로 판이 끝나는지 여부.</summary>
         public bool EndsMatch => NextState == GameState.Ended;
 
+        /// <summary>승자가 있는데 판이 계속되는 것처럼 앞뒤가 맞지 않는 판정이 생기지 않도록 생성자를 숨기고 정적 팩토리로만 만든다.</summary>
         private MatchVerdict(GameState? nextState, MatchWinner winner, WinReason reason)
         {
             NextState = nextState;
@@ -29,27 +30,20 @@ namespace GuardVsMannequin.Rules
             Reason = reason;
         }
 
-        /// <summary>판을 끝내는 판정.</summary>
+        /// <summary>판이 끝날 때는 결과 화면에 승자와 사유가 꼭 필요하므로 둘을 함께 받는다.</summary>
         public static MatchVerdict End(MatchWinner winner, WinReason reason) => new(GameState.Ended, winner, reason);
 
-        /// <summary>다른 단계로 넘어가는 판정.</summary>
+        /// <summary>단계만 바뀌고 판은 이어지므로 승자·사유 없이 다음 상태만 담는다.</summary>
         public static MatchVerdict MoveTo(GameState state) => new(state, MatchWinner.None, WinReason.None);
     }
 
-    /// <summary>
-    /// 가드 vs 마네킹의 승패 조건과 사냥 시간 진입 조건을 판정한다. 값만 받아 결과를 반환하며 아무것도 바꾸지 않는다.
-    /// - 가드 승리: 마네킹 전멸 / 제한 시간 내 목표 미달성 / 사냥 시간 종료까지 가드 생존
-    /// - 마네킹 승리: 가드 전멸 (탐색 단계에서는 가드가 모두 나간 경우)
-    /// - 사냥 시간 진입: 목표 달성, 또는 목표 0회일 때 탐색 시작 후 보호 시간이 지남
-    /// </summary>
+    /// <summary>서버와 테스트가 같은 규칙을 쓰도록 승패와 사냥 시간 진입 조건을 값만으로 판정한다.</summary>
     public static class MatchJudge
     {
-        /// <summary>
-        /// 탐색 단계를 판정한다.
-        /// </summary>
+        /// <summary>같은 틱에 목표 달성과 겹쳐도 가드 승리가 우선이도록 마네킹 전멸부터 판정한다.</summary>
         /// <param name="aliveGuards">살아 있는 가드 수.</param>
         /// <param name="aliveMannequins">살아 있는 마네킹 수.</param>
-        /// <param name="huntReady">사냥 시간에 들어갈 조건(목표 달성 또는 보호 시간 종료)을 채웠는지.</param>
+        /// <param name="huntReady">사냥 시간에 들어갈 조건을 채웠는지.</param>
         /// <param name="remainingTime">탐색 단계 남은 시간(초).</param>
         public static MatchVerdict JudgePlaying(int aliveGuards, int aliveMannequins, bool huntReady, float remainingTime)
         {
@@ -69,9 +63,7 @@ namespace GuardVsMannequin.Rules
             return MatchVerdict.Continue;
         }
 
-        /// <summary>
-        /// 사냥 시간을 판정한다.
-        /// </summary>
+        /// <summary>사냥 시간은 마네킹이 공격하는 단계라 가드 전멸부터 판정한다.</summary>
         /// <param name="aliveGuards">살아 있는 가드 수.</param>
         /// <param name="aliveMannequins">살아 있는 마네킹 수.</param>
         /// <param name="remainingTime">사냥 시간 남은 시간(초).</param>
@@ -89,9 +81,7 @@ namespace GuardVsMannequin.Rules
             return MatchVerdict.Continue;
         }
 
-        /// <summary>
-        /// 사냥 시간 진입 조건: 목표가 있으면 달성 여부, 목표가 0회면 보호 시간 종료 여부.
-        /// </summary>
+        /// <summary>목표가 0회인 방은 목표로 사냥 시간에 들어갈 수 없으므로 보호 시간 종료를 대신 조건으로 쓴다.</summary>
         public static bool IsHuntReady(GameSettings settings, float remainingTime, bool objectiveComplete)
         {
             if (!HuntTiming.IsTimedHunt(settings))

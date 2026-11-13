@@ -22,17 +22,13 @@ using UnityEngine.UI;
 
 namespace GuardVsMannequin.Editor
 {
-    /// <summary>
-    /// 로비 씬(메인 메뉴 + 네트워크 루트)과 룸 씬(대기방)을 만든다.
-    /// </summary>
+    /// <summary>로비 씬과 룸 씬을 코드로 만들어 항상 같은 구성을 보장한다.</summary>
     public static class MenuSceneBuilder
     {
         private const string FishySteamworksTypeName = "FishySteamworks.FishySteamworks";
         private const string SceneConditionPath = "Assets/FishNet/Runtime/Observing/Conditions/ScriptableObjects/SceneCondition.asset";
 
-        /// <summary>
-        /// 로비 씬을 만든다. 씬이 바뀌어도 유지되는 네트워크 루트(NetworkManager와 세션 서비스)를 포함한다.
-        /// </summary>
+        /// <summary>로비로 돌아올 때 두 벌이 되지 않도록 씬 전환에도 유지되는 네트워크 루트를 첫 씬에 둔다.</summary>
         /// <param name="scenePath">저장할 경로.</param>
         /// <param name="roomScenePath">서버 시작 시 불러올 룸 씬 경로.</param>
         /// <param name="spawnablePrefabs">스폰 가능한 프리팹 목록.</param>
@@ -45,16 +41,14 @@ namespace GuardVsMannequin.Editor
             EditorUiFactory.CreateEventSystem();
             CreateLobbyUi();
 
-            // 배경 연출(어두운 방에서 가드가 구울에게 쫓김). 메뉴 카메라를 방 안으로 옮긴다.
+            // 배경 연출이 보이도록 메뉴 카메라를 방 안으로 옮긴다.
             LobbyBackdropBuilder.AddToScene(scene);
 
             SceneLightingSetup.Apply(scene);
             EditorSceneManager.SaveScene(scene, scenePath);
         }
 
-        /// <summary>
-        /// 룸 씬을 만든다. 서버에서 방 상태를 스폰하는 부트스트랩과 룸 UI를 포함한다.
-        /// </summary>
+        /// <summary>방 상태는 네트워크 오브젝트라 씬에 미리 둘 수 없어 서버가 스폰하도록 부트스트랩을 둔다.</summary>
         public static void BuildRoomScene(string scenePath, NetworkObject roomStatePrefab)
         {
             Scene scene = EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Single);
@@ -73,10 +67,7 @@ namespace GuardVsMannequin.Editor
 
         #region 네트워크 루트
 
-        /// <summary>
-        /// NetworkManager + Multipass(Tugboat, FishySteamworks) + DefaultScene + Steam/세션 서비스를 가진 루트를 만든다.
-        /// NetworkManager가 DontDestroyOnLoad로 만들기 때문에 같은 오브젝트의 서비스도 씬 전환 후 유지된다.
-        /// </summary>
+        /// <summary>씬 전환 후에도 서비스가 유지되도록 NetworkManager와 같은 오브젝트에 트랜스포트·세션 서비스를 둔다.</summary>
         private static void CreateNetworkRoot(string lobbyScenePath, string roomScenePath, DefaultPrefabObjects spawnablePrefabs)
         {
             var root = new GameObject("NetworkRoot");
@@ -85,10 +76,7 @@ namespace GuardVsMannequin.Editor
             if (spawnablePrefabs != null)
                 networkManager.SpawnablePrefabs = spawnablePrefabs;
 
-            // 씬 오브젝트는 그 씬을 불러온 클라이언트에게만 보이게 한다.
-            // 없으면 호스트가 게임 씬을 먼저 불러온 순간 로딩 중인 게스트에게 스폰 정보를 보내
-            // 게스트가 GameSystems를 찾지 못한다(SceneId not found → HUD/문 동작 안 함).
-            // 전역 오브젝트(RoomState)는 FishNet이 조건에서 자동으로 제외한다.
+            // 로딩 중인 게스트가 GameSystems 스폰 정보를 먼저 받아 놓치지 않도록 씬 오브젝트는 그 씬을 불러온 클라이언트에게만 보이게 한다.
             ObserverManager observerManager = root.AddComponent<ObserverManager>();
             TestEnvironmentSetupTool.SetArray(observerManager, "_defaultConditions",
                 new UnityEngine.Object[] { AssetDatabase.LoadAssetAtPath<ObserverCondition>(SceneConditionPath) });
@@ -121,10 +109,7 @@ namespace GuardVsMannequin.Editor
             TestEnvironmentSetupTool.SetField(session, "steamLobby", steamLobby);
         }
 
-        /// <summary>
-        /// FishySteamworks 트랜스포트를 추가하고 P2P(SteamID 접속)를 켠다.
-        /// FishySteamworks는 Assembly-CSharp에 있어 타입 이름으로 찾는다. 없으면 경고 후 null.
-        /// </summary>
+        /// <summary>FishySteamworks는 Assembly-CSharp에 있어 타입 이름으로 찾아 P2P로 붙인다.</summary>
         private static Transport AddFishySteamworks(GameObject root)
         {
             Type steamType = AppDomain.CurrentDomain.GetAssemblies()
@@ -149,7 +134,7 @@ namespace GuardVsMannequin.Editor
         }
 
         /// <summary>
-        /// 메뉴 화면용 카메라를 만든다.
+        /// 카메라가 없으면 Overlay가 아닌 화면이 검게 나오고 배경 연출도 보이지 않으므로 메뉴용 카메라를 둔다.
         /// </summary>
         private static void CreateMenuCamera()
         {
@@ -165,10 +150,7 @@ namespace GuardVsMannequin.Editor
 
         #region 로비 UI
 
-        /// <summary>
-        /// 로비 캔버스에 없는 영역(왼쪽 아래 버전 표시, "모드" 화면)만 만들어 붙인다. 이미 있는 프리팹을 고치지 않고 더할 때도 쓴다.
-        /// 없어진 입장 거부 경고 창이 남아 있으면 지운다. (모드 확인이 게임 시작 때로 옮겨짐)
-        /// </summary>
+        /// <summary>기존 프리팹을 고치지 않고 로비 캔버스에 빠진 영역만 더하고 없어진 경고 창은 지운다.</summary>
         /// <returns>새로 추가한 영역 수.</returns>
         public static int AddMissingLobbySections(GameObject canvas)
         {
@@ -187,6 +169,11 @@ namespace GuardVsMannequin.Editor
                 added++;
             }
             added += RemoveOldModMismatchPopup(canvas);
+            if (canvas.GetComponent<LobbyView>() != null && canvas.GetComponent<LobbyRejoinView>() == null)
+            {
+                CreateRejoinButtons(canvas);
+                added++;
+            }
             if (canvas.GetComponent<LobbyCreateMenu>() != null && AddSteamRoomOptions(canvas))
                 added++;
             if (canvas.GetComponent<LobbyJoinMenu>() != null && !HasLobbyScreen(canvas.GetComponent<LobbyView>(), LobbyScreen.Browse))
@@ -202,10 +189,7 @@ namespace GuardVsMannequin.Editor
             return added;
         }
 
-        /// <summary>
-        /// "직접 방 만들기" 아래 화면(일반 방 만들기 / 테스트 방 만들기)을 만들어 로비 화면 목록에 등록한다.
-        /// 방 만들기 화면의 "직접 방 만들기" 버튼이 이 화면을 연다.
-        /// </summary>
+        /// <summary>실수로 테스트 방을 열지 않도록 일반 방과 테스트 방 만들기를 따로 나눈 화면을 만든다.</summary>
         private static void CreateDirectCreateScreen(GameObject canvas)
         {
             RectTransform screen = CreateScreen(canvas.transform, "DirectCreatePanel", "lobby.create.direct");
@@ -225,7 +209,7 @@ namespace GuardVsMannequin.Editor
         }
 
         /// <summary>
-        /// 로비 화면 목록에 그 화면이 패널과 함께 등록되어 있는지 확인한다.
+        /// 보강을 여러 번 실행해도 화면이 두 번 생기지 않도록 이미 패널과 함께 등록되어 있는지 확인한다.
         /// </summary>
         private static bool HasLobbyScreen(LobbyView view, LobbyScreen screen)
         {
@@ -243,7 +227,7 @@ namespace GuardVsMannequin.Editor
         }
 
         /// <summary>
-        /// 로비 화면 목록과 뒤로 버튼 목록에 화면 하나를 더한다.
+        /// 화면 목록·뒤로 버튼 목록은 직렬화 배열이라 코드로 더하려면 SerializedObject로 늘려야 하므로 한곳에서 처리한다.
         /// </summary>
         private static void RegisterLobbyScreen(LobbyView view, LobbyScreen screen, GameObject panel, LobbyScreen parent, Button backButton)
         {
@@ -263,7 +247,7 @@ namespace GuardVsMannequin.Editor
         }
 
         /// <summary>
-        /// 설정·크레딧 패널이 있으면 그 앞에 둔다. (그 패널들이 화면 위에 그려지도록)
+        /// 나중에 더한 화면이 설정·크레딧 패널 위에 그려지면 패널을 가리므로 그 앞에 끼워 넣는다.
         /// </summary>
         private static void PlaceBeforeOverlayPanels(GameObject canvas, Transform screen)
         {
@@ -272,10 +256,97 @@ namespace GuardVsMannequin.Editor
                 screen.SetSiblingIndex(settings.transform.GetSiblingIndex());
         }
 
-        /// <summary>
-        /// 스팀 방 만들기 화면에 방 이름 입력칸과 공개방 토글을 더한다. 기본 위치에 있는 기존 요소는 자리를 만들려고 옮기고, 사용자가 옮긴 요소는 그대로 둔다.
-        /// </summary>
-        /// <returns>추가했는지 여부. 이미 있으면 false.</returns>
+        /// <summary>끊긴 사람이 다시 참가할 방법을 찾기 쉽도록 로비 아래쪽에 다시 참가·포기 버튼을 둔다.</summary>
+        private static void CreateRejoinButtons(GameObject canvas)
+        {
+            RectTransform root = EditorUiFactory.CreateRect(canvas.transform, "RejoinButtons");
+            EditorUiFactory.Place(root, new Vector2(0.5f, 0f), new Vector2(0f, 185f), new Vector2(640f, 56f));
+
+            Button rejoin = EditorUiFactory.CreateButton(root, "RejoinButton", string.Empty, EditorUiFactory.AccentColor, out Text rejoinLabel);
+            EditorUiFactory.Place(rejoin, Center, new Vector2(-90f, 0f), new Vector2(440f, 56f));
+            Button discard = EditorUiFactory.CreateButton(root, "DiscardButton", "lobby.rejoin.discard", EditorUiFactory.ButtonColor);
+            EditorUiFactory.Place(discard, Center, new Vector2(230f, 0f), new Vector2(180f, 56f));
+
+            LobbyRejoinView view = canvas.AddComponent<LobbyRejoinView>();
+            TestEnvironmentSetupTool.SetField(view, "root", root.gameObject);
+            TestEnvironmentSetupTool.SetField(view, "rejoinButton", rejoin);
+            TestEnvironmentSetupTool.SetField(view, "rejoinLabel", rejoinLabel);
+            TestEnvironmentSetupTool.SetField(view, "discardButton", discard);
+            root.gameObject.SetActive(false);
+        }
+
+        /// <summary>판 중에도 문제 있는 플레이어를 내보낼 수 있도록 ESC 메뉴와 방 코드 줄에 플레이어 관리 창을 더한다.</summary>
+        /// <returns>추가했으면 1, 대상이 없거나 이미 있으면 0.</returns>
+        public static int AddMissingPlayerPanel(GameObject canvas)
+        {
+            PauseMenuView pauseMenu = canvas.GetComponent<PauseMenuView>();
+            if (pauseMenu == null || canvas.GetComponent<HostPlayerPanel>() != null)
+                return 0;
+
+            var openButtons = new List<UnityEngine.Object>();
+            if (new SerializedObject(pauseMenu).FindProperty("leaveButton").objectReferenceValue is Button leaveButton)
+            {
+                Button pauseOpen = EditorUiFactory.CreateButton(leaveButton.transform.parent, "PlayersButton", "room.players.open", EditorUiFactory.ButtonColor);
+                EditorUiFactory.SetHeight(pauseOpen, 60f);
+                pauseOpen.transform.SetSiblingIndex(leaveButton.transform.GetSiblingIndex());
+                openButtons.Add(pauseOpen);
+            }
+            RoomCodeView roomCode = canvas.GetComponent<RoomCodeView>();
+            if (roomCode != null && new SerializedObject(roomCode).FindProperty("inviteButton").objectReferenceValue is Button inviteButton)
+            {
+                Button roomOpen = EditorUiFactory.CreateButton(inviteButton.transform.parent, "PlayersButton", "room.players.open", EditorUiFactory.ButtonColor);
+                EditorUiFactory.SetFlexibleWidth(roomOpen);
+                openButtons.Add(roomOpen);
+            }
+
+            RectTransform dim = EditorUiFactory.CreatePanel(canvas.transform, "PlayerPanel", Vector2.zero, Vector2.one, new Color(0f, 0f, 0f, 0.65f));
+            RectTransform box = EditorUiFactory.CreatePanel(dim, "Box", new Vector2(0.33f, 0.2f), new Vector2(0.67f, 0.8f), EditorUiFactory.PanelColor);
+            EditorUiFactory.AddVerticalLayout(box, 12f, 28);
+            Text title = EditorUiFactory.CreateText(box, "Title", "room.players.title", 32, TextAnchor.MiddleCenter, EditorUiFactory.AccentColor);
+            title.fontStyle = FontStyle.Bold;
+            EditorUiFactory.SetHeight(title, 48f);
+            Text hint = EditorUiFactory.CreateText(box, "Hint", "room.players.hint", 20, TextAnchor.MiddleCenter, HintColor);
+            EditorUiFactory.SetHeight(hint, 56f);
+
+            RectTransform listContent = EditorUiFactory.CreateScrollList(box, "PlayerList", 6f);
+            EditorUiFactory.FillRemainingHeight(listContent, 220f);
+            Button rowTemplate = EditorUiFactory.CreateButton(listContent, "PlayerRowTemplate", string.Empty, EditorUiFactory.ButtonColor, out Text rowLabel);
+            rowLabel.fontSize = 22;
+            EditorUiFactory.SetHeight(rowTemplate, 56f);
+            rowTemplate.gameObject.SetActive(false);
+
+            Button close = EditorUiFactory.CreateButton(box, "CloseButton", "room.players.close", EditorUiFactory.AccentColor);
+            EditorUiFactory.SetHeight(close, 56f);
+
+            RectTransform confirm = EditorUiFactory.CreatePanel(dim, "KickConfirm", new Vector2(0.36f, 0.38f), new Vector2(0.64f, 0.62f), EditorUiFactory.PanelColor);
+            EditorUiFactory.AddVerticalLayout(confirm, 12f, 24);
+            Text confirmText = EditorUiFactory.CreateText(confirm, "Text", string.Empty, 24, TextAnchor.MiddleCenter, EditorUiFactory.TextColor);
+            EditorUiFactory.SetHeight(confirmText, 110f);
+            RectTransform confirmButtons = EditorUiFactory.CreateRow(confirm, "Buttons", 52f, 12f);
+            Button no = EditorUiFactory.CreateButton(confirmButtons, "NoButton", "room.players.confirmNo", EditorUiFactory.ButtonColor);
+            Button yes = EditorUiFactory.CreateButton(confirmButtons, "YesButton", "room.players.confirmYes", EditorUiFactory.AccentColor);
+            EditorUiFactory.SetFlexibleWidth(no);
+            EditorUiFactory.SetFlexibleWidth(yes);
+            confirm.gameObject.SetActive(false);
+
+            dim.SetAsLastSibling();
+            dim.gameObject.SetActive(false);
+
+            HostPlayerPanel panel = canvas.AddComponent<HostPlayerPanel>();
+            TestEnvironmentSetupTool.SetArray(panel, "openButtons", openButtons.ToArray());
+            TestEnvironmentSetupTool.SetField(panel, "panel", dim.gameObject);
+            TestEnvironmentSetupTool.SetField(panel, "listContent", listContent);
+            TestEnvironmentSetupTool.SetField(panel, "rowTemplate", rowTemplate);
+            TestEnvironmentSetupTool.SetField(panel, "closeButton", close);
+            TestEnvironmentSetupTool.SetField(panel, "confirmPanel", confirm.gameObject);
+            TestEnvironmentSetupTool.SetField(panel, "confirmText", confirmText);
+            TestEnvironmentSetupTool.SetField(panel, "confirmYesButton", yes);
+            TestEnvironmentSetupTool.SetField(panel, "confirmNoButton", no);
+            return 1;
+        }
+
+        /// <summary>사용자가 옮긴 요소는 그대로 두고 스팀 방 만들기 화면에 방 이름 입력칸과 공개방 토글을 더한다.</summary>
+        /// <returns>추가했는지 여부(이미 있으면 false).</returns>
         private static bool AddSteamRoomOptions(GameObject canvas)
         {
             LobbyCreateMenu menu = canvas.GetComponent<LobbyCreateMenu>();
@@ -298,7 +369,7 @@ namespace GuardVsMannequin.Editor
         }
 
         /// <summary>
-        /// 요소가 기본 세로 위치에 그대로 있을 때만 옮긴다.
+        /// 사용자가 직접 옮긴 배치를 덮어쓰지 않도록, 요소가 기본 세로 위치에 그대로 있을 때만 옮긴다.
         /// </summary>
         private static void MoveIfAtDefault(Transform target, float defaultY, float newY)
         {
@@ -306,9 +377,7 @@ namespace GuardVsMannequin.Editor
                 rect.anchoredPosition = new Vector2(rect.anchoredPosition.x, newY);
         }
 
-        /// <summary>
-        /// 공개방 찾기 화면(필터, 방 목록, 새로고침, 빠른 참가, 뒤로)과 참가 화면의 "공개방 찾기" 버튼을 만들어 로비 화면 목록에 등록한다.
-        /// </summary>
+        /// <summary>방 코드를 모르는 사람도 함께 할 사람을 찾도록 공개방 찾기 화면을 만든다.</summary>
         private static void CreateBrowseScreen(GameObject canvas)
         {
             LobbyJoinMenu joinMenu = canvas.GetComponent<LobbyJoinMenu>();
@@ -362,9 +431,9 @@ namespace GuardVsMannequin.Editor
         }
 
         /// <summary>
-        /// 없어진 입장 거부 경고 창의 오브젝트와, 스크립트가 지워져 빈 컴포넌트를 없앤다.
+        /// 스크립트가 지워진 컴포넌트가 남으면 "Missing Script" 경고가 계속 나므로, 없어진 입장 거부 경고 창의 오브젝트와 빈 컴포넌트를 없앤다.
         /// </summary>
-        /// <returns>지운 것이 있으면 1, 없으면 0. (프리팹을 저장할지 정하는 데 쓴다)</returns>
+        /// <returns>프리팹을 저장할지 정하도록 지운 것이 있으면 1, 없으면 0.</returns>
         private static int RemoveOldModMismatchPopup(GameObject canvas)
         {
             int removed = GameObjectUtility.RemoveMonoBehavioursWithMissingScript(canvas);
@@ -378,7 +447,7 @@ namespace GuardVsMannequin.Editor
         }
 
         /// <summary>
-        /// 룸 캔버스에 없는 영역(모드 설치 안내 창)만 만들어 붙인다. 이미 있는 프리팹을 고치지 않고 더할 때도 쓴다.
+        /// 손으로 다듬은 룸 프리팹을 초기화하지 않고 새 기능을 쓸 수 있도록 없는 영역(모드 설치 안내 창)만 만들어 붙인다.
         /// </summary>
         /// <returns>새로 추가한 영역 수.</returns>
         public static int AddMissingRoomSections(GameObject canvas)
@@ -390,10 +459,7 @@ namespace GuardVsMannequin.Editor
             return 1;
         }
 
-        /// <summary>
-        /// 고른 맵의 모드가 없을 때의 설치 안내(위쪽 안내 버튼, 모드 목록 창, 링크 열기 확인 창)를 만든다.
-        /// 다른 화면 위에 그려지도록 캔버스 맨 뒤에 둔다.
-        /// </summary>
+        /// <summary>모드가 없는 게스트가 직접 설치할 수 있도록 다른 화면 위에 설치 안내 창을 만든다.</summary>
         private static void CreateRoomModRequiredPopup(GameObject canvas)
         {
             Button openButton = EditorUiFactory.CreateButton(canvas.transform, "ModRequiredButton", "room.modRequired.openButton", EditorUiFactory.AccentColor);
@@ -457,10 +523,7 @@ namespace GuardVsMannequin.Editor
             TestEnvironmentSetupTool.SetField(popup, "confirmCancelButton", confirmCancel);
         }
 
-        /// <summary>
-        /// "모드" 화면(모드 목록, 다시 읽기, 모드 폴더 열기, 뒤로)과 메인 화면 오른쪽 위의 "모드" 버튼을 만들어 로비 화면 목록에 등록한다.
-        /// 설정·크레딧 패널보다 아래에 그려지도록 그 앞에 끼워 넣는다.
-        /// </summary>
+        /// <summary>게임을 끄지 않고 모드를 켜고 끄거나 다시 읽을 수 있도록 "모드" 화면을 만든다.</summary>
         private static void CreateModsScreen(GameObject canvas)
         {
             LobbyView view = canvas.GetComponent<LobbyView>();
@@ -513,7 +576,7 @@ namespace GuardVsMannequin.Editor
         }
 
         /// <summary>
-        /// 로비 화면 프리팹(없으면 기본 모양으로 만들어 저장)을 씬에 넣는다. 직접 고친 프리팹은 그대로 쓴다.
+        /// 씬을 다시 만들어도 손으로 다듬은 로비 UI가 사라지지 않도록 프리팹이 있으면 그대로 쓰고, 없을 때만 기본 모양으로 만들어 저장한 뒤 넣는다.
         /// </summary>
         private static void CreateLobbyUi()
         {
@@ -521,7 +584,7 @@ namespace GuardVsMannequin.Editor
             UiPrefabLibrary.Instantiate(prefab);
         }
 
-        // 로비 화면 배치 (1920×1080 기준, 화면 가운데 기준 픽셀). Layout Group을 쓰지 않아 프리팹에서 자유롭게 옮길 수 있다.
+        // 프리팹에서 자유롭게 옮길 수 있도록 Layout Group 없이 쓰는 로비 화면 배치(1920×1080 기준).
         private static readonly Vector2 Center = new Vector2(0.5f, 0.5f);
         private static readonly Vector2 ScreenPosition = new Vector2(0f, -40f);
         private static readonly Vector2 ScreenSize = new Vector2(720f, 560f);
@@ -529,13 +592,7 @@ namespace GuardVsMannequin.Editor
         private static readonly Vector2 InputSize = new Vector2(480f, 64f);
         private static readonly Color HintColor = new Color(0.7f, 0.7f, 0.7f);
 
-        /// <summary>
-        /// 로비 화면의 기본 모양을 만든다. 화면(패널)을 겹쳐 두고 하나씩 보여준다.
-        /// 메인 ─ 방 만들기 ─ 스팀 방 만들기(암호) / 직접 방 만들기
-        ///      ─ 참가     ─ 스팀 방 입장(방 코드, 암호) / IP로 참가
-        ///      ─ 설정, 크레딧, 종료
-        /// 모든 요소는 고정 위치·크기(Layout Group 없음)라 프리팹에서 끌어서 옮기거나 크기를 바꿀 수 있다.
-        /// </summary>
+        /// <summary>화면 전환 때마다 로딩이 생기지 않도록 화면들을 한 캔버스에 겹쳐 두고 하나씩 보여 준다.</summary>
         private static GameObject BuildLobbyCanvas()
         {
             Canvas canvas = EditorUiFactory.CreateCanvas("LobbyCanvas");
@@ -595,7 +652,7 @@ namespace GuardVsMannequin.Editor
 
             canvas.gameObject.AddComponent<CursorUnlockOnStart>();
             LobbyView view = canvas.gameObject.AddComponent<LobbyView>();
-            // 화면 목록: (화면, 패널, 뒤로 가면 돌아갈 화면). 첫 항목이 시작 화면.
+            // 화면 목록(첫 항목이 시작 화면).
             SetLobbyScreens(view,
                 (LobbyScreen.Main, main.gameObject, LobbyScreen.Main),
                 (LobbyScreen.Create, createMenu.gameObject, LobbyScreen.Main),
@@ -604,7 +661,7 @@ namespace GuardVsMannequin.Editor
                 (LobbyScreen.SteamJoin, steamJoin.gameObject, LobbyScreen.Join),
                 (LobbyScreen.DirectJoin, directJoin.gameObject, LobbyScreen.Join));
 
-            // 화면별 버튼 코드 (모두 캔버스에 붙여, 화면이 꺼져 있어도 이벤트를 받을 수 있게 한다)
+            // 화면이 꺼져 있어도 이벤트를 받도록 버튼 코드는 모두 캔버스에 붙인다.
             LobbyMainMenu mainMenuCode = canvas.gameObject.AddComponent<LobbyMainMenu>();
             TestEnvironmentSetupTool.SetField(mainMenuCode, "createMenuButton", createMenuButton);
             TestEnvironmentSetupTool.SetField(mainMenuCode, "joinMenuButton", joinMenuButton);
@@ -631,18 +688,16 @@ namespace GuardVsMannequin.Editor
             TestEnvironmentSetupTool.SetField(view, "steamStatusText", steamStatus);
             TestEnvironmentSetupTool.SetField(view, "noticeText", notice);
 
-            // 버전 표시와 "모드" 화면 (기존 프리팹에는 "빠진 UI 영역 추가" 메뉴로 더한다)
+            // 버전 표시와 "모드" 화면.
             AddMissingLobbySections(canvas.gameObject);
 
-            // 설정과 크레딧 화면 (메뉴 위에 그려지도록 마지막에 만든다)
+            // 메뉴 위에 그려지도록 설정과 크레딧 화면은 마지막에 만든다.
             TestEnvironmentSetupTool.SetField(view, "settingsPanel", SharedUiBuilder.CreateSettingsPanel(canvas.transform));
             TestEnvironmentSetupTool.SetField(view, "creditsPanel", SharedUiBuilder.CreateCreditsPanel(canvas.transform));
             return canvas.gameObject;
         }
 
-        /// <summary>
-        /// 로비 화면 목록(LobbyView.screens)을 채운다. 항목 = (화면, 패널, 뒤로 가면 돌아갈 화면)
-        /// </summary>
+        /// <summary>화면을 추가해도 LobbyView를 고치지 않도록 화면 이동 규칙을 목록 데이터로 채운다.</summary>
         private static void SetLobbyScreens(LobbyView view, params (LobbyScreen screen, GameObject panel, LobbyScreen parent)[] entries)
         {
             var serialized = new SerializedObject(view);
@@ -658,9 +713,7 @@ namespace GuardVsMannequin.Editor
             serialized.ApplyModifiedPropertiesWithoutUndo();
         }
 
-        /// <summary>
-        /// 로비 화면(패널) 하나를 화면 가운데에 만든다. 제목 key가 있으면 위쪽에 제목을 둔다.
-        /// </summary>
+        /// <summary>전환할 때 튀지 않도록 로비 화면들을 같은 크기·위치의 틀로 만든다.</summary>
         private static RectTransform CreateScreen(Transform canvas, string name, string titleKey)
         {
             RectTransform screen = EditorUiFactory.CreateRect(canvas, name);
@@ -676,9 +729,7 @@ namespace GuardVsMannequin.Editor
             return screen;
         }
 
-        /// <summary>
-        /// 화면 가운데 세로 위치(y)에 메뉴 버튼을 만든다.
-        /// </summary>
+        /// <summary>로비 버튼이 같은 크기·정렬이 되면서 에디터에서 옮길 수 있도록 레이아웃 없이 고정 배치한다.</summary>
         private static Button CreateMenuButton(Transform screen, string name, string labelKey, float y, Color color)
         {
             Button button = EditorUiFactory.CreateButton(screen, name, labelKey, color);
@@ -687,7 +738,7 @@ namespace GuardVsMannequin.Editor
         }
 
         /// <summary>
-        /// 화면 가운데 세로 위치(y)에 입력 칸을 만든다.
+        /// 입력 칸이 버튼과 같은 폭으로 정렬되도록 가운데 정렬로 세로 위치(y)만 받아 만든다.
         /// </summary>
         private static InputField CreateInput(Transform screen, string name, string placeholderKey, float y)
         {
@@ -697,7 +748,7 @@ namespace GuardVsMannequin.Editor
         }
 
         /// <summary>
-        /// 화면 가운데 세로 위치(y)에 안내 문구를 만든다.
+        /// 입력 칸 옆에 무엇을 넣는지 알려 주는 문구가 버튼·입력 칸과 같은 정렬이 되도록 세로 위치(y)만 받아 만든다.
         /// </summary>
         private static void CreateHint(Transform screen, string name, string key, float y)
         {
@@ -710,7 +761,7 @@ namespace GuardVsMannequin.Editor
         #region 룸 UI
 
         /// <summary>
-        /// 룸 화면 프리팹(없으면 기본 모양으로 만들어 저장)을 씬에 넣는다. 직접 고친 프리팹은 그대로 쓴다.
+        /// 씬을 다시 만들어도 손으로 다듬은 룸 UI가 사라지지 않도록 프리팹이 있으면 그대로 쓰고, 없을 때만 기본 모양으로 만들어 저장한 뒤 넣는다.
         /// </summary>
         private static void CreateRoomUi()
         {
@@ -718,10 +769,7 @@ namespace GuardVsMannequin.Editor
             UiPrefabLibrary.Instantiate(prefab);
         }
 
-        /// <summary>
-        /// 룸 화면(참가자·방 코드 / 게임 설정 / 하단 버튼)의 기본 모양을 만든다.
-        /// 게임 설정 줄은 game_settings.csv의 항목 수만큼 만든다. (항목을 추가하면 UI 프리팹 초기화가 필요)
-        /// </summary>
+        /// <summary>대기 중에 참가자와 판 설정을 한 화면에서 보도록 룸 화면을 만들고, 설정 줄은 game_settings.csv 항목 수만큼 만든다.</summary>
         private static GameObject BuildRoomCanvas()
         {
             Canvas canvas = EditorUiFactory.CreateCanvas("RoomCanvas");
@@ -767,7 +815,7 @@ namespace GuardVsMannequin.Editor
             EditorUiFactory.SetFlexibleWidth(status);
             Button leaveButton = EditorUiFactory.CreateButton(bottom, "LeaveButton", "room.leave", EditorUiFactory.ButtonColor);
             EditorUiFactory.SetWidth(leaveButton, 220f);
-            // 시작/준비/준비 해제로 바뀌는 버튼이라 RoomFooterView가 문구를 채운다. (key를 넘기지 않음)
+            // 상황에 따라 문구가 바뀌어 RoomFooterView가 채우므로 key를 넘기지 않는다.
             Button primaryButton = EditorUiFactory.CreateButton(bottom, "PrimaryButton", string.Empty, EditorUiFactory.AccentColor, out Text primaryLabel);
             EditorUiFactory.SetWidth(primaryButton, 320f);
 
@@ -795,16 +843,14 @@ namespace GuardVsMannequin.Editor
             // ESC 메뉴: 룸에서는 커서를 잠그지 않는다.
             SharedUiBuilder.CreatePauseMenu(canvas.transform, lockCursorOnClose: false);
             AddMissingRoomSections(canvas.gameObject);
+            AddMissingPlayerPanel(canvas.gameObject);
             return canvas.gameObject;
         }
 
-        /// <summary>
-        /// 설정 줄 목록(settingRows 필드)을 가진 화면에, 코드에는 있지만 프리팹에 빠진 설정 줄을 기존 줄 옆에 더한다.
-        /// (룸 설정 화면, HUD 테스트 메뉴. 새 설정 항목을 기존 프리팹에 넣을 때 사용)
-        /// </summary>
-        /// <param name="owner">settingRows 필드를 가진 컴포넌트. 없으면 -1.</param>
+        /// <summary>손으로 다듬은 모양을 지키려고 초기화하지 않고 빠진 설정 줄만 더한다.</summary>
+        /// <param name="owner">settingRows 필드를 가진 컴포넌트.</param>
         /// <param name="include">이 화면에 보여줄 항목인지.</param>
-        /// <returns>추가한 줄 수. 대상을 찾지 못하면 -1.</returns>
+        /// <returns>추가한 줄 수(대상이 없으면 -1).</returns>
         internal static int AddMissingSettingRows(Component owner, Func<GameSettingId, bool> include)
         {
             if (owner == null)
@@ -840,9 +886,7 @@ namespace GuardVsMannequin.Editor
             return added;
         }
 
-        /// <summary>
-        /// 설정 한 줄(이름 | - | 값 | +)을 만든다. 맵 이외의 값은 눌러서 키보드로 입력할 수 있는 칸이다.
-        /// </summary>
+        /// <summary>룸과 테스트 메뉴가 같은 설정 줄을 쓰도록 생성을 한곳에 두고, 숫자는 키보드로 입력할 수 있게 한다.</summary>
         internal static SettingRowView CreateSettingRow(Transform parent, GameSettingId id)
         {
             RectTransform row = EditorUiFactory.CreateRow(parent, $"Row_{id}", 38f, 8f);
@@ -889,7 +933,7 @@ namespace GuardVsMannequin.Editor
         #endregion
 
         /// <summary>
-        /// 구역 제목을 추가한다.
+        /// 룸 화면 구역(참가자·설정)이 같은 제목 모양이 되도록 한곳에서 만든다.
         /// </summary>
         private static void AddHeader(Transform parent, string content)
         {
@@ -899,7 +943,7 @@ namespace GuardVsMannequin.Editor
         }
 
         /// <summary>
-        /// 한 줄 텍스트를 추가한다.
+        /// 세로 레이아웃 안에서 문구가 차지할 높이를 글자 크기에 맞춰 고정해야 줄이 겹치지 않으므로 높이까지 정해 추가한다.
         /// </summary>
         private static Text AddLine(Transform parent, string name, string content, int fontSize, Color color)
         {

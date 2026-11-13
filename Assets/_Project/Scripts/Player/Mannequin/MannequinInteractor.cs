@@ -5,11 +5,7 @@ using UnityEngine;
 
 namespace GuardVsMannequin.Player.Mannequin
 {
-    /// <summary>
-    /// 마네킹의 좌클릭 유지 상호작용(전원 장치 파괴 등).
-    /// 누르면 조준한 대상과 상호작용을 시작하고, 떼면 끝낸다. 판정은 서버가 한다.
-    /// 상호작용 중인지는 모든 클라이언트에 동기화한다. (상호작용 애니메이션 표시용, <see cref="IInteractionState"/>)
-    /// </summary>
+    /// <summary>판정은 서버가 하는 마네킹의 좌클릭 유지 상호작용.</summary>
     [RequireComponent(typeof(MannequinTransformer), typeof(PlayerHealth))]
     public class MannequinInteractor : NetworkBehaviour, IInteractor, IInteractionState
     {
@@ -24,17 +20,21 @@ namespace GuardVsMannequin.Player.Mannequin
         public int ClientId => Owner.ClientId;
         public Vector3 Position => transform.position;
 
-        /// <summary>상호작용 중인지 여부. (서버가 정하고 모든 클라이언트에 동기화)</summary>
+        /// <summary>다른 화면에서도 상호작용 동작이 보이도록 서버가 정해 모두에게 동기화한다.</summary>
         public bool IsInteracting => isInteracting.Value;
 
         /// <summary>
-        /// 살아 있고, 변신하지 않았고, 탐색 단계일 때만 상호작용할 수 있다.
+        /// 변신한 채 전원 장치를 부수거나 사냥 시간에 좌클릭이 공격과 겹치지 않도록 살아 있고 변신하지 않은 탐색 단계에서만 허용하고,
+        /// 스폰 근처 장치를 시작하자마자 부수지 못하도록 시작 구간에는 막는다.
         /// </summary>
-        public bool CanInteract => this != null && health.IsAlive && !transformer.IsDisguised
-                                   && GameServices.CurrentStateOrWaiting == GameState.Playing;
+        public bool CanInteract => this != null && health.IsAlive && !transformer.IsDisguised && IsInteractPhase;
+
+        /// <summary>입력 쪽과 서버 검증이 같은 단계 조건을 쓰도록 모은다.</summary>
+        private static bool IsInteractPhase => GameServices.CurrentStateOrWaiting == GameState.Playing
+                                               && !MatchOpeningRules.IsActive(GameServices.State);
 
         /// <summary>
-        /// 같은 오브젝트의 구성 요소를 캐시한다.
+        /// 매 프레임 GetComponent를 부르지 않도록 미리 찾아 둔다.
         /// </summary>
         private void Awake()
         {
@@ -45,7 +45,7 @@ namespace GuardVsMannequin.Player.Mannequin
         }
 
         /// <summary>
-        /// 소유자만 좌클릭 입력을 구독한다.
+        /// 남의 아바타가 내 클릭에 반응하지 않도록 소유자만 좌클릭 입력을 듣는다.
         /// </summary>
         public override void OnStartClient()
         {
@@ -58,7 +58,7 @@ namespace GuardVsMannequin.Player.Mannequin
         }
 
         /// <summary>
-        /// 입력 구독을 해제한다.
+        /// 아바타가 사라진 뒤 입력 이벤트가 이 객체를 부르지 않도록 구독을 끊는다.
         /// </summary>
         public override void OnStopClient()
         {
@@ -71,7 +71,7 @@ namespace GuardVsMannequin.Player.Mannequin
         }
 
         /// <summary>
-        /// 제거될 때 진행 중인 상호작용을 끝낸다.
+        /// 죽거나 나간 마네킹이 계속 참여자로 남아 진행을 올리지 않도록, 제거될 때 상호작용을 끝낸다.
         /// </summary>
         public override void OnStopServer()
         {
@@ -80,7 +80,7 @@ namespace GuardVsMannequin.Player.Mannequin
         }
 
         /// <summary>
-        /// 서버에서 대상이 참여자를 뺐는지(거리·변신·파괴 등) 확인하고 상호작용 상태를 동기화한다.
+        /// 대상이 거리·변신·파괴 등으로 참여자를 스스로 뺄 수 있어서, 서버가 매 프레임 확인해 동기화 값을 맞춘다.
         /// </summary>
         private void Update()
         {
@@ -90,18 +90,15 @@ namespace GuardVsMannequin.Player.Mannequin
             if (currentTarget != null && !currentTarget.IsInteracting(this))
                 currentTarget = null;
 
-            bool interacting = currentTarget != null;
-            if (isInteracting.Value != interacting)
-                isInteracting.Value = interacting;
+            bool hasTarget = currentTarget != null;
+            if (isInteracting.Value != hasTarget)
+                isInteracting.Value = hasTarget;
         }
 
-        /// <summary>
-        /// 조준한 네트워크 오브젝트에 상호작용 시작을 요청한다.
-        /// </summary>
+        /// <summary>3인칭 카메라가 몸 뒤에 있어 그 거리만큼 광선을 늘려 대상을 찾는다.</summary>
         private void OnPrimaryPressed()
         {
-            // 전원 장치 파괴는 탐색 단계에서만 가능하다. (사냥 시간의 좌클릭은 MannequinAttackTool이 처리)
-            if (transformer.IsDisguised || GameServices.CurrentStateOrWaiting != GameState.Playing)
+            if (transformer.IsDisguised || !IsInteractPhase)
                 return;
 
             Ray aim = aimProvider.GetAimRay();
@@ -115,7 +112,7 @@ namespace GuardVsMannequin.Player.Mannequin
         }
 
         /// <summary>
-        /// 좌클릭을 떼면 상호작용 종료를 요청한다.
+        /// 누르고 있어야 진행되는 동작이라 떼는 순간 서버에 알린다.
         /// </summary>
         private void OnPrimaryReleased()
         {
@@ -123,7 +120,7 @@ namespace GuardVsMannequin.Player.Mannequin
         }
 
         /// <summary>
-        /// 서버에서 대상의 상호작용 조건을 검증하고 시작한다.
+        /// 한 번에 한 대상과만 상호작용하도록 이전 것을 먼저 끝내고, 클라이언트 조건은 믿지 않고 서버에서 다시 확인한다.
         /// </summary>
         [ServerRpc]
         private void BeginInteractServerRpc(NetworkObject target)
@@ -139,7 +136,7 @@ namespace GuardVsMannequin.Player.Mannequin
         }
 
         /// <summary>
-        /// 서버에서 상호작용을 끝낸다.
+        /// 종료는 서버가 대상에게 알려야 진행이 멈추므로 RPC로 보낸다.
         /// </summary>
         [ServerRpc]
         private void EndInteractServerRpc()
@@ -148,7 +145,7 @@ namespace GuardVsMannequin.Player.Mannequin
         }
 
         /// <summary>
-        /// 진행 중인 상호작용이 있으면 끝낸다.
+        /// 대상 쪽 참여자 목록에서도 빠지도록 대상에게 끝났다고 알린다.
         /// </summary>
         private void EndCurrentInteraction()
         {

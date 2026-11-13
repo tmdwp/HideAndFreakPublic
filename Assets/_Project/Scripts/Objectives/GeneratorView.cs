@@ -20,10 +20,10 @@ namespace GuardVsMannequin.Objectives
         [SerializeField] private Transform barFill;
 
         private Generator generator;
-        private bool destroyedApplied;
+        private bool isDestroyedApplied;
 
         /// <summary>
-        /// 전원 장치를 캐시하고 진행도 바를 숨긴다.
+        /// 진행이 시작되기 전에는 바가 보이면 안 되므로 처음에 숨겨 둔다.
         /// </summary>
         private void Awake()
         {
@@ -31,39 +31,34 @@ namespace GuardVsMannequin.Objectives
             barRoot.gameObject.SetActive(false);
         }
 
-        /// <summary>
-        /// 매 프레임 파괴 외형과 진행도 바를 갱신한다.
-        /// </summary>
+        /// <summary>동기화 값에는 이벤트가 없어 매 프레임 파괴 여부와 진행도를 반영한다.</summary>
         private void Update()
         {
-            if (generator.IsDestroyed && !destroyedApplied)
+            if (generator.IsDestroyed && !isDestroyedApplied)
             {
                 bodyRenderer.sharedMaterial = destroyedMaterial;
-                destroyedApplied = true;
+                isDestroyedApplied = true;
             }
 
             UpdateProgressBar();
         }
 
-        /// <summary>
-        /// 로컬 플레이어가 마네킹이고 진행 중일 때만 바를 보여준다.
-        /// </summary>
+        /// <summary>가드가 지킬 곳을 쉽게 알지 못하도록 진행도는 마네킹에게만 보이고 바는 로컬 플레이어를 향한다.</summary>
         private void UpdateProgressBar()
         {
             PlayerIdentity localPlayer = LocalPlayerEvents.Current;
-            bool visible = localPlayer != null && localPlayer.Role == PlayerRole.Mannequin
-                           && !generator.IsDestroyed && generator.Progress > 0f;
+            bool isVisible = localPlayer != null && localPlayer.Role == PlayerRole.Mannequin
+                             && !generator.IsDestroyed && generator.Progress > 0f;
 
-            if (barRoot.gameObject.activeSelf != visible)
-                barRoot.gameObject.SetActive(visible);
-            if (!visible)
+            if (barRoot.gameObject.activeSelf != isVisible)
+                barRoot.gameObject.SetActive(isVisible);
+            if (!isVisible)
                 return;
 
             Vector3 fillScale = barFill.localScale;
             fillScale.x = Mathf.Clamp01(generator.Progress);
             barFill.localScale = fillScale;
 
-            // 바가 로컬 플레이어 쪽을 향하도록 수평 회전
             Vector3 toPlayer = localPlayer.transform.position - barRoot.position;
             toPlayer.y = 0f;
             if (toPlayer.sqrMagnitude > 0.001f)

@@ -3,6 +3,8 @@
     "rootNamespace": "GuardVsMannequin.Tests",
     "references": [
         "GuardVsMannequin.Runtime",
+        "GuardVsMannequin.Content",
+        "GuardVsMannequin.Content.Editor",
         "UnityEngine.TestRunner",
         "UnityEditor.TestRunner"
     ],

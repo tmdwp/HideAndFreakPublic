@@ -3,14 +3,7 @@ using UnityEngine;
 
 namespace GuardVsMannequin.Player.Mannequin
 {
-    /// <summary>
-    /// 마네킹의 몸 방향 규칙을 관리한다.
-    /// - 평소: 이동 방향을 바라본다.
-    /// - 변신 중: 이동해도 방향이 바뀌지 않고, Q/E로만 좌우 회전한다. (사물 배치 방향을 직접 정하기 위함)
-    /// - 1인칭(사냥 시간): 마우스 좌우 시점으로 몸을 회전한다.
-    /// 회전 모드는 이 컴포넌트만 변경한다. (벽타기 등 다른 기능은 회전 모드를 건드리지 않음)
-    /// ECM2 시뮬레이션이 도는 소유자에서만 동작하며, 회전은 NetworkTransform으로 동기화된다.
-    /// </summary>
+    /// <summary>변신 중 사물 방향을 직접 정할 수 있도록 상황별로 마네킹 몸 방향 규칙을 바꾼다.</summary>
     [RequireComponent(typeof(Character), typeof(MannequinTransformer))]
     public class DisguiseRotationAbility : MonoBehaviour
     {
@@ -23,7 +16,7 @@ namespace GuardVsMannequin.Player.Mannequin
         private IPlayerInput playerInput;
 
         /// <summary>
-        /// 같은 오브젝트의 구성 요소를 캐시한다.
+        /// 매 프레임 GetComponent를 부르지 않도록 미리 찾아 둔다.
         /// </summary>
         private void Awake()
         {
@@ -34,7 +27,7 @@ namespace GuardVsMannequin.Player.Mannequin
         }
 
         /// <summary>
-        /// 캐릭터 시뮬레이션 직전 이벤트를 구독한다.
+        /// ECM2가 회전을 계산하기 직전에 모드를 바꿔야 같은 단계에 반영되므로 시뮬레이션 직전 이벤트를 듣는다.
         /// </summary>
         private void OnEnable()
         {
@@ -42,19 +35,16 @@ namespace GuardVsMannequin.Player.Mannequin
         }
 
         /// <summary>
-        /// 이벤트 구독을 해제한다.
+        /// 꺼진 뒤 이벤트가 이 객체를 부르지 않도록 끊는다.
         /// </summary>
         private void OnDisable()
         {
             character.BeforeSimulationUpdated -= OnBeforeSimulationUpdated;
         }
 
-        /// <summary>
-        /// 변신 여부에 맞는 회전 모드를 적용한다.
-        /// </summary>
+        /// <summary>변신 중이나 1인칭에서는 자동 회전이 방향을 망치므로 끈다.</summary>
         private void OnBeforeSimulationUpdated(float deltaTime)
         {
-            // 1인칭(사냥 시간)에서는 시점 입력이 몸을 직접 회전시키므로 자동 회전을 끈다.
             bool isFirstPerson = mannequinCharacter != null && mannequinCharacter.IsFirstPerson;
             Character.RotationMode mode = transformer.IsDisguised || isFirstPerson
                 ? Character.RotationMode.None
@@ -65,16 +55,16 @@ namespace GuardVsMannequin.Player.Mannequin
         }
 
         /// <summary>
-        /// 변신 중이면 Q/E 입력만큼 좌우로 회전시킨다.
+        /// 변신 중에는 마우스가 카메라를 돌리므로 사물 방향은 Q/E로 따로 돌릴 수 있게 한다.
         /// </summary>
         private void Update()
         {
             if (!transformer.IsDisguised || playerInput == null)
                 return;
 
-            float rotate = playerInput.Rotate;
-            if (rotate != 0f)
-                character.AddYawInput(rotate * rotateSpeed * Time.deltaTime);
+            float rotateInput = playerInput.Rotate;
+            if (rotateInput != 0f)
+                character.AddYawInput(rotateInput * rotateSpeed * Time.deltaTime);
         }
     }
 }

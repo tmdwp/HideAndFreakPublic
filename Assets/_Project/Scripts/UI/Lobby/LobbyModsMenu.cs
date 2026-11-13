@@ -8,10 +8,7 @@ using UnityEngine.UI;
 
 namespace GuardVsMannequin.UI
 {
-    /// <summary>
-    /// 로비 "모드" 화면: 설치된 모드 목록(켜짐/꺼짐/오류와 이유), 누르면 켜고 끄기, 다시 읽기, 모드 폴더 열기.
-    /// 모드 목록과 켜기/끄기는 <see cref="ModService"/>가 맡고, 이 화면은 보여주고 요청만 한다.
-    /// </summary>
+    /// <summary>게임을 끄지 않고 모드를 켜고 끄거나 다시 읽도록 설치된 모드 목록을 보여 준다.</summary>
     public class LobbyModsMenu : MonoBehaviour
     {
         [Tooltip("메인 화면의 '모드' 버튼.")]
@@ -31,9 +28,7 @@ namespace GuardVsMannequin.UI
 
         private readonly List<GameObject> rows = new();
 
-        /// <summary>
-        /// 버튼을 연결하고 목록을 만든다. 모드 목록이 바뀌면 다시 만든다.
-        /// </summary>
+        /// <summary>결과가 바로 보이도록 모드 목록과 언어가 바뀔 때마다 목록을 다시 만든다.</summary>
         private void Start()
         {
             ILobbyNavigator navigator = UiLookup.FindInParent<ILobbyNavigator>(this);
@@ -48,7 +43,7 @@ namespace GuardVsMannequin.UI
         }
 
         /// <summary>
-        /// 이벤트 연결을 해제한다.
+        /// 모드 서비스는 씬보다 오래 살아서, 끊지 않으면 파괴된 화면을 부른다.
         /// </summary>
         private void OnDestroy()
         {
@@ -56,9 +51,7 @@ namespace GuardVsMannequin.UI
             Loc.LanguageChanged -= Rebuild;
         }
 
-        /// <summary>
-        /// 모드 줄을 다시 만든다. 오류 모드는 누를 수 없고 이유를 함께 보여준다.
-        /// </summary>
+        /// <summary>모드 수가 자주 바뀌지 않아 줄을 통째로 다시 만들고, 오류 모드는 누를 수 없게 한다.</summary>
         private void Rebuild()
         {
             foreach (GameObject row in rows)
@@ -71,12 +64,12 @@ namespace GuardVsMannequin.UI
             foreach (ModInfo mod in mods)
                 AddRow(Describe(mod), mod.Status == ModStatus.Error ? null : mod);
 
-            int active = mods.Count(m => m.Status == ModStatus.Active);
-            summaryText.text = Loc.Format("lobby.mods.summary", active, mods.Count, ModScanner.SearchFolders[0]);
+            int activeCount = mods.Count(installedMod => installedMod.Status == ModStatus.Active);
+            summaryText.text = Loc.Format("lobby.mods.summary", activeCount, mods.Count, ModScanner.SearchFolders[0]);
         }
 
         /// <summary>
-        /// 줄 하나를 더한다. 모드가 null이면 누를 수 없는 안내 줄이다.
+        /// 안내 줄과 모드 줄을 같은 모양으로 보이려고 같은 원본을 쓰며, 모드가 null이면 누를 수 없는 안내 줄로 만든다.
         /// </summary>
         private void AddRow(string label, ModInfo mod)
         {
@@ -90,24 +83,22 @@ namespace GuardVsMannequin.UI
         }
 
         /// <summary>
-        /// 모드 한 줄의 문구: [상태] 이름 v버전 (ID) — 오류면 이유.
+        /// 같은 이름의 모드를 구별하고 오류를 고칠 수 있도록 버전·ID와 오류 이유를 함께 보여 준다.
         /// </summary>
         private static string Describe(ModInfo mod)
         {
-            string state = mod.Status switch
+            string stateLabel = mod.Status switch
             {
                 ModStatus.Active => Loc.Get("lobby.mods.state.active"),
                 ModStatus.Disabled => Loc.Get("lobby.mods.state.disabled"),
                 _ => Loc.Get("lobby.mods.state.error")
             };
             string version = mod.Manifest?.version ?? "?";
-            string line = $"{state} {mod.DisplayName} v{version}  ({mod.Id})";
+            string line = $"{stateLabel} {mod.DisplayName} v{version}  ({mod.Id})";
             return mod.Status == ModStatus.Error ? $"{line}\n  └ {mod.Error}" : line;
         }
 
-        /// <summary>
-        /// 실행 파일 옆 모드 폴더를 탐색기로 연다. (없으면 만든다)
-        /// </summary>
+        /// <summary>처음 설치하는 사람은 폴더가 없으므로 만든 뒤 연다.</summary>
         private static void OpenModsFolder()
         {
             string folder = ModScanner.SearchFolders[0];

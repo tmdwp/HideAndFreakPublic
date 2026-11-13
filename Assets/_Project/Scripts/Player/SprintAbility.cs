@@ -3,14 +3,10 @@ using UnityEngine;
 
 namespace GuardVsMannequin.Player
 {
-    /// <summary>
-    /// 달리기 키(기본 Shift)를 누른 채 움직이면 스태미나를 쓰며 빨리 달린다.
-    /// 로컬 소유자 아바타에서만 활성화된다(<see cref="PlayerOwnershipSetup"/>의 소유자 전용 목록).
-    /// 꺼져 있으면(원격·서버의 다른 플레이어 아바타) 배율은 항상 1이다.
-    /// 서버는 <see cref="MovementValidator"/>가 같은 규칙(<see cref="SprintRules"/>)으로 달리기 거리를 검증한다.
-    /// </summary>
+    /// <summary>달리기 키를 누른 채 움직이면 스태미나를 쓰며 빨리 달리게 한다.</summary>
     public class SprintAbility : MonoBehaviour, IStaminaSource, IMoveSpeedModifier
     {
+        // 제자리에서 Shift만 눌러도 스태미나가 닳지 않게 하는 이동 입력 하한
         private const float MinMoveInput = 0.01f;
 
         private readonly StaminaModel stamina = new();
@@ -27,7 +23,7 @@ namespace GuardVsMannequin.Player
         public float SpeedMultiplier => isSprinting && isActiveAndEnabled ? SprintRules.SpeedMultiplier : 1f;
 
         /// <summary>
-        /// 같은 오브젝트의 입력 구현을 찾는다.
+        /// 매 프레임 GetComponent를 부르지 않도록 입력 구현을 미리 찾아 둔다.
         /// </summary>
         private void Awake()
         {
@@ -35,7 +31,7 @@ namespace GuardVsMannequin.Player
         }
 
         /// <summary>
-        /// 꺼지면 달리기를 멈춘다.
+        /// 다시 켜졌을 때 달리던 상태가 남아 있으면 키를 떼도 빨리 달리므로 초기화한다.
         /// </summary>
         private void OnDisable()
         {
@@ -43,7 +39,7 @@ namespace GuardVsMannequin.Player
         }
 
         /// <summary>
-        /// 달리기 입력과 이동 입력으로 스태미나를 진행한다.
+        /// 실제로 움직일 때만 달리기로 보도록 이동 입력도 함께 확인한다.
         /// </summary>
         private void Update()
         {

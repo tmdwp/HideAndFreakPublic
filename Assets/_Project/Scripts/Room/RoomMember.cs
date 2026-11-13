@@ -13,9 +13,7 @@ namespace GuardVsMannequin.Room
         Missing
     }
 
-    /// <summary>
-    /// 룸 참가자 한 명의 정보. 네트워크로 동기화되므로 값 타입 필드만 사용한다.
-    /// </summary>
+    /// <summary>네트워크로 동기화되므로 값 타입 필드만 쓰는 룸 참가자 한 명의 정보.</summary>
     public struct RoomMember
     {
         public string displayName;

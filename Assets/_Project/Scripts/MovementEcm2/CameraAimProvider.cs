@@ -3,10 +3,7 @@ using UnityEngine;
 
 namespace GuardVsMannequin.Player
 {
-    /// <summary>
-    /// 캐릭터 카메라의 정면을 조준 광선으로 사용한다.
-    /// 카메라가 없으면(원격 아바타) 몸체 정면을 사용한다.
-    /// </summary>
+    /// <summary>화면 가운데를 맞히도록 카메라 정면을 조준 광선으로 쓴다.</summary>
     [RequireComponent(typeof(Character))]
     public class CameraAimProvider : MonoBehaviour, IAimProvider
     {
@@ -16,16 +13,14 @@ namespace GuardVsMannequin.Player
         private Character character;
 
         /// <summary>
-        /// 같은 오브젝트의 캐릭터를 캐시한다.
+        /// 쏠 때마다 GetComponent를 부르지 않도록 미리 찾아 둔다.
         /// </summary>
         private void Awake()
         {
             character = GetComponent<Character>();
         }
 
-        /// <summary>
-        /// 카메라 위치와 정면 방향으로 광선을 만든다.
-        /// </summary>
+        /// <summary>원격 아바타는 카메라가 없어 몸 정면과 눈 높이로 광선을 대신한다.</summary>
         public Ray GetAimRay()
         {
             Transform cameraTransform = character.cameraTransform;

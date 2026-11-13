@@ -12,13 +12,7 @@ using UnityEngine.SceneManagement;
 
 namespace GuardVsMannequin.Editor
 {
-    /// <summary>
-    /// 맵 씬을 가볍게 만든다. (맵 빌더·맵 제작 도우미로 만든 맵 대상, 수동으로 옮긴 배치는 유지)
-    /// 1. 플레이어가 갈 수 없는 곳(투명 경계 밖 + 여유 거리)에 있는 환경 오브젝트와 꺼져 있는 오브젝트를 지운다.
-    /// 2. 남은 환경에 정적 플래그를 준다: 가려질 수 있음(Occludee), 큰 불투명 메시는 가리개(Occluder), 정적 배칭.
-    /// 3. 플레이 영역에 Occlusion Area를 두고 오클루전 컬링을 굽는다. (보이지 않는 오브젝트를 실행 중에 그리지 않음)
-    /// 4. 총에 맞으면 튕겨나갈 변신 사물의 충돌체를 볼록으로 바꾼다(<see cref="PropColliderBaker"/>).
-    /// </summary>
+    /// <summary>맵 씬을 가볍게 하려고 갈 수 없는 곳의 오브젝트를 지우고 정적 플래그·오클루전·NavMesh를 굽는다.</summary>
     public static class MapOptimizer
     {
         internal const string EnvironmentPath = "Map/Environment";
@@ -33,9 +27,7 @@ namespace GuardVsMannequin.Editor
 
         #region 메뉴
 
-        /// <summary>
-        /// 열려 있는 맵 씬(직접 만든 맵 포함)을 최적화하고 저장한다. 먼저 씬을 저장해야 한다. (맵 제작 도우미의 "현재 맵 최적화")
-        /// </summary>
+        /// <summary>오클루전·NavMesh는 씬 경로 옆에 저장되므로 저장된 씬만 최적화하고, 오브젝트를 지우기 전에 저장 여부를 묻는다.</summary>
         public static void OptimizeActiveScene()
         {
             Scene scene = SceneManager.GetActiveScene();
@@ -47,7 +39,7 @@ namespace GuardVsMannequin.Editor
             if (!EditorSceneManager.SaveCurrentModifiedScenesIfUserWantsTo())
                 return;
 
-            // 맵 목록의 씬은 실외 기준(경계 밖 여유 거리가 김), 목록에 없는 씬은 실내 맵으로 본다.
+            // 맵 목록의 씬은 실외, 나머지는 실내 맵으로 본다.
             Optimize(scene, indoor: MapCatalog.FindByScenePath(scene.path) == null);
             EditorSceneManager.MarkSceneDirty(scene);
             EditorSceneManager.SaveScene(scene);
@@ -55,9 +47,7 @@ namespace GuardVsMannequin.Editor
 
         #endregion
 
-        /// <summary>
-        /// 열려 있는 맵 씬을 최적화한다. 오클루전을 굽기 전에 씬이 저장된 경로를 가지고 있어야 한다.
-        /// </summary>
+        /// <summary>지운 오브젝트가 오클루전에 남지 않도록 지우기 → 정적 플래그 → 굽기 순서를 한곳에 둔다.</summary>
         public static void Optimize(Scene scene, bool indoor)
         {
             GameObject environmentObject = FindByPath(scene, EnvironmentPath);
@@ -68,7 +58,7 @@ namespace GuardVsMannequin.Editor
                 return;
             }
 
-            // 실시간 조명만 쓰므로 GI 계산을 끈다. (에디터가 GI를 다시 계산하다 메모리가 부족해지는 것 방지)
+            // 실시간 조명만 쓰므로 GI 계산을 끈다.
             SceneLightingSetup.Apply(scene);
 
             Bounds playArea = GetBoundaryBounds(boundaryObject.transform);
@@ -78,92 +68,81 @@ namespace GuardVsMannequin.Editor
 
             Transform environment = environmentObject.transform;
             Transform mapRoot = environment.parent;
-            int inactive = RemoveInactive(environment);
-            int outside = RemoveOutside(environment, keepArea);
-            int empty = RemoveEmpty(environment);
-            int fixedBoxes = FixNegativeScaleBoxColliders(environment);
-            int areaLights = RemoveAreaLights(mapRoot);
-            int shadowLights = LimitLightShadows(mapRoot);
-            int occluders = SetStaticFlags(environment);
-            int physicsColliders = PropColliderBaker.BakeScene(scene);
+            int inactiveCount = RemoveInactive(environment);
+            int outsideCount = RemoveOutside(environment, keepArea);
+            int emptyCount = RemoveEmpty(environment);
+            int fixedBoxCount = FixNegativeScaleBoxColliders(environment);
+            int areaLightCount = RemoveAreaLights(mapRoot);
+            int shadowLightCount = LimitLightShadows(mapRoot);
+            int occluderCount = SetStaticFlags(environment);
+            int physicsColliderCount = PropColliderBaker.BakeScene(scene);
 
-            bool navMeshBaked = BakeNavMesh(scene, mapRoot);
+            bool isNavMeshBaked = BakeNavMesh(scene, mapRoot);
             EnsureOcclusionArea(boundaryObject.transform, playArea);
             BakeOcclusion(scene);
 
-            Debug.Log($"[MapOptimizer] {scene.name}: 꺼진 오브젝트 {inactive}개, 경계 밖 {outside}개, 빈 오브젝트 {empty}개 제거. " +
-                      $"음수 크기 상자 충돌체 {fixedBoxes}개 교체, 튕겨나갈 사물 충돌체 {physicsColliders}개 볼록화, 영역 조명 {areaLights}개 제거, 그림자 끈 조명 {shadowLights}개. " +
-                      $"NavMesh {(navMeshBaked ? "저장" : "실패")}, 가리개 {occluders}개로 오클루전 컬링을 구웠습니다.");
+            Debug.Log($"[MapOptimizer] {scene.name}: 꺼진 오브젝트 {inactiveCount}개, 경계 밖 {outsideCount}개, 빈 오브젝트 {emptyCount}개 제거. " +
+                      $"음수 크기 상자 충돌체 {fixedBoxCount}개 교체, 튕겨나갈 사물 충돌체 {physicsColliderCount}개 볼록화, 영역 조명 {areaLightCount}개 제거, 그림자 끈 조명 {shadowLightCount}개. " +
+                      $"NavMesh {(isNavMeshBaked ? "저장" : "실패")}, 가리개 {occluderCount}개로 오클루전 컬링을 구웠습니다.");
         }
 
         #region 조명·충돌체·NavMesh
 
-        /// <summary>
-        /// 영역(Area) 조명을 지운다. URP는 실시간 영역 조명을 지원하지 않아 빛을 내지 못하고 경고만 남기기 때문이다.
-        /// URP 보조 컴포넌트(UniversalAdditionalLightData)가 Light에 의존하므로 먼저 지워야 Light를 지울 수 있다.
-        /// </summary>
+        /// <summary>URP는 실시간 영역 조명을 지원하지 않아 경고만 남기므로 지운다.</summary>
         private static int RemoveAreaLights(Transform mapRoot)
         {
-            int removed = 0;
-            foreach (Light target in mapRoot.GetComponentsInChildren<Light>(true))
+            int removedCount = 0;
+            foreach (Light areaLight in mapRoot.GetComponentsInChildren<Light>(true))
             {
-                if (target.type != LightType.Rectangle && target.type != LightType.Disc)
+                if (areaLight.type != LightType.Rectangle && areaLight.type != LightType.Disc)
                     continue;
-                if (target.TryGetComponent(out MapLight mapLight))
+                if (areaLight.TryGetComponent(out MapLight mapLight))
                     Object.DestroyImmediate(mapLight);
-                if (target.TryGetComponent(out UniversalAdditionalLightData additionalData))
+                if (areaLight.TryGetComponent(out UniversalAdditionalLightData additionalData))
                     Object.DestroyImmediate(additionalData);
-                Object.DestroyImmediate(target);
+                Object.DestroyImmediate(areaLight);
                 // 지우지 못했으면(다른 의존 컴포넌트) 세지 않는다.
-                if (target == null)
-                    removed++;
+                if (areaLight == null)
+                    removedCount++;
             }
-            return removed;
+            return removedCount;
         }
 
-        /// <summary>
-        /// 맵 조명(방향광 제외)의 그림자를 끈다. 그림자를 내는 실시간 조명이 많으면 그림자 지도가 부족해 화질이 떨어지고 느려진다.
-        /// (사냥 시간 손전등은 가드에 붙어 있어 영향받지 않는다)
-        /// </summary>
+        /// <summary>그림자를 내는 실시간 조명이 많으면 화질이 떨어지고 느려지므로 맵 조명의 그림자를 끈다.</summary>
         private static int LimitLightShadows(Transform mapRoot)
         {
-            int changed = 0;
-            foreach (Light target in mapRoot.GetComponentsInChildren<Light>(true))
+            int changedCount = 0;
+            foreach (Light mapLight in mapRoot.GetComponentsInChildren<Light>(true))
             {
-                if (target.type == LightType.Directional || target.shadows == LightShadows.None)
+                if (mapLight.type == LightType.Directional || mapLight.shadows == LightShadows.None)
                     continue;
-                target.shadows = LightShadows.None;
-                changed++;
+                mapLight.shadows = LightShadows.None;
+                changedCount++;
             }
-            return changed;
+            return changedCount;
         }
 
-        /// <summary>
-        /// 크기가 음수(거울 배치)인 상자 충돌체를 메시 충돌체로 바꾼다. 상자 충돌체는 음수 크기를 지원하지 않아 경고와 함께 모양이 틀어진다.
-        /// </summary>
+        /// <summary>상자 충돌체는 음수 크기를 지원하지 않아 모양이 틀어지므로 메시 충돌체로 바꾼다.</summary>
         private static int FixNegativeScaleBoxColliders(Transform environment)
         {
-            int replaced = 0;
-            foreach (BoxCollider box in environment.GetComponentsInChildren<BoxCollider>(true))
+            int replacedCount = 0;
+            foreach (BoxCollider boxCollider in environment.GetComponentsInChildren<BoxCollider>(true))
             {
-                Vector3 scale = box.transform.lossyScale;
-                if (scale.x >= 0f && scale.y >= 0f && scale.z >= 0f)
+                Vector3 worldScale = boxCollider.transform.lossyScale;
+                if (worldScale.x >= 0f && worldScale.y >= 0f && worldScale.z >= 0f)
                     continue;
 
-                MeshFilter filter = box.GetComponent<MeshFilter>();
-                GameObject target = box.gameObject;
-                Object.DestroyImmediate(box);
-                if (filter != null && filter.sharedMesh != null)
-                    target.AddComponent<MeshCollider>().sharedMesh = filter.sharedMesh;
-                replaced++;
+                MeshFilter meshFilter = boxCollider.GetComponent<MeshFilter>();
+                GameObject colliderObject = boxCollider.gameObject;
+                Object.DestroyImmediate(boxCollider);
+                if (meshFilter != null && meshFilter.sharedMesh != null)
+                    colliderObject.AddComponent<MeshCollider>().sharedMesh = meshFilter.sharedMesh;
+                replacedCount++;
             }
-            return replaced;
+            return replacedCount;
         }
 
-        /// <summary>
-        /// 맵의 NavMesh를 에디터에서 구워 씬 폴더에 에셋으로 저장한다.
-        /// 빌드에서는 읽기가 허용되지 않은 메시를 실행 중에 구울 수 없으므로, 서버는 이 데이터를 그대로 쓴다.
-        /// </summary>
+        /// <summary>빌드에서는 실행 중에 NavMesh를 구울 수 없으므로 에디터에서 구워 에셋으로 저장한다.</summary>
         private static bool BakeNavMesh(Scene scene, Transform mapRoot)
         {
             NavMeshSurface surface = mapRoot != null ? mapRoot.GetComponent<NavMeshSurface>() : null;
@@ -179,14 +158,14 @@ namespace GuardVsMannequin.Editor
             if (surface.navMeshData == null)
                 return false;
 
-            // 씬 이름과 같은 폴더(오클루전 데이터와 같은 곳)에 저장한다.
-            string folder = Path.Combine(Path.GetDirectoryName(scene.path) ?? string.Empty, scene.name).Replace('\\', '/');
-            if (!AssetDatabase.IsValidFolder(folder))
-                AssetDatabase.CreateFolder(Path.GetDirectoryName(folder)?.Replace('\\', '/'), scene.name);
+            // 오클루전 데이터와 같은 씬 폴더에 저장한다.
+            string sceneDataFolder = Path.Combine(Path.GetDirectoryName(scene.path) ?? string.Empty, scene.name).Replace('\\', '/');
+            if (!AssetDatabase.IsValidFolder(sceneDataFolder))
+                AssetDatabase.CreateFolder(Path.GetDirectoryName(sceneDataFolder)?.Replace('\\', '/'), scene.name);
 
-            string path = $"{folder}/NavMesh-{mapRoot.name}.asset";
-            AssetDatabase.DeleteAsset(path);
-            AssetDatabase.CreateAsset(surface.navMeshData, path);
+            string navMeshPath = $"{sceneDataFolder}/NavMesh-{mapRoot.name}.asset";
+            AssetDatabase.DeleteAsset(navMeshPath);
+            AssetDatabase.CreateAsset(surface.navMeshData, navMeshPath);
             EditorUtility.SetDirty(surface);
             return true;
         }
@@ -196,38 +175,35 @@ namespace GuardVsMannequin.Editor
         #region 제거
 
         /// <summary>
-        /// 꺼져 있는 환경 오브젝트를 지운다. (게임 중에 켜지지 않으므로 불필요)
+        /// 맵 오브젝트를 켜는 게임 코드가 없어 꺼진 오브젝트는 용량만 차지하므로 지운다.
         /// </summary>
         private static int RemoveInactive(Transform environment)
         {
-            int removed = 0;
+            int removedCount = 0;
             foreach (Transform child in environment.GetComponentsInChildren<Transform>(true).ToArray())
             {
                 if (child != null && child != environment && !child.gameObject.activeSelf)
                 {
                     Object.DestroyImmediate(child.gameObject);
-                    removed++;
+                    removedCount++;
                 }
             }
-            return removed;
+            return removedCount;
         }
 
-        /// <summary>
-        /// 보관 영역과 전혀 겹치지 않는 렌더러·충돌체·조명을 지운다.
-        /// 자식이 없는 오브젝트는 통째로, 자식이 있으면 해당 컴포넌트만 지운다.
-        /// </summary>
+        /// <summary>볼 수 없는 곳의 오브젝트도 그리기·충돌 비용이 들므로 보관 영역 밖의 렌더러·충돌체·조명을 지운다.</summary>
         private static int RemoveOutside(Transform environment, Bounds keepArea)
         {
-            int removed = 0;
+            int removedCount = 0;
             foreach (Transform node in environment.GetComponentsInChildren<Transform>(true).ToArray())
             {
                 if (node == null || node == environment)
                     continue;
 
-                Component[] parts = node.GetComponents<Component>()
-                    .Where(c => c is Renderer || c is Collider || c is Light || c is MeshFilter || c is LODGroup)
+                Component[] visualComponents = node.GetComponents<Component>()
+                    .Where(component => component is Renderer || component is Collider || component is Light || component is MeshFilter || component is LODGroup)
                     .ToArray();
-                if (parts.Length == 0 || !IsOutside(node.gameObject, keepArea))
+                if (visualComponents.Length == 0 || !IsOutside(node.gameObject, keepArea))
                     continue;
 
                 if (node.childCount == 0)
@@ -237,19 +213,19 @@ namespace GuardVsMannequin.Editor
                 else
                 {
                     // 자식이 영역 안에 있을 수 있으므로 이 오브젝트의 표시·충돌만 지운다.
-                    foreach (Component part in parts.OrderBy(p => p is MeshFilter ? 1 : 0))
+                    foreach (Component visualComponent in visualComponents.OrderBy(component => component is MeshFilter ? 1 : 0))
                     {
-                        if (part != null)
-                            Object.DestroyImmediate(part);
+                        if (visualComponent != null)
+                            Object.DestroyImmediate(visualComponent);
                     }
                 }
-                removed++;
+                removedCount++;
             }
-            return removed;
+            return removedCount;
         }
 
         /// <summary>
-        /// 오브젝트의 렌더러·충돌체·조명이 모두 보관 영역 밖에 있는지 확인한다.
+        /// 하나라도 영역에 닿으면 보일 수 있으므로 렌더러·충돌체·조명이 모두 영역 밖일 때만 밖으로 본다.
         /// </summary>
         private static bool IsOutside(GameObject target, Bounds keepArea)
         {
@@ -276,16 +252,14 @@ namespace GuardVsMannequin.Editor
             return target.GetComponent<Terrain>() == null;
         }
 
-        /// <summary>
-        /// 컴포넌트도 자식도 없는 빈 오브젝트를 아래에서부터 지운다.
-        /// </summary>
+        /// <summary>컴포넌트를 지우고 남은 빈 오브젝트는 Hierarchy만 복잡하게 하므로 지운다.</summary>
         private static int RemoveEmpty(Transform environment)
         {
-            int removed = 0;
-            bool changed = true;
-            while (changed)
+            int removedCount = 0;
+            bool isChanged = true;
+            while (isChanged)
             {
-                changed = false;
+                isChanged = false;
                 foreach (Transform node in environment.GetComponentsInChildren<Transform>(true).ToArray())
                 {
                     if (node == null || node == environment || node.childCount > 0)
@@ -294,38 +268,34 @@ namespace GuardVsMannequin.Editor
                         continue;
 
                     Object.DestroyImmediate(node.gameObject);
-                    removed++;
-                    changed = true;
+                    removedCount++;
+                    isChanged = true;
                 }
             }
-            return removed;
+            return removedCount;
         }
 
         #endregion
 
         #region 정적 플래그와 오클루전
 
-        /// <summary>
-        /// 환경 렌더러에 정적 플래그를 준다. 가리개로 지정한 개수를 반환한다.
-        /// 불투명하고 충분히 큰 메시만 가리개로 쓴다. (반투명·작은 장식은 뒤를 가리지 못하므로)
-        /// </summary>
+        /// <summary>오클루전 컬링과 정적 배칭이 동작하도록 환경 렌더러에 정적 플래그를 준다.</summary>
         private static int SetStaticFlags(Transform environment)
         {
-            int occluders = 0;
-            foreach (Renderer target in environment.GetComponentsInChildren<Renderer>(true))
+            int occluderCount = 0;
+            foreach (Renderer environmentRenderer in environment.GetComponentsInChildren<Renderer>(true))
             {
-                if (target is ParticleSystemRenderer || target is SkinnedMeshRenderer)
+                if (environmentRenderer is ParticleSystemRenderer || environmentRenderer is SkinnedMeshRenderer)
                     continue;
 
-                StaticEditorFlags flags = GameObjectUtility.GetStaticEditorFlags(target.gameObject);
-                TransformableProp prop = target.GetComponentInParent<TransformableProp>(true);
+                StaticEditorFlags flags = GameObjectUtility.GetStaticEditorFlags(environmentRenderer.gameObject);
+                TransformableProp prop = environmentRenderer.GetComponentInParent<TransformableProp>(true);
 
-                // 판마다 자리를 옮기는 변신 사물(벽 조각 제외)은 움직이지 않는다고 가정한 오클루전 계산에서 뺀다.
-                // (넣어 두면 옮긴 뒤 엉뚱하게 사라지거나, 원래 자리에서 뒤쪽을 가린다)
+                // 판마다 옮겨지는 변신 사물은 엉뚱하게 가려지지 않도록 오클루전 계산에서 뺀다.
                 if (prop != null && !prop.IsWall)
                 {
                     flags &= ~(StaticEditorFlags.BatchingStatic | StaticEditorFlags.OccludeeStatic | StaticEditorFlags.OccluderStatic);
-                    GameObjectUtility.SetStaticEditorFlags(target.gameObject, flags);
+                    GameObjectUtility.SetStaticEditorFlags(environmentRenderer.gameObject, flags);
                     continue;
                 }
                 flags |= StaticEditorFlags.OccludeeStatic;
@@ -336,51 +306,45 @@ namespace GuardVsMannequin.Editor
                 else
                     flags &= ~StaticEditorFlags.BatchingStatic;
 
-                Vector3 size = target.bounds.size;
-                bool large = Mathf.Max(size.x, size.y, size.z) >= OccluderMinSize;
-                if (large && IsOpaque(target))
+                Vector3 rendererSize = environmentRenderer.bounds.size;
+                bool isLarge = Mathf.Max(rendererSize.x, rendererSize.y, rendererSize.z) >= OccluderMinSize;
+                if (isLarge && IsOpaque(environmentRenderer))
                 {
                     flags |= StaticEditorFlags.OccluderStatic;
-                    occluders++;
+                    occluderCount++;
                 }
                 else
                 {
                     flags &= ~StaticEditorFlags.OccluderStatic;
                 }
-                GameObjectUtility.SetStaticEditorFlags(target.gameObject, flags);
+                GameObjectUtility.SetStaticEditorFlags(environmentRenderer.gameObject, flags);
             }
-            return occluders;
+            return occluderCount;
         }
 
-        /// <summary>
-        /// 모든 머티리얼이 불투명(알파 테스트 이전 큐)인지 확인한다.
-        /// </summary>
-        private static bool IsOpaque(Renderer target)
+        /// <summary>반투명 머티리얼이 있는 메시를 가리개로 쓰면 뒤의 물체가 잘못 사라지므로 불투명인지 본다.</summary>
+        private static bool IsOpaque(Renderer targetRenderer)
         {
-            return target.sharedMaterials.All(m => m != null && m.renderQueue < 2450);
+            return targetRenderer.sharedMaterials.All(material => material != null && material.renderQueue < 2450);
         }
 
-        /// <summary>
-        /// 경계 안쪽을 덮는 Occlusion Area를 둔다. 오클루전 계산을 플레이 영역으로 한정해 굽는 시간을 줄인다.
-        /// </summary>
+        /// <summary>굽는 시간이 크게 늘지 않도록 오클루전 계산을 플레이 영역으로 한정한다.</summary>
         private static void EnsureOcclusionArea(Transform boundary, Bounds playArea)
         {
-            OcclusionArea area = boundary.GetComponentInChildren<OcclusionArea>();
-            if (area == null)
+            OcclusionArea occlusionArea = boundary.GetComponentInChildren<OcclusionArea>();
+            if (occlusionArea == null)
             {
                 var areaObject = new GameObject("OcclusionArea");
                 areaObject.transform.SetParent(boundary, false);
-                area = areaObject.AddComponent<OcclusionArea>();
+                occlusionArea = areaObject.AddComponent<OcclusionArea>();
             }
 
-            area.transform.position = Vector3.zero;
-            area.center = playArea.center;
-            area.size = playArea.size;
+            occlusionArea.transform.position = Vector3.zero;
+            occlusionArea.center = playArea.center;
+            occlusionArea.size = playArea.size;
         }
 
-        /// <summary>
-        /// 오클루전 컬링 데이터를 굽는다. (씬 크기에 따라 수 분이 걸릴 수 있음)
-        /// </summary>
+        /// <summary>오클루전은 활성 씬 데이터로 구워지므로 대상 씬을 활성으로 만들고 최소 크기를 맵 규모에 맞춘다.</summary>
         private static void BakeOcclusion(Scene scene)
         {
             if (string.IsNullOrEmpty(scene.path))
@@ -402,31 +366,31 @@ namespace GuardVsMannequin.Editor
         #region 공용
 
         /// <summary>
-        /// 씬 루트부터 "부모/자식" 경로로 오브젝트를 찾는다.
+        /// GameObject.Find는 꺼진 오브젝트를 찾지 못하고 여러 씬이 열려 있으면 엉뚱한 씬을 찾으므로, 지정한 씬의 루트부터 "부모/자식" 경로로 따라간다.
         /// </summary>
         internal static GameObject FindByPath(Scene scene, string path)
         {
-            string[] parts = path.Split('/');
-            GameObject root = scene.GetRootGameObjects().FirstOrDefault(r => r.name == parts[0]);
-            if (root == null)
+            string[] pathNames = path.Split('/');
+            GameObject rootObject = scene.GetRootGameObjects().FirstOrDefault(candidate => candidate.name == pathNames[0]);
+            if (rootObject == null)
                 return null;
 
-            Transform current = root.transform;
-            for (int i = 1; i < parts.Length && current != null; i++)
-                current = current.Find(parts[i]);
+            Transform current = rootObject.transform;
+            for (int i = 1; i < pathNames.Length && current != null; i++)
+                current = current.Find(pathNames[i]);
             return current != null ? current.gameObject : null;
         }
 
         /// <summary>
-        /// 투명 경계(벽·천장 충돌체)가 둘러싼 영역.
+        /// 플레이 영역을 따로 저장하지 않고, 투명 경계(벽·천장 충돌체)가 둘러싼 범위를 플레이 영역으로 본다.
         /// </summary>
         internal static Bounds GetBoundaryBounds(Transform boundary)
         {
-            List<BoxCollider> boxes = boundary.GetComponentsInChildren<BoxCollider>(true).ToList();
-            Bounds bounds = boxes[0].bounds;
-            foreach (BoxCollider box in boxes)
-                bounds.Encapsulate(box.bounds);
-            return bounds;
+            List<BoxCollider> boundaryBoxes = boundary.GetComponentsInChildren<BoxCollider>(true).ToList();
+            Bounds boundaryBounds = boundaryBoxes[0].bounds;
+            foreach (BoxCollider boundaryBox in boundaryBoxes)
+                boundaryBounds.Encapsulate(boundaryBox.bounds);
+            return boundaryBounds;
         }
 
         #endregion

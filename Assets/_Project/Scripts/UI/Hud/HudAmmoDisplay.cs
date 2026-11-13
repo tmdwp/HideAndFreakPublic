@@ -4,11 +4,7 @@ using UnityEngine.UI;
 
 namespace GuardVsMannequin.UI
 {
-    /// <summary>
-    /// 조준점 둘레의 원형 게이지로 남은 탄과 장전 진행을 보여준다.
-    /// 게이지는 위에서 시작해 반시계 방향으로 채워지므로, 탄을 쓰면 빈 곳이 시계 방향으로 일정한 속도로 늘고
-    /// 장전하면 장전 진행만큼 반시계 방향으로 다시 찬다. 사격 후 발사 간격 동안·장전 중에는 색을 바꾼다.
-    /// </summary>
+    /// <summary>시선을 떼지 않고 탄을 보도록 조준점 둘레 게이지로 남은 탄과 장전을 보여 준다.</summary>
     public class HudAmmoDisplay : MonoBehaviour, IHudSection
     {
         [SerializeField] private GameObject gaugePanel;
@@ -26,76 +22,75 @@ namespace GuardVsMannequin.UI
         private HudContext context;
         private float displayedFill = 1f;
         private bool wasReloading;
-        private float reloadTotal;
+        private float reloadTotalTime;
         private float reloadStartFill;
 
-        /// <inheritdoc />
+        /// <summary>
+        /// 로컬 아바타가 바뀌어도 따라가도록 아바타 대신 추적기를 담은 공용 정보를 기억한다.
+        /// </summary>
         public void Bind(HudContext hudContext)
         {
             context = hudContext;
         }
 
-        /// <inheritdoc />
+        /// <summary>
+        /// 네트워크 준비 전에는 탄 정보가 없으므로 빈 게이지가 보이지 않게 숨긴다.
+        /// </summary>
         public void Hide()
         {
             gaugePanel.SetActive(false);
         }
 
-        /// <inheritdoc />
+        /// <summary>탄 정보가 있을 때만 보이고, 다음 아바타가 빈 게이지로 시작하지 않게 숨길 때 채운다.</summary>
         public void Refresh(GameState state)
         {
             bool isInMatch = state is GameState.Preparation or GameState.Playing or GameState.Hunting;
             IAmmoSource ammo = context.LocalPlayer.Ammo;
-            bool visible = isInMatch && ammo != null;
-            gaugePanel.SetActive(visible);
-            if (!visible)
+            bool isVisible = isInMatch && ammo != null;
+            gaugePanel.SetActive(isVisible);
+            if (!isVisible)
             {
-                // 다음 판·다음 아바타는 가득 찬 게이지로 시작한다.
                 displayedFill = 1f;
                 wasReloading = false;
                 return;
             }
 
-            int size = Mathf.Max(1, ammo.MagazineSize);
+            int magazineSize = Mathf.Max(1, ammo.MagazineSize);
             float reloadRemaining = ammo.ReloadRemaining;
-            float target = reloadRemaining > 0f ? GetReloadFill(ammo, size, reloadRemaining) : (float)ammo.Ammo / size;
+            float targetFill = reloadRemaining > 0f ? GetReloadFill(ammo, magazineSize, reloadRemaining) : (float)ammo.Ammo / magazineSize;
             wasReloading = reloadRemaining > 0f;
 
-            displayedFill = MoveFill(displayedFill, target, size);
+            displayedFill = MoveFill(displayedFill, targetFill, magazineSize);
             gaugeFill.fillAmount = displayedFill;
             gaugeFill.color = GetColor(ammo, reloadRemaining);
         }
 
         /// <summary>
-        /// 장전 중 목표 채움: 장전을 시작할 때의 남은 탄 비율에서 장전 진행만큼 가득 참 쪽으로 늘린다.
+        /// 장전 진행 비율은 남은 시간만 알려 주므로, 장전이 시작된 순간의 전체 시간과 채움을 기억해 그 사이를 보간한다.
         /// </summary>
-        private float GetReloadFill(IAmmoSource ammo, int size, float reloadRemaining)
+        private float GetReloadFill(IAmmoSource ammo, int magazineSize, float reloadRemaining)
         {
             if (!wasReloading)
             {
-                reloadTotal = reloadRemaining;
-                reloadStartFill = (float)ammo.Ammo / size;
+                reloadTotalTime = reloadRemaining;
+                reloadStartFill = (float)ammo.Ammo / magazineSize;
             }
 
-            float progress = reloadTotal > 0f ? 1f - reloadRemaining / reloadTotal : 1f;
-            return Mathf.Lerp(reloadStartFill, 1f, Mathf.Clamp01(progress));
+            float reloadProgress = reloadTotalTime > 0f ? 1f - reloadRemaining / reloadTotalTime : 1f;
+            return Mathf.Lerp(reloadStartFill, 1f, Mathf.Clamp01(reloadProgress));
         }
 
-        /// <summary>
-        /// 줄어들 때는 한 발당 <see cref="drainDurationPerRound"/> 속도로 일정하게 줄이고, 늘어날 때(장전)는 바로 따라간다.
-        /// </summary>
-        private float MoveFill(float current, float target, int size)
+        /// <summary>연사할 때 게이지가 뚝뚝 끊기지 않도록 일정한 속도로 줄인다.</summary>
+        private float MoveFill(float currentFill, float targetFill, int magazineSize)
         {
-            if (target >= current)
-                return target;
+            if (targetFill >= currentFill)
+                return targetFill;
 
-            float drainSpeed = drainDurationPerRound > 0f ? 1f / (size * drainDurationPerRound) : float.PositiveInfinity;
-            return Mathf.MoveTowards(current, target, drainSpeed * Time.deltaTime);
+            float drainSpeed = drainDurationPerRound > 0f ? 1f / (magazineSize * drainDurationPerRound) : float.PositiveInfinity;
+            return Mathf.MoveTowards(currentFill, targetFill, drainSpeed * Time.deltaTime);
         }
 
-        /// <summary>
-        /// 장전 중 / 사격 후 발사 간격 중 / 쏠 수 있음에 따라 게이지 색을 고른다.
-        /// </summary>
+        /// <summary>지금 쏠 수 있는지 바로 알도록 상태별로 색을 다르게 한다.</summary>
         private Color GetColor(IAmmoSource ammo, float reloadRemaining)
         {
             if (reloadRemaining > 0f)

@@ -3,10 +3,7 @@ using UnityEngine;
 
 namespace GuardVsMannequin.Player
 {
-    /// <summary>
-    /// 동기화된 상호작용 상태(<see cref="IInteractionState"/>)를 외형 애니메이터의 Interact(Bool)로 옮긴다.
-    /// 모든 클라이언트에서 실행되어 다른 플레이어에게도 상호작용 동작이 보인다. 컨트롤러에 Interact가 없으면 아무것도 하지 않는다.
-    /// </summary>
+    /// <summary>모든 클라이언트에서 상호작용 동작이 보이도록 동기화된 상태를 애니메이터에 옮긴다.</summary>
     [RequireComponent(typeof(CharacterSkinView))]
     public class InteractAnimationView : MonoBehaviour
     {
@@ -15,7 +12,7 @@ namespace GuardVsMannequin.Player
         private bool lastInteracting;
 
         /// <summary>
-        /// 외형과 상호작용 상태를 캐시한다.
+        /// 매 프레임 조회하지 않도록 외형과 상호작용 상태를 미리 찾아 둔다.
         /// </summary>
         private void Awake()
         {
@@ -24,19 +21,19 @@ namespace GuardVsMannequin.Player
         }
 
         /// <summary>
-        /// 상태가 바뀐 프레임에만 애니메이터 값을 바꾼다.
+        /// 같은 값을 매 프레임 넣을 필요가 없으므로 상태가 바뀐 프레임에만 애니메이터 값을 바꾼다.
         /// </summary>
         private void Update()
         {
             if (interactionState == null)
                 return;
 
-            bool interacting = interactionState.IsInteracting;
-            if (interacting == lastInteracting)
+            bool isInteracting = interactionState.IsInteracting;
+            if (isInteracting == lastInteracting)
                 return;
 
-            lastInteracting = interacting;
-            skinView.TrySetBool(CharacterAnimatorParameters.Interact, interacting);
+            lastInteracting = isInteracting;
+            skinView.TrySetBool(CharacterAnimatorParameters.Interact, isInteracting);
         }
     }
 }

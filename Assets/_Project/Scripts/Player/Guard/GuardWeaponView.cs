@@ -4,25 +4,7 @@ using UnityEngine.Rendering;
 
 namespace GuardVsMannequin.Player.Guard
 {
-    /// <summary>
-    /// 가드의 총 외형을 관리한다.
-    /// - 소유자: 기본은 1인칭에서도 손에 든 3인칭 총을 보여준다(<c>useHandGunInFirstPerson</c>, 팔다리만 보이는 1인칭 몸과 함께).
-    ///   끄면 예전처럼 카메라 앞의 1인칭 총을 보여주고 손에 든 총은 그림자만 남긴다.
-    /// - 다른 플레이어: 외형의 손에 3인칭 총을 들려 조준 방향으로 향하게 한다.
-    /// 사격 연출은 <see cref="Muzzle"/>(보는 사람 기준 총구)에서 시작한다.
-    /// 1인칭 총과 양손 3인칭 총은 몸 흔들림(<see cref="CharacterSway"/>)을 따라 같이 출렁인다. (한 손 총은 손 뼈를 따라가므로 이미 흔들린다)
-    /// 총 모델 프리팹은 "캐릭터·무기 에셋 생성" 도구가 총구가 +Z를 향하고 Muzzle 자식을 갖도록 만든다.
-    ///
-    /// 손잡이 지점(<see cref="GunGripSpots"/>)
-    /// - Right Hand + Left Hand가 있으면 양손 총: 몸 기준 어깨 높이의 회전 중심에서 일정 거리에 총을 놓고(상하 시선을 따라 돎),
-    ///   조준 IK가 두 손을 각 지점에 붙이며 팔꿈치는 몸 바깥·아래를 향하게 한다.
-    ///   총 위치는 IK 직전(<see cref="TryGetHandGoals"/>)에 정해 손과 총이 같은 프레임에 맞는다.
-    /// - Right Hand(또는 예전 이름 Spot)만 있으면 한 손 총: 애니메이션이 끝난 손 뼈에 그 지점이 오도록 총을 놓는다.
-    ///
-    /// 위치 조정 (값은 매 프레임 적용되므로 Play 중 바꾸며 맞출 수 있다)
-    /// - 1인칭 총: 카메라 기준이라 외형과 무관 → 이 컴포넌트의 값. Play 중 맞춘 뒤 Copy Component → 프리팹에 Paste Component Values.
-    /// - 3인칭 총·조준 IK 손 위치: 외형마다 다름 → 외형 에셋(Skin_*.asset)의 Weapon Grip. 에셋이라 Play 중 바꾼 값이 그대로 저장된다.
-    /// </summary>
+    /// <summary>소유자와 다른 사람에게 맞는 총이 보이도록 가드의 1인칭·3인칭 총 외형을 관리한다.</summary>
     public class GuardWeaponView : NetworkBehaviour, IHandIKGoalSource, IPerspectiveListener
     {
         private const string MuzzleName = "Muzzle";
@@ -61,20 +43,29 @@ namespace GuardVsMannequin.Player.Guard
         private Transform rightHand;
         private bool hasAimIK;
 
-        // 양손 총을 이번 프레임 IK 직전에 이미 놓았는지. (애니메이터가 꺼져 IK가 불리지 않은 프레임은 LateUpdate에서 놓는다)
+        // IK 뒤 실제 손과의 차이만큼 총을 옮기려고 기억하는 오른손 목표.
+        private Vector3 requestedRightHand;
+
+        // 총을 돌려도 쥔 모양을 유지하려고 기억한 두 손 방향.
+        private const int HandRotationCaptureDelay = 10;
+        private int twoHandedFrames;
+        private Quaternion? rightHandToGun;
+        private Quaternion? leftHandToGun;
+
+        // IK가 불리지 않은 프레임에 LateUpdate에서 놓으려고 기억하는 이번 프레임 배치 여부.
         private int twoHandedPlacedFrame = -1;
 
-        // 소유자 화면에 카메라 앞 1인칭 총을 보여주는 중인지. (아니면 손에 든 총이 보인다)
+        // 소유자 화면에 카메라 앞 1인칭 총을 보여 주는 중인지.
         private bool isFirstPersonGunShown;
 
-        /// <summary>보는 사람 기준 총구. (소유자가 카메라 앞 총을 보는 중이면 그 총, 아니면 손에 든 총)</summary>
+        /// <summary>사격 연출이 보는 사람 화면의 총에서 나와야 하므로, 지금 보이는 총의 총구를 고른다.</summary>
         public Transform Muzzle => isFirstPersonGunShown || thirdPersonMuzzle == null ? firstPersonMuzzle : thirdPersonMuzzle;
 
-        /// <summary>양손으로 잡는 총인지. (3인칭 총에 Left Hand 지점이 있고 외형이 조준 IK를 쓸 때)</summary>
+        /// <summary>왼손 지점이 있어도 외형이 조준 IK를 쓰지 않으면 왼손을 붙일 수 없으므로 둘 다 갖춰야 양손으로 본다.</summary>
         private bool IsTwoHanded => thirdPersonGun != null && aimPivot != null && leftGripPoint.HasValue && hasAimIK;
 
         /// <summary>
-        /// 3인칭 총을 만들고, 외형의 조준 IK와 손 뼈를 연결한다.
+        /// 손잡이 지점과 손 뼈는 바뀌지 않으므로 처음에 한 번 찾아 두고, 외형의 조준 IK가 이 총을 목표로 쓰도록 연결한다.
         /// </summary>
         private void Awake()
         {
@@ -105,17 +96,15 @@ namespace GuardVsMannequin.Player.Guard
         }
 
         /// <summary>
-        /// 총 모델의 Muzzle 자식을 찾는다. 없으면 총 자체를 총구로 쓴다.
+        /// Muzzle 자식이 없는 총 모델도 연출이 나오도록 총 자체를 총구로 대신 쓴다.
         /// </summary>
         private static Transform FindMuzzle(Transform gun)
         {
-            Transform found = gun.Find(MuzzleName);
-            return found != null ? found : gun;
+            Transform foundMuzzle = gun.Find(MuzzleName);
+            return foundMuzzle != null ? foundMuzzle : gun;
         }
 
-        /// <summary>
-        /// 소유자는 1인칭으로 시작하므로 그에 맞는 총을 보여주고, 다른 플레이어에게는 손에 든 3인칭 총만 보이게 한다.
-        /// </summary>
+        /// <summary>소유 여부는 스폰 뒤에야 알 수 있어 여기서 정하고, 다른 사람에게는 카메라 앞 총을 끈다.</summary>
         public override void OnStartClient()
         {
             base.OnStartClient();
@@ -126,7 +115,7 @@ namespace GuardVsMannequin.Player.Guard
         }
 
         /// <summary>
-        /// 소유자 시점이 바뀌면 그 시점에 맞는 총을 보여준다. (테스트 방 시점 전환)
+        /// 테스트 방 시점 전환 때 3인칭에서 카메라 앞 총이 떠 있지 않도록 시점에 맞는 총으로 바꾼다.
         /// </summary>
         public void OnPerspectiveChanged(bool firstPerson)
         {
@@ -134,10 +123,7 @@ namespace GuardVsMannequin.Player.Guard
                 ApplyOwnerGunVisibility(firstPerson);
         }
 
-        /// <summary>
-        /// 소유자 화면의 총: 1인칭이고 손에 든 총을 쓰지 않으면 카메라 앞 총(손에 든 총은 그림자만),
-        /// 그 밖에는(손에 든 총 사용 또는 3인칭) 손에 든 총을 보여준다.
-        /// </summary>
+        /// <summary>두 총이 겹쳐 보이지 않게 하나만 보이되, 바닥 그림자는 남도록 손에 든 총은 그림자만 그린다.</summary>
         private void ApplyOwnerGunVisibility(bool firstPerson)
         {
             isFirstPersonGunShown = firstPerson && (!useHandGunInFirstPerson || thirdPersonGun == null);
@@ -152,9 +138,9 @@ namespace GuardVsMannequin.Player.Guard
         }
 
         /// <summary>
-        /// 조준 IK 직전에 불린다. 양손 총이면 총을 놓고 두 손잡이 지점과 팔꿈치 방향을 돌려준다.
+        /// 총을 IK 뒤에 놓으면 손이 한 프레임 늦게 따라와 떨려 보이므로, IK 직전에 총을 먼저 놓고 그 손잡이를 목표로 준다.
         /// </summary>
-        public bool TryGetHandGoals(out HandIKGoals goals)
+        public bool TryGetHandGoals(HandIKPose animatedPose, out HandIKGoals goals)
         {
             goals = default;
             if (!IsTwoHanded)
@@ -163,22 +149,54 @@ namespace GuardVsMannequin.Player.Guard
             WeaponGrip grip = CurrentGrip;
             PlaceTwoHandedGun(grip);
             twoHandedPlacedFrame = Time.frameCount;
+            CaptureHandRotations(grip, animatedPose);
 
             // 팔꿈치 힌트는 상하 시선과 관계없이 몸 방향 기준이라 위아래를 볼 때도 팔이 옆·아래로 굽는다.
             Vector3 pivot = HoldPivot(grip, out Quaternion bodyYaw);
+            requestedRightHand = thirdPersonGun.TransformPoint(rightGripPoint);
             goals = new HandIKGoals
             {
-                RightHand = thirdPersonGun.TransformPoint(rightGripPoint),
+                RightHand = requestedRightHand,
                 LeftHand = thirdPersonGun.TransformPoint(leftGripPoint.Value),
+                RightHandRotation = HandRotationOnGun(grip, rightHandToGun, grip.rightHandRotationOffset),
+                LeftHandRotation = HandRotationOnGun(grip, leftHandToGun, grip.leftHandRotationOffset),
                 RightElbowHint = pivot + bodyYaw * grip.rightElbowHint,
                 LeftElbowHint = pivot + bodyYaw * grip.leftElbowHint
             };
             return true;
         }
 
+        /// <summary>총을 위아래로 돌려도 쥔 모양을 유지하도록 기억한 손 방향을 지금 총 방향에 얹는다.</summary>
+        private Quaternion? HandRotationOnGun(WeaponGrip grip, Quaternion? handToGun, Vector3 offset)
+        {
+            if (!grip.lockHandRotation || !handToGun.HasValue)
+                return null;
+            return thirdPersonGun.rotation * handToGun.Value * Quaternion.Euler(offset);
+        }
+
         /// <summary>
-        /// 애니메이션(IK 포함)이 끝난 뒤 총 위치를 적용한다. 인스펙터 값을 매 프레임 반영한다.
+        /// 손 뼈 Transform 방향은 IK 목표와 축이 달라 그대로 넣으면 손이 꺾이므로, IK 목표 방향을 총 기준으로 한 번 기억한다.
         /// </summary>
+        private void CaptureHandRotations(WeaponGrip grip, HandIKPose animatedPose)
+        {
+            if (!grip.lockHandRotation || rightHandToGun.HasValue)
+                return;
+            // 스폰 직후에는 기본 자세(T자)일 수 있어, 애니메이션이 자리 잡은 뒤의 손 방향을 기억한다.
+            if (++twoHandedFrames < HandRotationCaptureDelay)
+                return;
+
+            Quaternion toGun = Quaternion.Inverse(thirdPersonGun.rotation);
+            rightHandToGun = toGun * animatedPose.RightHandRotation;
+            leftHandToGun = toGun * animatedPose.LeftHandRotation;
+        }
+
+        /// <summary>팔이 모자라 총과 손이 떨어져 보이지 않도록 그 차이만큼 총을 손 쪽으로 옮긴다.</summary>
+        private void AttachGunToHands()
+        {
+            thirdPersonGun.position += rightHand.position - requestedRightHand;
+        }
+
+        /// <summary>IK가 끝난 손 위치에 맞추도록 LateUpdate에서 총을 놓는다.</summary>
         private void LateUpdate()
         {
             WeaponGrip grip = CurrentGrip;
@@ -187,9 +205,7 @@ namespace GuardVsMannequin.Player.Guard
 
             if (firstPersonGun != null)
             {
-                // 카메라는 그릴 때만 흔들림 × 카메라 배율만큼 옮겨진다. 총이 같은 양만 움직이면 화면에선 멈춰 보이므로
-                // 카메라 배율만큼 따라간 뒤 firstPersonSwayScale만큼 더 움직여 화면 안에서도 출렁이게 한다.
-                // (흔들림은 월드 기준이라 총의 부모 기준으로 바꿔 더한다)
+                // 화면 안에서도 총이 출렁이도록 카메라 배율보다 firstPersonSwayScale만큼 더 움직인다.
                 Vector3 swayLocal = firstPersonGun.parent != null ? firstPersonGun.parent.InverseTransformVector(BodySway) : BodySway;
                 float cameraScale = sway != null ? sway.CameraSwayScale : 0f;
                 firstPersonGun.localPosition = firstPersonPosition + swayLocal * (cameraScale + firstPersonSwayScale);
@@ -202,8 +218,10 @@ namespace GuardVsMannequin.Player.Guard
 
             if (IsTwoHanded)
             {
-                // 이번 프레임 IK에서 이미 놓았으면 손과 맞춘 그 자리를 유지한다.
-                if (twoHandedPlacedFrame != Time.frameCount)
+                // IK에서 놓았으면 IK가 끝난 손에 총을 붙인다.
+                if (twoHandedPlacedFrame == Time.frameCount)
+                    AttachGunToHands();
+                else
                     PlaceTwoHandedGun(grip);
                 return;
             }
@@ -211,7 +229,7 @@ namespace GuardVsMannequin.Player.Guard
             thirdPersonGun.localScale = Vector3.one * grip.gunScale;
             if (rightHand == null)
             {
-                // 휴머노이드가 아니면 카메라 피벗 오른쪽 아래에 둔다.
+                // 휴머노이드가 아니면 손 뼈를 알 수 없으므로 카메라 피벗 오른쪽 아래에 둔다.
                 thirdPersonGun.SetPositionAndRotation(aimPivot.TransformPoint(new Vector3(0.2f, -0.3f, 0.4f)), aimPivot.rotation);
                 return;
             }
@@ -223,12 +241,7 @@ namespace GuardVsMannequin.Player.Guard
             MoveGripPointTo(rightGripPoint, handTarget);
         }
 
-        /// <summary>
-        /// 양손 총을 몸 기준 회전 중심(어깨 높이, holdPivot)에 매달아 놓는다.
-        /// 두 손 사이 가운데 지점이 회전 중심에서 holdOffset만큼 떨어진 채 상하 시선을 따라 돌아,
-        /// 위아래를 봐도 총과 몸통 사이 거리가 일정하다. (상하 각도는 holdPitchLimit까지만 따라간다)
-        /// 총구 방향은 제한 없이 조준 방향 + handRotationOffset. (한 손 총 전용 값은 쓰지 않는다)
-        /// </summary>
+        /// <summary>위아래를 볼 때 총이 몸에 박히지 않도록 손 뼈 대신 어깨 높이 회전 중심에 매단다.</summary>
         private void PlaceTwoHandedGun(WeaponGrip grip)
         {
             Vector3 pivot = HoldPivot(grip, out Quaternion bodyYaw);
@@ -241,21 +254,21 @@ namespace GuardVsMannequin.Player.Guard
             MoveGripPointTo(handsCenter, pivot + holdRotation * grip.holdOffset);
         }
 
-        /// <summary>
-        /// 양손 총의 회전 중심(월드)과 좌우 시선 방향의 회전. 좌우는 조준 방향을 따르고 상하는 뺀다.
-        /// 몸 흔들림만큼 함께 움직여 총과 두 손이 몸과 같이 출렁인다.
-        /// </summary>
+        /// <summary>팔꿈치 힌트와 총 위치가 같은 기준을 쓰도록 회전 중심과 좌우 회전을 한곳에서 계산한다.</summary>
         private Vector3 HoldPivot(WeaponGrip grip, out Quaternion bodyYaw)
         {
             bodyYaw = Quaternion.Euler(0f, aimPivot.eulerAngles.y, 0f);
-            return transform.position + bodyYaw * grip.holdPivot + BodySway;
+            return transform.position + bodyYaw * grip.holdPivot + BodySway + UpperBodySway;
         }
 
-        /// <summary>이번 프레임 몸 흔들림(월드). 흔들림 구성 요소가 없으면 0.</summary>
+        /// <summary>몸 흔들림(월드 기준).</summary>
         private Vector3 BodySway => sway != null ? sway.WorldOffset : Vector3.zero;
 
+        /// <summary>BodySway와 더해 쓰는 골반을 뺀 상체 흔들림.</summary>
+        private Vector3 UpperBodySway => sway != null ? sway.UpperBodyWorldOffset : Vector3.zero;
+
         /// <summary>
-        /// 총의 회전·크기는 그대로 두고, 총 루트 기준 지점이 목표 위치에 오도록 총을 옮긴다.
+        /// 손잡이 지점은 총 루트가 아닌 곳에 있으므로, 회전·크기를 정한 뒤 그 지점이 목표에 오도록 총 루트를 옮긴다.
         /// </summary>
         private void MoveGripPointTo(Vector3 gripPoint, Vector3 target)
         {
@@ -263,10 +276,7 @@ namespace GuardVsMannequin.Player.Guard
             thirdPersonGun.position = target - gripOffset;
         }
 
-        /// <summary>
-        /// 적용된 외형의 손 위치 설정. 외형이 없으면 이 컴포넌트의 예비 설정.
-        /// (매 프레임 읽으므로 Play 중 외형 에셋 값을 바꾸면 바로 반영된다)
-        /// </summary>
+        /// <summary>손 위치는 외형마다 달라 외형 에셋 값을 쓰고, 외형이 없을 때만 예비 설정을 쓴다.</summary>
         private WeaponGrip CurrentGrip
         {
             get
@@ -276,9 +286,7 @@ namespace GuardVsMannequin.Player.Guard
             }
         }
 
-        /// <summary>
-        /// 선택했을 때 씬 뷰에 총구(빨강)와 손잡이 지점(오른손 하늘색, 왼손 노랑)을 표시한다. (위치 조정용)
-        /// </summary>
+        /// <summary>위치를 조정할 때 손잡이·총구가 보이도록 선택하면 씬 뷰에 표시한다.</summary>
         private void OnDrawGizmosSelected()
         {
             Gizmos.color = Color.red;

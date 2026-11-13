@@ -6,21 +6,13 @@ using UnityEngine.Rendering.Universal;
 
 namespace GuardVsMannequin.Editor
 {
-    /// <summary>
-    /// 게임의 URP 설정(PC_RPAsset·PC_Renderer·기본 볼륨 프로필)을 모드 SDK용으로 복사한다.
-    /// 모드 번들에 들어가는 셰이더는 모드 제작 프로젝트의 URP 설정으로 만들어지므로, 게임과 설정이 다르면
-    /// 그림자·추가 조명 등의 셰이더 변형이 빠져 분홍색이나 잘못된 빛으로 보일 수 있다.
-    /// 게임 코드에 의존하는 렌더러 기능(외곽선 등)은 SDK에서 쓸 수 없으므로 복사본에서 뺀다. (URP 기본 기능은 유지)
-    /// SDK에서는 "Hide&amp;Freak > 게임 그래픽 설정 적용"(<see cref="ModSdkSettings"/>)으로 이 설정을 쓴다.
-    /// </summary>
+    /// <summary>모드 번들 셰이더가 게임과 같은 변형으로 만들어지도록 게임 URP 설정을 SDK용으로 복사한다.</summary>
     public static class ModSdkGraphicsExporter
     {
         private const string SourceAsset = "Assets/Settings/PC_RPAsset.asset";
         private const string SourceRenderer = "Assets/Settings/PC_Renderer.asset";
 
-        /// <summary>
-        /// SDK 폴더에 URP 설정 복사본을 새로 만든다. 성공하면 true.
-        /// </summary>
+        /// <summary>게임 설정이 바뀌었을 수 있어 매번 새로 복사하고, SDK에서 쓸 수 없는 게임 전용 렌더러 기능은 뺀다.</summary>
         public static bool Export()
         {
             var sourceAsset = AssetDatabase.LoadAssetAtPath<UniversalRenderPipelineAsset>(SourceAsset);
@@ -33,18 +25,23 @@ namespace GuardVsMannequin.Editor
             EnsureFolder(ModSdkSettings.SettingsFolder);
             CopyOver(SourceAsset, ModSdkSettings.PipelineAssetPath);
             CopyOver(SourceRenderer, ModSdkSettings.RendererPath);
+            // Graphics 설정은 에셋으로 복사할 수 없어 값을 파일로 적어 둔다.
+            System.IO.File.WriteAllLines(ModSdkSettings.ShaderStrippingPath, ModSdkSettings.ReadShaderStripping(), new System.Text.UTF8Encoding(false));
+            AssetDatabase.ImportAsset(ModSdkSettings.ShaderStrippingPath);
+            System.IO.File.WriteAllLines(ModSdkSettings.GraphicsApisPath, ModSdkSettings.ReadGraphicsApis(), new System.Text.UTF8Encoding(false));
+            AssetDatabase.ImportAsset(ModSdkSettings.GraphicsApisPath);
 
-            var renderer = AssetDatabase.LoadAssetAtPath<UniversalRendererData>(ModSdkSettings.RendererPath);
-            RemoveGameRendererFeatures(renderer);
+            var rendererData = AssetDatabase.LoadAssetAtPath<UniversalRendererData>(ModSdkSettings.RendererPath);
+            RemoveGameRendererFeatures(rendererData);
 
             var pipeline = AssetDatabase.LoadAssetAtPath<UniversalRenderPipelineAsset>(ModSdkSettings.PipelineAssetPath);
             var serializedPipeline = new SerializedObject(pipeline);
-            SerializedProperty renderers = serializedPipeline.FindProperty("m_RendererDataList");
-            renderers.arraySize = 1;
-            renderers.GetArrayElementAtIndex(0).objectReferenceValue = renderer;
+            SerializedProperty rendererList = serializedPipeline.FindProperty("m_RendererDataList");
+            rendererList.arraySize = 1;
+            rendererList.GetArrayElementAtIndex(0).objectReferenceValue = rendererData;
             serializedPipeline.FindProperty("m_DefaultRendererIndex").intValue = 0;
 
-            // 기본 볼륨 프로필도 SDK 폴더로 복사해 가리킨다. (게임 프로젝트의 다른 폴더에 의존하지 않도록)
+            // SDK가 게임 프로젝트의 다른 폴더에 의존하지 않도록 기본 볼륨 프로필도 복사한다.
             SerializedProperty volumeProfile = serializedPipeline.FindProperty("m_VolumeProfile");
             if (volumeProfile != null && volumeProfile.objectReferenceValue != null)
             {
@@ -54,25 +51,23 @@ namespace GuardVsMannequin.Editor
             serializedPipeline.ApplyModifiedPropertiesWithoutUndo();
 
             EditorUtility.SetDirty(pipeline);
-            EditorUtility.SetDirty(renderer);
+            EditorUtility.SetDirty(rendererData);
             AssetDatabase.SaveAssets();
             return true;
         }
 
-        /// <summary>
-        /// 게임 코드(GuardVsMannequin 어셈블리)에 있는 렌더러 기능을 지운다. URP 기본 기능(SSAO 등)은 남긴다.
-        /// </summary>
-        private static void RemoveGameRendererFeatures(UniversalRendererData renderer)
+        /// <summary>SDK에는 게임 코드가 없어 게임 렌더러 기능이 "스크립트 없음"으로 깨지므로 지운다.</summary>
+        private static void RemoveGameRendererFeatures(UniversalRendererData rendererData)
         {
-            var serialized = new SerializedObject(renderer);
-            SerializedProperty features = serialized.FindProperty("m_RendererFeatures");
-            // 기능 목록과 같은 순서의 내부 ID 목록. 함께 지워야 URP가 "없는 기능" 경고를 내지 않는다.
-            SerializedProperty featureMap = serialized.FindProperty("m_RendererFeatureMap");
+            var serializedRenderer = new SerializedObject(rendererData);
+            SerializedProperty features = serializedRenderer.FindProperty("m_RendererFeatures");
+            // 함께 지워야 URP가 "없는 기능" 경고를 내지 않는 내부 ID 목록.
+            SerializedProperty featureMap = serializedRenderer.FindProperty("m_RendererFeatureMap");
             for (int i = features.arraySize - 1; i >= 0; i--)
             {
                 var feature = features.GetArrayElementAtIndex(i).objectReferenceValue as ScriptableRendererFeature;
-                bool fromGame = feature == null || feature.GetType().Assembly.GetName().Name.StartsWith("GuardVsMannequin");
-                if (!fromGame)
+                bool isGameFeature = feature == null || feature.GetType().Assembly.GetName().Name.StartsWith("GuardVsMannequin");
+                if (!isGameFeature)
                     continue;
 
                 features.DeleteArrayElementAtIndex(i);
@@ -81,32 +76,32 @@ namespace GuardVsMannequin.Editor
                 if (feature != null)
                     Object.DestroyImmediate(feature, true);
             }
-            serialized.ApplyModifiedPropertiesWithoutUndo();
-            renderer.SetDirty();
+            serializedRenderer.ApplyModifiedPropertiesWithoutUndo();
+            rendererData.SetDirty();
         }
 
         /// <summary>
-        /// 에셋을 대상 경로로 복사한다. 이미 있으면 지우고 새로 복사한다.
+        /// CopyAsset은 대상이 있으면 실패하므로 먼저 지운 뒤 복사한다.
         /// </summary>
-        private static void CopyOver(string source, string destination)
+        private static void CopyOver(string sourcePath, string destinationPath)
         {
-            AssetDatabase.DeleteAsset(destination);
-            AssetDatabase.CopyAsset(source, destination);
+            AssetDatabase.DeleteAsset(destinationPath);
+            AssetDatabase.CopyAsset(sourcePath, destinationPath);
         }
 
         /// <summary>
-        /// "Assets/a/b/c" 형식의 폴더를 차례로 만든다.
+        /// AssetDatabase.CreateFolder는 한 단계씩만 만들 수 있어 "Assets/a/b/c"의 각 단계를 차례로 만든다.
         /// </summary>
-        private static void EnsureFolder(string folder)
+        private static void EnsureFolder(string folderPath)
         {
-            string[] parts = folder.Split('/');
-            string current = parts[0];
-            foreach (string part in parts.Skip(1))
+            string[] folderNames = folderPath.Split('/');
+            string currentPath = folderNames[0];
+            foreach (string folderName in folderNames.Skip(1))
             {
-                string next = $"{current}/{part}";
-                if (!AssetDatabase.IsValidFolder(next))
-                    AssetDatabase.CreateFolder(current, part);
-                current = next;
+                string nextPath = $"{currentPath}/{folderName}";
+                if (!AssetDatabase.IsValidFolder(nextPath))
+                    AssetDatabase.CreateFolder(currentPath, folderName);
+                currentPath = nextPath;
             }
         }
     }

@@ -1,20 +1,17 @@
 namespace GuardVsMannequin.Core
 {
-    /// <summary>
-    /// 탄창이 있는 도구. HUD는 <see cref="ITool"/>의 쿨타임과 함께 남은 탄·장전 상태를 표시한다.
-    /// </summary>
+    /// <summary>HUD가 남은 탄·장전 상태를 표시하도록 하는 탄창 있는 도구.</summary>
     public interface IAmmoSource
     {
-        /// <summary>남은 탄 수. (소유자 화면 기준)</summary>
+        /// <summary>즉시 반응하도록 소유자 화면의 예측값을 쓴다.</summary>
         int Ammo { get; }
 
-        /// <summary>탄창 크기.</summary>
         int MagazineSize { get; }
 
-        /// <summary>장전 남은 시간(초). 장전 중이 아니면 0.</summary>
+        /// <summary>장전 남은 시간(초).</summary>
         float ReloadRemaining { get; }
 
-        /// <summary>사격 후 다음 발까지 남은 발사 간격(초). (장전·출발 보호와 별개)</summary>
+        /// <summary>HUD가 장전과 구분하도록 따로 주는 발사 간격(초).</summary>
         float FireCooldownRemaining { get; }
     }
 }

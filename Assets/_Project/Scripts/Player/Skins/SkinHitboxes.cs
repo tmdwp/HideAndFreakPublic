@@ -3,21 +3,14 @@ using UnityEngine;
 
 namespace GuardVsMannequin.Player
 {
-    /// <summary>
-    /// 외형의 뼈를 따라 움직이는 피격 판정용 캡슐(몸통·머리·팔다리)을 만든다. (마네킹 — 사냥 시간 구울처럼 크기·자세가 바뀌는 외형)
-    /// - 판정 캡슐은 트리거이고 "Hitbox" 레이어에 둔다. 이동(ECM2는 Default만 충돌)·다른 광선 검사(트리거 무시)·물리에 영향이 없다.
-    /// - 총 판정(<see cref="AimRaycaster.TryRaycastHittable"/>)만 이 캡슐을 맞히고, 판정 캡슐이 켜져 있는 동안 이동 캡슐은 맞히지 않는다.
-    /// - 원본 몸이 숨겨지면(변신) 판정 캡슐을 끈다. 그때는 지금처럼 사물 크기로 바뀐 이동 캡슐이 판정을 맡는다.
-    /// - 외형이 바뀌면(사냥 외형) 새 뼈대로 다시 만든다.
-    /// 모든 피어에서 같은 애니메이션으로 움직이므로 서버(호스트)의 판정도 화면과 맞는다.
-    /// </summary>
+    /// <summary>크기·자세가 바뀌는 외형도 정확히 맞도록 뼈를 따라 움직이는 피격 판정 캡슐을 만든다.</summary>
     [RequireComponent(typeof(CharacterSkinView))]
-    public class SkinHitboxes : MonoBehaviour
+    public class SkinHitboxes : MonoBehaviour, IHitShapeOverride
     {
-        /// <summary>판정 캡슐을 두는 레이어 이름. (Project Settings > Tags and Layers)</summary>
+        /// <summary>Project Settings > Tags and Layers에 같은 이름의 레이어가 있어야 한다.</summary>
         public const string LayerName = "Hitbox";
 
-        // 사람 기준(키 1.8m) 골반~머리 거리. 외형의 실제 거리와의 비로 캡슐 굵기를 맞춘다.
+        // 외형 비율로 캡슐 굵기를 맞추는 기준 골반~머리 거리.
         private const float HumanHipsToHead = 0.63f;
 
         // 사람 기준 반지름(m)
@@ -31,7 +24,7 @@ namespace GuardVsMannequin.Player
         private const float UpperLegRadius = 0.09f;
         private const float LowerLegRadius = 0.075f;
 
-        // 이어지는 두 뼈와 반지름. (부모 뼈 → 자식 뼈. 자식 뼈의 시작점은 부모 뼈 기준으로 움직이지 않으므로 캡슐이 정확히 따라간다)
+        // 캡슐이 정확히 따라가도록 잇는 부모·자식 뼈와 반지름.
         private static readonly (HumanBodyBones from, HumanBodyBones to, float radius)[] Segments =
         {
             (HumanBodyBones.Hips, HumanBodyBones.Spine, TorsoRadius),
@@ -48,7 +41,7 @@ namespace GuardVsMannequin.Player
             (HumanBodyBones.RightLowerLeg, HumanBodyBones.RightFoot, LowerLegRadius),
         };
 
-        // 자식 뼈가 없는 끝 부위: (뼈, 방향을 정할 부모 뼈, 길이, 반지름) — 부모→뼈 방향으로 길이만큼 늘인다.
+        // 자식 뼈가 없는 끝 부위의 뼈·방향·길이·반지름.
         private static readonly (HumanBodyBones bone, HumanBodyBones parent, float length, float radius)[] Tips =
         {
             (HumanBodyBones.Head, HumanBodyBones.Neck, HeadLength, HeadRadius),
@@ -56,6 +49,7 @@ namespace GuardVsMannequin.Player
             (HumanBodyBones.RightHand, HumanBodyBones.RightLowerArm, HandLength, HandRadius),
         };
 
+        // -2: 아직 찾지 않음, -1: 레이어 없음
         private static int hitboxLayer = -2;
 
         [Tooltip("판정 캡슐이 켜져 있을 때 총이 맞히지 않을 이동 캡슐. 비우면 같은 오브젝트의 CapsuleCollider.")]
@@ -63,31 +57,27 @@ namespace GuardVsMannequin.Player
 
         private readonly List<CapsuleCollider> hitboxes = new();
         private CharacterSkinView skinView;
-        private Animator builtFor;
+        private Animator builtForAnimator;
         private bool hitboxesEnabled;
 
-        /// <summary>판정 캡슐이 있고 켜져 있는지 여부.</summary>
+        /// <summary>판정 캡슐이 없으면 이동 캡슐을 건너뛰면 안 되므로, 실제로 있고 켜졌을 때만 참이다.</summary>
         public bool IsActive => hitboxesEnabled && hitboxes.Count > 0;
 
         /// <summary>
-        /// 총 판정에서 이 충돌체를 판정 캡슐로 볼지 여부.
+        /// 다른 트리거까지 맞으면 안 되므로, 이 레이어의 트리거만 판정 캡슐로 본다.
         /// </summary>
         public static bool IsHitbox(Collider collider)
         {
             return collider != null && collider.isTrigger && collider.gameObject.layer == HitboxLayer && HitboxLayer >= 0;
         }
 
-        /// <summary>
-        /// 판정 캡슐이 대신하고 있어 총 판정에서 건너뛸 이동 캡슐인지 여부.
-        /// </summary>
-        public static bool IsReplacedCapsule(Collider collider)
+        /// <summary>이동 캡슐은 몸보다 커서 빈 곳을 쏴도 맞으므로 판정 캡슐이 켜져 있으면 건너뛴다.</summary>
+        public bool ReplacesCollider(Collider collider)
         {
-            return collider != null && collider.TryGetComponent(out SkinHitboxes owner) && owner.IsActive && owner.movementCapsule == collider;
+            return IsActive && movementCapsule == collider;
         }
 
-        /// <summary>
-        /// "Hitbox" 레이어 번호. 처음 쓸 때 다른 모든 레이어와의 물리 충돌을 끈다. 레이어가 없으면 -1.
-        /// </summary>
+        /// <summary>판정 캡슐이 이동·물리에 영향을 주지 않도록 처음 쓸 때 모든 레이어와의 충돌을 끈다.</summary>
         private static int HitboxLayer
         {
             get
@@ -107,7 +97,7 @@ namespace GuardVsMannequin.Player
         }
 
         /// <summary>
-        /// 외형과 이동 캡슐을 캐시한다.
+        /// 이동 캡슐을 지정하지 않은 프리팹도 동작하도록 같은 오브젝트의 캡슐을 대신 쓴다.
         /// </summary>
         private void Awake()
         {
@@ -117,33 +107,30 @@ namespace GuardVsMannequin.Player
         }
 
         /// <summary>
-        /// 만든 판정 캡슐을 지운다.
+        /// 캡슐은 뼈의 자식이라 외형 모델과 함께 지워지지만, 외형이 남는 경우에 대비해 직접 지운다.
         /// </summary>
         private void OnDestroy()
         {
             Clear();
         }
 
-        /// <summary>
-        /// 외형이 바뀌면 다시 만들고, 원본 몸이 보이는지(변신하지 않았는지)에 맞춰 켜고 끈다.
-        /// (애니메이션 뒤에 실행되도록 LateUpdate)
-        /// </summary>
+        /// <summary>애니메이션 뒤에 확인하도록 LateUpdate에서 외형 교체와 변신을 따라간다.</summary>
         private void LateUpdate()
         {
             Animator animator = skinView.Animator;
-            if (animator != builtFor)
+            if (animator != builtForAnimator)
                 Rebuild(animator);
 
-            bool visible = IsBodyVisible();
-            if (visible == hitboxesEnabled)
+            bool isVisible = IsBodyVisible();
+            if (isVisible == hitboxesEnabled)
                 return;
-            hitboxesEnabled = visible;
+            hitboxesEnabled = isVisible;
             foreach (CapsuleCollider hitbox in hitboxes)
-                hitbox.enabled = visible;
+                hitbox.enabled = isVisible;
         }
 
         /// <summary>
-        /// 원본 몸 렌더러가 하나라도 켜져 있으면 true. (변신하면 몸 렌더러가 꺼진다)
+        /// 변신하면 몸 렌더러가 꺼지므로, 변신 여부를 따로 묻지 않고 렌더러가 하나라도 켜져 있는지로 판단한다.
         /// </summary>
         private bool IsBodyVisible()
         {
@@ -156,41 +143,41 @@ namespace GuardVsMannequin.Player
         }
 
         /// <summary>
-        /// 지금 외형의 뼈대로 판정 캡슐을 다시 만든다. 굵기는 외형 크기(골반~머리 거리)에 비례한다.
+        /// 외형마다 키가 달라서 굵기를 사람 기준 골반~머리 거리와의 비로 맞춰 다시 만든다.
         /// </summary>
         private void Rebuild(Animator animator)
         {
             Clear();
-            builtFor = animator;
+            builtForAnimator = animator;
             if (animator == null || HitboxLayer < 0)
                 return;
 
             Transform hips = SkinBones.Find(animator, HumanBodyBones.Hips);
             Transform head = SkinBones.Find(animator, HumanBodyBones.Head);
-            float scale = hips != null && head != null ? Vector3.Distance(hips.position, head.position) / HumanHipsToHead : 1f;
+            float sizeScale = hips != null && head != null ? Vector3.Distance(hips.position, head.position) / HumanHipsToHead : 1f;
 
             foreach ((HumanBodyBones from, HumanBodyBones to, float radius) in Segments)
             {
-                Transform start = SkinBones.Find(animator, from);
-                Transform end = SkinBones.Find(animator, to);
-                if (start != null && end != null)
-                    CreateCapsule(start, start.position, end.position, radius * scale);
+                Transform startBone = SkinBones.Find(animator, from);
+                Transform endBone = SkinBones.Find(animator, to);
+                if (startBone != null && endBone != null)
+                    CreateCapsule(startBone, startBone.position, endBone.position, radius * sizeScale);
             }
             foreach ((HumanBodyBones bone, HumanBodyBones parent, float length, float radius) in Tips)
             {
-                Transform tip = SkinBones.Find(animator, bone);
-                Transform before = SkinBones.Find(animator, parent);
-                if (tip == null || before == null)
+                Transform tipBone = SkinBones.Find(animator, bone);
+                Transform parentBone = SkinBones.Find(animator, parent);
+                if (tipBone == null || parentBone == null)
                     continue;
-                Vector3 direction = (tip.position - before.position).normalized;
-                CreateCapsule(tip, tip.position, tip.position + direction * length * scale, radius * scale);
+                Vector3 direction = (tipBone.position - parentBone.position).normalized;
+                CreateCapsule(tipBone, tipBone.position, tipBone.position + direction * length * sizeScale, radius * sizeScale);
             }
 
             hitboxesEnabled = true;
         }
 
         /// <summary>
-        /// 두 점(월드)을 잇는 트리거 캡슐을 뼈의 자식으로 만든다. 뼈의 크기 배율을 나눠 월드 크기를 맞춘다.
+        /// 뼈를 따라 움직이도록 뼈의 자식으로 만들고, 뼈의 크기 배율이 캡슐 크기를 바꾸지 않도록 나눠서 월드 크기를 맞춘다.
         /// </summary>
         private void CreateCapsule(Transform bone, Vector3 from, Vector3 to, float radius)
         {
@@ -214,7 +201,7 @@ namespace GuardVsMannequin.Player
         }
 
         /// <summary>
-        /// 만든 판정 캡슐을 지운다.
+        /// 다시 만들 때 이전 캡슐이 남아 두 번 맞지 않도록 모두 지운다.
         /// </summary>
         private void Clear()
         {
@@ -224,7 +211,7 @@ namespace GuardVsMannequin.Player
                     Destroy(hitbox.gameObject);
             }
             hitboxes.Clear();
-            builtFor = null;
+            builtForAnimator = null;
             hitboxesEnabled = false;
         }
     }

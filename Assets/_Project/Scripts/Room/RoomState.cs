@@ -7,29 +7,25 @@ using FishNet.Object.Synchronizing;
 using FishNet.Transporting;
 using GuardVsMannequin.Core;
 using GuardVsMannequin.Localization;
+using GuardVsMannequin.Map;
 using GuardVsMannequin.Mods;
 using GuardVsMannequin.Network;
 using UnityEngine;
 
 namespace GuardVsMannequin.Room
 {
-    /// <summary>
-    /// 방 하나의 상태(참가자, 준비 여부, 게임 설정)를 서버 권한으로 관리하고 동기화한다.
-    /// 전역(Global) 네트워크 오브젝트라 룸 ↔ 게임 씬을 오가도 유지되며, 서버가 멈추면 함께 사라진다.
-    /// 게임 씬에는 <see cref="IRoomInfo"/>, <see cref="ISceneFlow"/>로만 노출된다.
-    /// </summary>
+    /// <summary>룸 ↔ 게임 씬을 오가도 유지되도록 방 상태를 전역 네트워크 오브젝트로 서버 권한 관리·동기화한다.</summary>
     public class RoomState : NetworkBehaviour, IRoomInfo, ISceneFlow
     {
-        // 로딩 중인 클라이언트가 "아직 불러오는 중"을 알리는 간격과, 마지막 알림 후 로딩 중으로 인정하는 시간(초).
-        // 씬 활성화 순간에는 메인 스레드가 몇 초 멈출 수 있으므로 인정 시간을 간격보다 넉넉히 둔다.
+        // 씬 활성화 때 메인 스레드가 몇 초 멈출 수 있어 인정 시간을 알림 간격보다 넉넉히 둔 로딩 알림 간격·인정 시간(초).
         private const float LoadingReportInterval = 2f;
         private const float LoadingReportTimeout = 10f;
 
-        // 시작을 누른 뒤 게스트들이 모드 확인 결과를 보낼 때까지 기다리는 시간(초). 모드 폴더를 다시 읽는 시간을 포함한다.
+        // 모드 폴더를 다시 읽는 시간까지 포함한 게스트 모드 확인 대기 시간(초).
         private const float StartModCheckTimeout = 5f;
         private const int MaxMapNameLength = 48;
 
-        // 게스트가 맵 변경으로 모드 폴더를 다시 읽는 최소 간격(초). 호스트가 맵을 빠르게 넘겨도 디스크를 계속 읽지 않게 한다.
+        // 호스트가 맵을 빠르게 넘겨도 디스크를 계속 읽지 않도록 둔 모드 재확인 최소 간격(초).
         private const float LocalModCheckInterval = 0.25f;
 
         [Tooltip("룸 씬 이름. (빌드 설정에 등록되어 있어야 함)")]
@@ -41,9 +37,9 @@ namespace GuardVsMannequin.Room
         private readonly SyncVar<GameSettings> settings = new();
         private readonly SyncDictionary<int, RoomMember> members = new();
         private readonly SyncVar<bool> isInGame = new();
-        // 판을 시작할 때 정한다. 서버는 맵을 다 불러온 뒤에야 게스트에게 로딩을 지시하므로, 게스트는 맵보다 이 값을 먼저 받는다.
+        // 게스트가 맵보다 먼저 받도록 판 시작 때 정하는 배치 시드.
         private readonly SyncVar<int> propLayoutSeed = new();
-        // 고른 맵의 ID·이름·필요한 모드. 게스트마다 맵 목록이 달라 GameSettings.mapId(호스트 목록의 번호)로는 알 수 없다.
+        // 게스트마다 맵 목록이 달라 번호 대신 쓰는 고른 맵의 ID·이름·필요한 모드.
         private readonly SyncVar<RoomMapInfo> selectedMap = new();
 
         // 서버: 시작 전 모드 확인
@@ -61,7 +57,7 @@ namespace GuardVsMannequin.Room
         // 클라이언트: 모드가 없어 시작이 중단됐다는 알림을 아직 화면에 보여 주지 않음
         private bool startBlockedPending;
 
-        // 서버: 테스트 방 여부 (방을 만들 때 세션에서 읽음, 게스트에게는 동기화하지 않음)
+        // 서버만 아는 테스트 방 여부.
         private bool isTestRoom;
 
         // 서버: 클라이언트별 "로딩 중" 알림 기록
@@ -70,18 +66,18 @@ namespace GuardVsMannequin.Room
         private float nextLoadingReportTime;
         private RoomSceneSet scenes;
 
-        /// <summary>룸·게임 시스템·맵 씬 이름 처리. 맵 목록은 등록소(내장 맵 + 켜진 모드)에서 읽는다.</summary>
+        /// <summary>맵 목록이 모드에 따라 바뀌므로 처음 쓸 때 등록소로 만든다.</summary>
         private RoomSceneSet Scenes => scenes ??= new RoomSceneSet(roomSceneName, systemsSceneName, ContentRegistry.Instance);
 
-        /// <summary>현재 방. 없으면 null. (서버와 클라이언트 모두)</summary>
+        /// <summary>룸 UI가 씬 참조 없이 방을 찾을 수 있도록 연다.</summary>
         public static RoomState Instance { get; private set; }
 
         public GameSettings Settings => settings.Value;
 
-        /// <summary>참가자 목록. (키: 클라이언트 ID)</summary>
+        /// <summary>키: 클라이언트 ID.</summary>
         public SyncDictionary<int, RoomMember> Members => members;
 
-        /// <summary>게임 씬에 있는지 여부. (룸 UI 표시용)</summary>
+        /// <summary>룸 UI가 게임 중에는 조작을 막도록 노출한다.</summary>
         public bool IsInGame => isInGame.Value;
 
         /// <inheritdoc />
@@ -90,10 +86,10 @@ namespace GuardVsMannequin.Room
         /// <inheritdoc />
         public bool IsTestRoom => isTestRoom;
 
-        /// <summary>이 PC에서 쓸 수 없는, 고른 맵의 모드. 비어 있으면 플레이할 수 있다. (게스트)</summary>
+        /// <summary>게스트에게 무엇을 설치해야 하는지 보여 주려고 노출한다.</summary>
         public IReadOnlyList<MissingMod> LocalMissingMods => localMissingMods;
 
-        /// <summary>고른 맵의 모드가 없는 게스트가 있는지 여부.</summary>
+        /// <summary>호스트가 시작 버튼을 누르기 전에 경고를 보여 줄 수 있도록, 모드가 없는 게스트가 있는지 알려 준다.</summary>
         public bool HasMembersMissingMods
         {
             get
@@ -107,9 +103,7 @@ namespace GuardVsMannequin.Room
             }
         }
 
-        /// <summary>
-        /// 고른 맵의 표시 이름. 내 PC에 있는 맵이면 내 언어로, 없으면 호스트가 보낸 이름을 정리해 보여 준다.
-        /// </summary>
+        /// <summary>내 PC에 있는 맵이면 내 언어로, 없으면 정리한 호스트의 이름으로 보여 준다.</summary>
         public string SelectedMapDisplayName
         {
             get
@@ -124,28 +118,23 @@ namespace GuardVsMannequin.Room
             }
         }
 
-        /// <summary>
-        /// 이 클라이언트가 아직 목표 씬(게임 중이면 맵, 아니면 룸)에 도착하지 못했는지 여부. (로딩 화면 표시용)
-        /// 게임 시작 직후에는 호스트가 맵을 다 불러올 때까지 게스트에게 로딩 지시가 오지 않으므로, 그 시간도 포함된다.
-        /// </summary>
+        /// <summary>로딩 화면을 언제 보여 줄지 정하려고 호스트가 맵을 불러오는 시간까지 포함해 알린다.</summary>
         public bool IsSceneTransitionPending => Scenes.IsTransitionPending(isInGame.Value);
 
         /// <summary>
-        /// 서버에서 기본 설정을 적용하고, 이미 접속한 클라이언트를 참가자로 등록한다.
+        /// 방이 처음 만들어질 때 기본 설정과 고른 맵의 기본값을 넣고, 이 오브젝트보다 먼저 접속한 사람도 참가자로 넣는다.
         /// </summary>
         public override void OnStartServer()
         {
             base.OnStartServer();
             isTestRoom = SessionServices.Session?.IsTestRoom ?? false;
-            // 방의 초기 설정은 Resources/Data/default_game_settings.json을 따른다.
-            // 고른 맵(기본 맵)이 정한 기본값·범위도 적용한다. (map.json)
             ApplySettings(MapSettingRules.ApplyDefaults(DefaultGameSettings.Load()));
 
-            // 접속 검증(RoomAuthenticator)을 통과한 연결만 참가자로 등록한다.
-            foreach (NetworkConnection conn in ServerManager.Clients.Values)
+            // 인증을 통과한 연결만 참가자로 넣는다.
+            foreach (NetworkConnection connection in ServerManager.Clients.Values)
             {
-                if (conn.IsAuthenticated)
-                    AddMember(conn);
+                if (connection.IsAuthenticated)
+                    AddMember(connection);
             }
 
             ServerManager.OnAuthenticationResult += OnAuthenticationResult;
@@ -154,7 +143,7 @@ namespace GuardVsMannequin.Room
         }
 
         /// <summary>
-        /// 접속 상태 구독을 해제한다.
+        /// 서버가 멈춘 뒤 콜백이 남지 않도록 구독을 끊는다.
         /// </summary>
         public override void OnStopServer()
         {
@@ -163,19 +152,18 @@ namespace GuardVsMannequin.Room
             ServerManager.OnRemoteConnectionState -= OnRemoteConnectionState;
         }
 
-        /// <summary>
-        /// 클라이언트에서 방을 등록하고, 서버에 내 표시 이름을 알린다.
-        /// </summary>
+        /// <summary>게임 씬이 방을 찾도록 등록하고, 서버가 내 이름을 모르므로 알리며, 재접속이면 미뤄 둔 사물 준비를 한다.</summary>
         public override void OnStartClient()
         {
             base.OnStartClient();
             Instance = this;
             GameServices.RegisterRoom(this, this);
+            MapPropSetup.RunPending();
             SubmitNameServerRpc(LocalProfile.DisplayName);
         }
 
         /// <summary>
-        /// 클라이언트에서 방 등록을 해제한다.
+        /// 연결이 끊긴 뒤 없어진 방을 다른 코드가 계속 참조하지 않도록 등록을 해제한다.
         /// </summary>
         public override void OnStopClient()
         {
@@ -185,21 +173,16 @@ namespace GuardVsMannequin.Room
             GameServices.UnregisterRoom(this);
         }
 
-        /// <summary>
-        /// 클라이언트의 표시 이름을 반환한다.
-        /// </summary>
+        /// <summary>호스트가 바꿔 보낼 수 있어 받는 쪽에서도 이름을 정리한다.</summary>
         public string GetDisplayName(int clientId)
         {
-            // 서버가 정리해 보내지만, 호스트가 바꿔 보낼 수 있어 받는 쪽에서도 정리한다.
-            string name = members.TryGetValue(clientId, out RoomMember member)
+            string displayName = members.TryGetValue(clientId, out RoomMember member)
                 ? DisplayTextSanitizer.Clean(member.displayName, DisplayTextSanitizer.MaxPlayerNameLength)
                 : string.Empty;
-            return name.Length > 0 ? name : $"Player {clientId}";
+            return displayName.Length > 0 ? displayName : $"Player {clientId}";
         }
 
-        /// <summary>
-        /// 게임을 시작할 수 있는지와 그 이유를 반환한다. (호스트 제외 전원 준비 + 인원 조건, 테스트 방은 인원 조건 없음)
-        /// </summary>
+        /// <summary>시작 버튼을 막을 때 이유를 보여 주도록 조건과 문구를 함께 돌려준다.</summary>
         public bool CanStartGame(out string reason)
         {
             if (startModCheck.IsRunning)
@@ -231,9 +214,7 @@ namespace GuardVsMannequin.Room
             return true;
         }
 
-        /// <summary>
-        /// 설정 항목을 한 단계 조정한다. (호스트 전용, 호스트는 서버이므로 직접 호출)
-        /// </summary>
+        /// <summary>호스트는 서버라 RPC 없이 직접 부르고, 맵을 바꾸면 그 맵의 기본값을 함께 적용한다.</summary>
         [Server]
         public void AdjustSetting(GameSettingId id, int direction)
         {
@@ -241,15 +222,12 @@ namespace GuardVsMannequin.Room
                 return;
 
             GameSettings adjusted = GameSettingDefinitions.Adjust(settings.Value, id, direction);
-            // 맵을 바꾸면 그 맵이 정한 기본값을 적용한다.
             if (id == GameSettingId.Map && adjusted.mapId != settings.Value.mapId)
                 adjusted = MapSettingRules.ApplyDefaults(adjusted);
             ApplySettings(adjusted);
         }
 
-        /// <summary>
-        /// 설정 항목에 값을 직접 지정한다. 항목 범위와 인원 조건으로 보정된다. (호스트 전용, 키보드 입력)
-        /// </summary>
+        /// <summary>맵은 번호로 고르면 헷갈리므로 키보드 직접 입력을 막는다.</summary>
         [Server]
         public void SetSettingValue(GameSettingId id, float value)
         {
@@ -258,10 +236,7 @@ namespace GuardVsMannequin.Room
             ApplySettings(GameSettingDefinitions.SetClamped(settings.Value, id, value));
         }
 
-        /// <summary>
-        /// 조건을 확인하고 모든 플레이어를 게임 씬으로 보낸다. (호스트 전용)
-        /// 모드 맵이면 바로 시작하지 않고 게스트들에게 모드를 다시 확인시킨 뒤, 전원이 가지고 있을 때 시작한다.
-        /// </summary>
+        /// <summary>게스트가 모드를 지웠으면 로딩 중에 실패하므로 다시 확인시킨 뒤 시작한다.</summary>
         /// <param name="reason">바로 시작하지 않았을 때 보여 줄 문구.</param>
         /// <returns>바로 시작했는지 여부.</returns>
         [Server]
@@ -282,7 +257,6 @@ namespace GuardVsMannequin.Room
                 return true;
             }
 
-            // 맵을 고른 뒤 게스트가 모드를 지웠거나 새로 설치했을 수 있으므로 지금 다시 확인한다.
             PublishSelectedMap();
             startModCheck.Begin(Time.unscaledTime, StartModCheckTimeout);
             reason = Loc.Get("room.reason.checkingMods");
@@ -290,7 +264,7 @@ namespace GuardVsMannequin.Room
         }
 
         /// <summary>
-        /// 호스트 화면에 한 번 보여 줄 안내를 꺼낸다. 꺼내면 지워진다.
+        /// 같은 안내가 매 프레임 다시 뜨지 않도록 꺼내면 지운다.
         /// </summary>
         public bool TryTakeHostNotice(out string notice)
         {
@@ -299,19 +273,15 @@ namespace GuardVsMannequin.Room
             return !string.IsNullOrEmpty(notice);
         }
 
-        /// <summary>
-        /// 모드가 없어 시작이 중단됐다는 알림을 꺼낸다. 꺼내면 지워진다. (게스트의 설치 안내 창)
-        /// </summary>
+        /// <summary>설치 안내 창이 한 번만 열리도록 꺼내면 지운다.</summary>
         public bool TryTakeStartBlocked()
         {
-            bool blocked = startBlockedPending;
+            bool isBlocked = startBlockedPending;
             startBlockedPending = false;
-            return blocked;
+            return isBlocked;
         }
 
-        /// <summary>
-        /// 모드 폴더를 다시 읽어 고른 맵의 모드를 확인하고 결과를 서버에 알린다. (게스트, 맵이 바뀌었을 때와 "다시 확인"을 눌렀을 때)
-        /// </summary>
+        /// <summary>게스트가 모드를 새로 설치했을 수 있어 모드 폴더를 다시 읽어 서버에 알린다.</summary>
         public void RecheckLocalMods()
         {
             if (!IsClientStarted || IsServerStarted)
@@ -324,25 +294,18 @@ namespace GuardVsMannequin.Room
             ReportMapModsServerRpc(map.revision, hasAll);
         }
 
-        /// <summary>
-        /// 모든 플레이어를 게임 씬으로 보낸다.
-        /// </summary>
+        /// <summary>판 도중 참가로 상태가 꼬이지 않도록 새 참가를 막고, 모든 PC가 같은 배치로 섞도록 시드를 정한 뒤 게임 씬으로 보낸다.</summary>
         [Server]
         private void BeginGame()
         {
-            // 게임 중에는 새 참가를 막는다.
-            SessionServices.Session?.SetRoomJoinable(false);
+            SessionServices.Session?.SetRoomInGame(true);
             loadingReports.Clear();
             isInGame.Value = true;
-            // 맵 씬을 불러오기 전에 정해, 모든 PC가 맵을 불러오자마자 같은 배치로 섞게 한다. (0은 "섞지 않음"이라 피함)
             propLayoutSeed.Value = Random.Range(1, int.MaxValue);
             LoadGameScenes(Scenes.ResolveGameScene(settings.Value.mapId));
         }
 
-        /// <summary>
-        /// 게스트가 고른 맵의 모드를 가지고 있는지 알린다. 지난 확인 차수의 답은 무시한다.
-        /// 게스트가 거짓으로 답할 수 있지만, 그래도 그 게스트만 맵을 불러오지 못한다.
-        /// </summary>
+        /// <summary>맵을 빠르게 바꾸면 지난 맵의 답이 늦게 올 수 있어 차수가 다른 답은 무시한다.</summary>
         [ServerRpc(RequireOwnership = false)]
         private void ReportMapModsServerRpc(int revision, bool hasAll, NetworkConnection caller = null)
         {
@@ -353,7 +316,7 @@ namespace GuardVsMannequin.Room
         }
 
         /// <summary>
-        /// 시작이 중단됐음을 모드가 없는 게스트에게 알린다. 게스트는 설치 안내 창을 연다.
+        /// 모드가 없는 게스트가 무엇을 설치해야 하는지 바로 볼 수 있도록 알려 설치 안내 창을 열게 한다.
         /// </summary>
         [TargetRpc]
         private void NotifyStartBlockedTargetRpc(NetworkConnection target)
@@ -362,9 +325,7 @@ namespace GuardVsMannequin.Room
             startBlockedPending = true;
         }
 
-        /// <summary>
-        /// 게임이 끝나면 준비 상태를 초기화하고 모든 플레이어를 룸 씬으로 돌려보낸다. (서버 전용)
-        /// </summary>
+        /// <summary>지난 판의 준비 상태로 다음 판이 바로 시작되지 않도록 준비를 풀고 룸 씬으로 돌려보낸다.</summary>
         [Server]
         public void ReturnToRoom()
         {
@@ -374,12 +335,40 @@ namespace GuardVsMannequin.Room
             isInGame.Value = false;
             loadingReports.Clear();
             ResetReadyStates();
-            SessionServices.Session?.SetRoomJoinable(true);
+            SessionServices.Session?.SetRoomInGame(false);
             LoadGlobalScene(Scenes.RoomSceneName);
         }
 
+        /// <summary>내보낸 사람이 곧바로 다시 들어오지 못하도록 방이 닫힐 때까지 막는다.</summary>
+        [Server]
+        public void Kick(int clientId)
+        {
+            if (!members.TryGetValue(clientId, out RoomMember member) || member.isHost)
+                return;
+            if (!ServerManager.Clients.TryGetValue(clientId, out NetworkConnection connection))
+                return;
+
+            RoomMembership membership = SessionServices.Session?.Membership;
+            if (membership != null && membership.TryGetKey(clientId, out string key))
+                membership.Ban(key);
+
+            ServerManager.Broadcast(connection, new ConnectionRejectedBroadcast { reason = ConnectionRejectReason.Kicked, hostVersion = GameVersion.Current }, false);
+            connection.Disconnect(false);
+        }
+
         /// <summary>
-        /// 게스트가 준비/해제를 요청한다.
+        /// 스스로 나간 사람에게 재접속 대기 자리를 주면 판이 끝나지 않고 기다리므로, 나가기 전에 알려 바로 탈락하게 한다.
+        /// </summary>
+        [ServerRpc(RequireOwnership = false)]
+        public void DeclareLeavingServerRpc(NetworkConnection caller = null)
+        {
+            RoomMembership membership = SessionServices.Session?.Membership;
+            if (caller != null && membership != null && membership.TryGetKey(caller.ClientId, out string key))
+                membership.MarkLeaving(key);
+        }
+
+        /// <summary>
+        /// 호스트는 준비할 필요가 없으므로 게스트만 준비 상태를 바꿀 수 있다.
         /// </summary>
         [ServerRpc(RequireOwnership = false)]
         public void SetReadyServerRpc(bool ready, NetworkConnection caller = null)
@@ -392,7 +381,7 @@ namespace GuardVsMannequin.Room
         }
 
         /// <summary>
-        /// 클라이언트가 아직 씬을 불러오는 중임을 알린다. 서버는 이 알림이 이어지는 동안 판 시작을 기다린다.
+        /// 느린 PC를 끊긴 것으로 오인하지 않도록, 아직 씬을 불러오는 중이라는 알림을 받는 동안 서버가 판 시작을 기다린다.
         /// </summary>
         [ServerRpc(RequireOwnership = false)]
         private void ReportLoadingServerRpc(NetworkConnection caller = null)
@@ -402,17 +391,13 @@ namespace GuardVsMannequin.Room
             loadingReports.Record(caller.ClientId, Time.unscaledTime);
         }
 
-        /// <summary>
-        /// 클라이언트가 최근에 "로딩 중"을 알렸는지 확인한다. (서버 전용)
-        /// </summary>
+        /// <summary>판 시작 대기에서 느리지만 살아 있는 사람을 구분하려고 쓴다.</summary>
         public bool IsClientLoading(int clientId)
         {
             return loadingReports.IsLoading(clientId, Time.unscaledTime);
         }
 
-        /// <summary>
-        /// 게스트가 씬 전환 중이면 일정 간격으로 서버에 "로딩 중"을 알린다. (호스트는 서버가 직접 불러오므로 제외)
-        /// </summary>
+        /// <summary>대역폭을 아끼려고 일정 간격으로만 알린다.</summary>
         private void ReportLoadingIfPending()
         {
             if (!IsClientStarted || IsServerStarted || !IsSceneTransitionPending)
@@ -425,7 +410,7 @@ namespace GuardVsMannequin.Room
         }
 
         /// <summary>
-        /// 클라이언트가 자신의 표시 이름을 알린다. 비어 있으면 "Player N"을 쓴다.
+        /// 리치 텍스트 태그 등으로 다른 사람 화면을 깨뜨리지 못하도록 서버에서 정리한 뒤 저장한다.
         /// </summary>
         [ServerRpc(RequireOwnership = false)]
         private void SubmitNameServerRpc(string displayName, NetworkConnection caller = null)
@@ -438,49 +423,46 @@ namespace GuardVsMannequin.Room
         }
 
         /// <summary>
-        /// 접속 검증을 통과하면 참가자로 등록하고, 인원에 맞게 설정을 다시 보정한다.
+        /// 인원이 늘면 가드 수 등의 허용 범위가 바뀌므로, 참가자로 넣은 뒤 설정을 다시 보정한다.
         /// </summary>
-        private void OnAuthenticationResult(NetworkConnection conn, bool authenticated)
+        private void OnAuthenticationResult(NetworkConnection connection, bool authenticated)
         {
             if (!authenticated)
                 return;
 
-            AddMember(conn);
+            AddMember(connection);
             ApplySettings(settings.Value);
         }
 
-        /// <summary>
-        /// 접속이 끊기면 참가자에서 제거하고, 인원에 맞게 설정을 다시 보정한다.
-        /// </summary>
-        private void OnRemoteConnectionState(NetworkConnection conn, RemoteConnectionStateArgs args)
+        /// <summary>인원이 줄면 허용 범위가 바뀌므로 참가자에서 뺀 뒤 설정을 다시 보정한다.</summary>
+        private void OnRemoteConnectionState(NetworkConnection connection, RemoteConnectionStateArgs args)
         {
             if (args.ConnectionState != RemoteConnectionState.Stopped)
                 return;
 
-            loadingReports.Remove(conn.ClientId);
-            // 시작 확인 중 나간 사람은 판정에서 자연스럽게 빠진다.
-            if (members.Remove(conn.ClientId))
+            loadingReports.Remove(connection.ClientId);
+            if (members.Remove(connection.ClientId))
                 ApplySettings(settings.Value);
         }
 
         /// <summary>
-        /// 참가자를 등록한다. 호스트 자신의 연결은 호스트로 표시한다.
+        /// 이미 있는 참가자를 다시 넣으면 준비 상태가 풀리므로 없을 때만 넣는다.
         /// </summary>
-        private void AddMember(NetworkConnection conn)
+        private void AddMember(NetworkConnection connection)
         {
-            if (members.ContainsKey(conn.ClientId))
+            if (members.ContainsKey(connection.ClientId))
                 return;
 
-            members[conn.ClientId] = new RoomMember
+            members[connection.ClientId] = new RoomMember
             {
                 displayName = string.Empty,
                 isReady = false,
-                isHost = conn.IsLocalClient
+                isHost = connection.IsLocalClient
             };
         }
 
         /// <summary>
-        /// 매 프레임 호스트 표시를 확정하고 시작 전 모드 확인을 진행한다. 게스트라면 로딩 상태를 알리고 맵의 모드를 확인한다.
+        /// 서버·게스트가 할 일이 한 오브젝트에 모여 있어서, 각 작업이 스스로 조건을 확인하도록 매 프레임 차례로 부른다.
         /// </summary>
         private void Update()
         {
@@ -490,9 +472,7 @@ namespace GuardVsMannequin.Room
             CheckLocalModsIfMapChanged();
         }
 
-        /// <summary>
-        /// 게스트: 확인 차수가 바뀌었으면 맵의 모드를 확인한다. (접속 직후 처음 받은 맵도 여기서 확인)
-        /// </summary>
+        /// <summary>접속 직후 처음 받은 맵도 같은 경로로 확인하도록 콜백 대신 차수를 비교한다.</summary>
         private void CheckLocalModsIfMapChanged()
         {
             if (!IsClientStarted || IsServerStarted || isInGame.Value)
@@ -506,9 +486,7 @@ namespace GuardVsMannequin.Room
             RecheckLocalMods();
         }
 
-        /// <summary>
-        /// 서버: 시작 전 모드 확인 결과를 판정해 게임을 시작하거나 중단한다.
-        /// </summary>
+        /// <summary>기다리는 동안 준비나 인원이 바뀌었을 수 있어 시작 조건을 한 번 더 본다.</summary>
         private void UpdateStartModCheck()
         {
             if (!startModCheck.IsRunning || !this.IsServerReady())
@@ -517,7 +495,6 @@ namespace GuardVsMannequin.Room
             switch (startModCheck.Evaluate(members.Values, Time.unscaledTime))
             {
                 case StartModCheckResult.Passed:
-                    // 기다리는 동안 준비를 풀었거나 인원이 바뀌었을 수 있다.
                     if (CanStartGame(out string reason))
                         BeginGame();
                     else
@@ -529,9 +506,7 @@ namespace GuardVsMannequin.Room
             }
         }
 
-        /// <summary>
-        /// 서버: 모드가 없거나 답하지 않은 게스트에게 알리고, 호스트에게 누구 때문인지 안내한다.
-        /// </summary>
+        /// <summary>호스트가 누구를 기다려야 하는지 알도록 문제 있는 게스트 이름을 모아 안내한다.</summary>
         private void BlockStart()
         {
             var names = new StringBuilder();
@@ -551,18 +526,14 @@ namespace GuardVsMannequin.Room
             hostStartNotice = Loc.Format("room.reason.modsMissing", names.ToString());
         }
 
-        /// <summary>
-        /// 서버: 지금 맵이 바뀌었으면 맵 정보를 새로 보낸다.
-        /// </summary>
+        /// <summary>게스트가 불필요하게 다시 확인하지 않도록 맵이 바뀐 경우에만 맵 정보를 보낸다.</summary>
         private void SyncSelectedMap()
         {
             if (settings.Value.mapId != selectedMapIndex)
                 PublishSelectedMap();
         }
 
-        /// <summary>
-        /// 서버: 고른 맵의 정보를 새 확인 차수로 보내고 게스트들의 답을 초기화한다. 진행 중인 시작 확인은 취소된다.
-        /// </summary>
+        /// <summary>이전 맵 기준 답이 새 맵에 쓰이지 않도록 새 차수로 보내며 답과 시작 확인을 초기화한다.</summary>
         private void PublishSelectedMap()
         {
             selectedMapIndex = settings.Value.mapId;
@@ -586,9 +557,7 @@ namespace GuardVsMannequin.Room
             SessionServices.Session?.UpdateRoomListing(selectedMap.Value.mapId, maxPlayers);
         }
 
-        /// <summary>
-        /// 서버: 참가자의 모드 상태를 바꾼다. 같은 값이면 보내지 않는다.
-        /// </summary>
+        /// <summary>SyncDictionary는 다시 넣을 때마다 전송되므로 같은 값이면 보내지 않는다.</summary>
         private void SetMemberModState(int clientId, MemberModState state)
         {
             RoomMember member = members[clientId];
@@ -599,7 +568,7 @@ namespace GuardVsMannequin.Room
         }
 
         /// <summary>
-        /// 호스트 말고 다른 참가자가 있는지 확인한다.
+        /// 혼자 있을 때 모드 확인을 기다리면 시작이 늦어지기만 하므로, 게스트가 있는지 먼저 본다.
         /// </summary>
         private bool HasGuests()
         {
@@ -611,10 +580,7 @@ namespace GuardVsMannequin.Room
             return false;
         }
 
-        /// <summary>
-        /// 서버에서 호스트 표시를 확정한다.
-        /// 호스트의 로컬 연결은 인증이 끝난 뒤에야 IsLocalClient로 식별되므로, 참가자 등록 시점에 놓칠 수 있다.
-        /// </summary>
+        /// <summary>호스트 로컬 연결은 인증 뒤에야 식별되어 등록 때 놓칠 수 있으므로 매 프레임 바로잡는다.</summary>
         private void ConfirmHostMember()
         {
             if (!this.IsServerReady() || !ClientManager.Started)
@@ -632,18 +598,15 @@ namespace GuardVsMannequin.Room
             }
         }
 
-        /// <summary>
-        /// 현재 인원 기준으로 설정을 보정해 적용한다. (인원이 줄면 가드 수 등이 자동으로 줄어듦)
-        /// </summary>
+        /// <summary>인원이 줄어도 설정이 맞도록 맵 범위로 먼저 맞추고 관계 규칙을 마지막에 적용한다.</summary>
         private void ApplySettings(GameSettings newSettings)
         {
-            // 맵 범위로 먼저 맞추고, 인원에 따른 관계 규칙(가드 수, 목표 < 전원 장치 등)을 마지막에 적용한다.
             settings.Value = GameSettingsValidator.Validate(MapSettingRules.Clamp(newSettings), Mathf.Max(GameConstants.MinPlayers, members.Count));
             SyncSelectedMap();
         }
 
         /// <summary>
-        /// 모든 게스트의 준비 상태를 해제한다.
+        /// 판이 끝난 뒤 지난 준비 상태로 다음 판이 바로 시작되지 않도록 모두 해제한다.
         /// </summary>
         private void ResetReadyStates()
         {
@@ -656,7 +619,7 @@ namespace GuardVsMannequin.Room
         }
 
         /// <summary>
-        /// 모든 플레이어에게 씬을 전역으로 불러오고 이전 씬을 교체한다.
+        /// 이전 씬이 남아 겹치지 않도록 모든 플레이어에게 전역으로 불러오면서 이전 씬을 교체한다.
         /// </summary>
         private void LoadGlobalScene(string sceneName)
         {
@@ -664,10 +627,7 @@ namespace GuardVsMannequin.Room
             SceneManager.LoadGlobalScenes(loadData);
         }
 
-        /// <summary>
-        /// 맵 씬과 게임 시스템 씬을 함께 불러와 룸 씬을 교체한다. 맵 씬을 먼저 불러오고 활성 씬으로 정해
-        /// 맵의 하늘·환경광·안개 설정과 오클루전 데이터가 쓰이게 한다.
-        /// </summary>
+        /// <summary>맵의 하늘·안개·오클루전이 쓰이도록 맵 씬을 먼저 불러와 활성 씬으로 정한다.</summary>
         private void LoadGameScenes(string mapSceneName)
         {
             var loadData = new SceneLoadData(new[] { mapSceneName, systemsSceneName })

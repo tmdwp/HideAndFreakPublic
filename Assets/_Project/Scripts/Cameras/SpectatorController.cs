@@ -7,11 +7,7 @@ using UnityEngine.InputSystem;
 
 namespace GuardVsMannequin.Cameras
 {
-    /// <summary>
-    /// 로컬 아바타가 없을 때(사망 또는 미참가) 생존 중인 다른 플레이어의 시야로 관전하게 한다.
-    /// 좌우 화살표로 관전 대상을 바꾸고, 대상이 사망하면 자동으로 다음 대상으로 넘어간다.
-    /// 씬 카메라(SceneCameraSwitcher가 아바타가 없을 때 켜는 카메라)를 움직인다.
-    /// </summary>
+    /// <summary>죽거나 참가하지 않아 아바타가 없을 때 생존자의 시야로 관전하게 한다.</summary>
     public class SpectatorController : MonoBehaviour
     {
         private const string PlayerMapName = "Player";
@@ -24,11 +20,11 @@ namespace GuardVsMannequin.Cameras
         private Vector3 overviewPosition;
         private Quaternion overviewRotation;
 
-        /// <summary>현재 관전 중인 대상. 관전 중이 아니면 null.</summary>
+        /// <summary>HUD가 보여 줄 관전 대상(관전 중이 아니면 null).</summary>
         public SpectatorViewPoint CurrentTarget { get; private set; }
 
         /// <summary>
-        /// 관전 대상을 바꾸고, 이전/새 대상에게 관전 여부를 알린다. (대상 시야 효과 적용용)
+        /// 대상의 시야 효과·몸 숨김이 관전 대상일 때만 걸리도록 이전·새 대상에게 관전 여부를 알린다.
         /// </summary>
         private void SetTarget(SpectatorViewPoint target)
         {
@@ -44,12 +40,9 @@ namespace GuardVsMannequin.Cameras
                 CurrentTarget.SetSpectated(true);
         }
 
-        /// <summary>관전 중인지 여부.</summary>
         public bool IsSpectating => CurrentTarget != null;
 
-        /// <summary>
-        /// 대기 화면용 위치를 저장하고 관전 전환 입력을 준비한다.
-        /// </summary>
+        /// <summary>대기 화면 위치가 없을 때 돌아갈 곳으로 지금 위치를 기억하고, 원본 입력 에셋 대신 복제본에 저장된 키를 적용한다.</summary>
         private void Awake()
         {
             overviewPosition = transform.position;
@@ -63,7 +56,7 @@ namespace GuardVsMannequin.Cameras
         }
 
         /// <summary>
-        /// 관전 전환 입력을 켠다.
+        /// 아바타가 없어 플레이어 입력이 꺼져 있어도 관전 대상을 바꿀 수 있도록 자체 입력을 켠다.
         /// </summary>
         private void OnEnable()
         {
@@ -72,7 +65,7 @@ namespace GuardVsMannequin.Cameras
         }
 
         /// <summary>
-        /// 관전 전환 입력을 끈다.
+        /// 꺼진 동안 키 입력이 쌓이지 않도록 끈다.
         /// </summary>
         private void OnDisable()
         {
@@ -81,7 +74,7 @@ namespace GuardVsMannequin.Cameras
         }
 
         /// <summary>
-        /// 복제한 입력 에셋을 해제한다.
+        /// Instantiate로 만든 에셋은 씬과 함께 지워지지 않으므로 직접 해제한다.
         /// </summary>
         private void OnDestroy()
         {
@@ -89,9 +82,7 @@ namespace GuardVsMannequin.Cameras
                 Destroy(runtimeActions);
         }
 
-        /// <summary>
-        /// 관전 조건을 확인하고 대상을 고른다. 카메라 이동은 대상 위치가 갱신된 뒤인 LateUpdate에서 한다.
-        /// </summary>
+        /// <summary>대상이 죽으면 자동으로 넘어가도록 매 프레임 확인하고, 대상 위치가 갱신된 뒤 카메라를 옮긴다.</summary>
         private void Update()
         {
             if (!ShouldSpectate())
@@ -108,7 +99,7 @@ namespace GuardVsMannequin.Cameras
         }
 
         /// <summary>
-        /// 관전 중이면 대상의 시야로, 아니면 대기 화면 위치로 카메라를 옮긴다.
+        /// 대상이 이번 프레임 움직인 뒤의 시야를 따라가도록 LateUpdate에서 카메라를 옮긴다.
         /// </summary>
         private void LateUpdate()
         {
@@ -119,7 +110,7 @@ namespace GuardVsMannequin.Cameras
             }
             else
             {
-                // 맵이 대기 화면 위치를 정했으면 그곳을 쓴다. (카메라는 공용 시스템 씬에 있고 맵 씬은 따로 불러오므로)
+                // 카메라는 공용 씬에 있으므로 맵이 정한 대기 화면 위치를 쓴다.
                 Transform mapOverview = MapInfo.Current != null ? MapInfo.Current.OverviewPoint : null;
                 if (mapOverview != null)
                     transform.SetPositionAndRotation(mapOverview.position, mapOverview.rotation);
@@ -129,7 +120,7 @@ namespace GuardVsMannequin.Cameras
         }
 
         /// <summary>
-        /// 판이 진행 중이고 내 아바타가 없으며, 볼 수 있는 생존자가 있을 때 관전한다.
+        /// 판 밖(대기)이나 내 아바타가 있을 때 관전하면 화면이 엉뚱해지므로, 판 중이고 내 아바타가 없으며 볼 생존자가 있을 때만 관전한다.
         /// </summary>
         private static bool ShouldSpectate()
         {
@@ -137,14 +128,13 @@ namespace GuardVsMannequin.Cameras
             return state != GameState.Waiting && LocalPlayerEvents.Current == null && ClientPlayerList.Players.Count > 0;
         }
 
-        /// <summary>
-        /// 현재 위치에서 방향만큼 이동한 생존자를 관전 대상으로 고른다.
-        /// </summary>
+        /// <summary>관전 시점이 없는 아바타는 건너뛰도록 방향대로 넘기며 고를 수 있는 생존자를 찾는다.</summary>
         private void SelectTarget(int fromIndex, int direction)
         {
             int count = ClientPlayerList.Players.Count;
             for (int step = 0; step < count; step++)
             {
+                // 음수 나머지를 피하려고 count를 더한 뒤 다시 나눈다.
                 int index = ((fromIndex + direction * (step + 1)) % count + count) % count;
                 if (direction == 0)
                     index = (fromIndex + step) % count;
@@ -160,16 +150,14 @@ namespace GuardVsMannequin.Cameras
         }
 
         /// <summary>
-        /// 관전 대상이 아직 생존자 목록에 있는지 확인한다.
+        /// 죽은 아바타는 생존자 목록에서 빠지므로 목록에 있는지로 생존을 판단한다.
         /// </summary>
         private static bool IsAlive(SpectatorViewPoint target)
         {
             return target != null && IndexOf(target) >= 0;
         }
 
-        /// <summary>
-        /// 생존자 목록에서 대상의 위치를 찾는다.
-        /// </summary>
+        /// <summary>다음 대상을 고를 기준으로 생존자 목록에서 대상의 위치를 찾는다.</summary>
         private static int IndexOf(SpectatorViewPoint target)
         {
             for (int i = 0; i < ClientPlayerList.Players.Count; i++)

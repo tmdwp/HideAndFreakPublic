@@ -8,14 +8,12 @@ using UnityEngine.UI;
 
 namespace GuardVsMannequin.Editor
 {
-    /// <summary>
-    /// 여러 씬에서 함께 쓰는 uGUI 화면(설정, 크레딧, ESC 메뉴, 게임 HUD)을 만든다.
-    /// </summary>
+    /// <summary>여러 씬이 같은 화면을 쓰도록 설정·크레딧·ESC 메뉴·게임 HUD를 한곳에서 만든다.</summary>
     public static class SharedUiBuilder
     {
         public const string InputActionsPath = "Assets/_Project/Input/GameInput.inputactions";
 
-        // 하단 중앙 체력 게이지와 그 아래 스태미나 막대의 앵커. (발각 아이콘·손전등 표시가 이 위치를 기준으로 붙는다)
+        // 발각 아이콘·손전등 표시가 기준으로 삼는 하단 중앙 체력·스태미나 앵커.
         private static readonly Vector2 HealthAnchorMin = new(0.4f, 0.064f);
         private static readonly Vector2 HealthAnchorMax = new(0.6f, 0.1f);
         private static readonly Vector2 StaminaAnchorMin = new(0.4f, 0.04f);
@@ -25,27 +23,21 @@ namespace GuardVsMannequin.Editor
         private const float FlashlightIconGap = 6f;
         private static readonly Vector2 CrosshairGaugeSize = new(64f, 64f);
 
-        /// <summary>
-        /// 설정 화면 프리팹(없으면 기본 모양으로 만들어 저장)을 캔버스 안에 중첩 프리팹으로 넣는다. 처음에는 닫혀 있다.
-        /// </summary>
+        /// <summary>한 번 고치면 모든 화면에 반영되도록 설정 화면을 중첩 프리팹으로 넣는다.</summary>
         public static SettingsPanelView CreateSettingsPanel(Transform canvas)
         {
             GameObject prefab = UiPrefabLibrary.GetOrBuildPanel(UiPrefabLibrary.SettingsPanelPath, parent => BuildSettingsPanel(parent).gameObject);
             return UiPrefabLibrary.Instantiate(prefab, canvas).GetComponent<SettingsPanelView>();
         }
 
-        /// <summary>
-        /// 크레딧 화면 프리팹(없으면 기본 모양으로 만들어 저장)을 캔버스 안에 중첩 프리팹으로 넣는다. 처음에는 닫혀 있다.
-        /// </summary>
+        /// <summary>한 번 고치면 모든 화면에 반영되도록 크레딧 화면을 중첩 프리팹으로 넣는다.</summary>
         public static CreditsView CreateCreditsPanel(Transform canvas)
         {
             GameObject prefab = UiPrefabLibrary.GetOrBuildPanel(UiPrefabLibrary.CreditsPanelPath, parent => BuildCreditsPanel(parent).gameObject);
             return UiPrefabLibrary.Instantiate(prefab, canvas).GetComponent<CreditsView>();
         }
 
-        /// <summary>
-        /// 설정 화면의 기본 모양을 만든다. 탭(그래픽 / 사운드 / 조작)으로 페이지를 나눈다.
-        /// </summary>
+        /// <summary>설정 항목이 많아 찾기 어렵지 않도록 탭으로 페이지를 나눈 기본 모양을 만든다.</summary>
         private static SettingsPanelView BuildSettingsPanel(Transform canvas)
         {
             RectTransform panel = EditorUiFactory.CreatePanel(canvas, "SettingsPanel", new Vector2(0.2f, 0.06f), new Vector2(0.8f, 0.94f), new Color(0.06f, 0.07f, 0.09f, 0.98f));
@@ -81,7 +73,7 @@ namespace GuardVsMannequin.Editor
             EditorUiFactory.SetFlexibleWidth(resetAll);
             EditorUiFactory.SetFlexibleWidth(close);
 
-            // 틀(탭·닫기)만 연결한다. 각 설정은 페이지에 붙은 설정 묶음(ISettingsSection)이 처리한다.
+            // 각 설정은 페이지의 설정 묶음이 처리하므로 틀만 연결한다.
             SettingsPanelView view = panel.gameObject.AddComponent<SettingsPanelView>();
             TestEnvironmentSetupTool.SetArray(view, "tabButtons", tabButtons);
             TestEnvironmentSetupTool.SetArray(view, "pages", new Object[] { graphicsPage.gameObject, soundPage.gameObject, controlsPage.gameObject });
@@ -92,9 +84,7 @@ namespace GuardVsMannequin.Editor
             return view;
         }
 
-        /// <summary>
-        /// 그래픽 페이지: 화면 모드(◀ ▶), 해상도(스크롤 목록), 프레임 제한(◀ ▶), 카메라 흔들림(◀ ▶), 언어(◀ ▶).
-        /// </summary>
+        /// <summary>선택지가 적은 항목은 ◀ ▶로 빠르게 넘기고, 선택지가 많은 해상도만 스크롤 목록으로 만든다.</summary>
         private static void BuildGraphicsPage(RectTransform page)
         {
             CreateSelectorRow(page, "ScreenMode", "options.screenMode", out Button previousMode, out Text modeValue, out Button nextMode);
@@ -107,6 +97,7 @@ namespace GuardVsMannequin.Editor
 
             CreateFrameLimitRow(page);
             CreateCameraSwayRow(page);
+            CreateStatsDisplayRow(page);
 
             // 언어: strings.csv에 열을 추가하면 목록에 나타남
             CreateSelectorRow(page, "Language", "options.language", out Button previousLanguage, out Text languageValue, out Button nextLanguage);
@@ -123,9 +114,7 @@ namespace GuardVsMannequin.Editor
             TestEnvironmentSetupTool.SetField(language, "languageValueText", languageValue);
         }
 
-        /// <summary>
-        /// 사운드 페이지: 전체 / 배경 음악 / 효과음 음량.
-        /// </summary>
+        /// <summary>배경 음악만 줄이고 싶은 경우가 많아 전체·배경 음악·효과음 슬라이더를 나눈다.</summary>
         private static void BuildSoundPage(RectTransform page)
         {
             Slider master = CreateSliderRow(page, "MasterVolume", "options.masterVolume", out Text masterValue);
@@ -142,7 +131,7 @@ namespace GuardVsMannequin.Editor
         }
 
         /// <summary>
-        /// 조작 키 페이지: 마우스 감도, 키 설정 목록(스크롤).
+        /// 키 항목이 늘어나도 화면 밖으로 넘치지 않도록 키 설정 목록은 스크롤로 만들고, 자주 바꾸는 마우스 감도는 위에 둔다.
         /// </summary>
         private static void BuildControlsPage(RectTransform page)
         {
@@ -161,9 +150,7 @@ namespace GuardVsMannequin.Editor
             TestEnvironmentSetupTool.SetArray(controls, "rebindRows", rows);
         }
 
-        /// <summary>
-        /// 크레딧 화면의 기본 모양을 만든다. (내용은 credits.&lt;언어&gt;.txt, 이용한 에셋 페이지는 assets.txt)
-        /// </summary>
+        /// <summary>크레딧 내용은 빌드 후에도 고칠 수 있게 파일에서 읽으므로 스크롤 텍스트 틀만 만든다.</summary>
         private static CreditsView BuildCreditsPanel(Transform canvas)
         {
             RectTransform panel = EditorUiFactory.CreatePanel(canvas, "CreditsPanel", new Vector2(0.25f, 0.1f), new Vector2(0.75f, 0.9f), new Color(0.06f, 0.07f, 0.09f, 0.98f));
@@ -177,7 +164,7 @@ namespace GuardVsMannequin.Editor
             Text body = EditorUiFactory.CreateScrollText(panel, "Body", string.Empty, 24, TextAnchor.UpperCenter, EditorUiFactory.TextColor);
             EditorUiFactory.FillRemainingHeight(body.transform.parent, 200f);
 
-            // 페이지 전환 | 닫기 (전환 버튼 문구는 페이지에 따라 CreditsView가 채우므로 key를 넘기지 않는다)
+            // 전환 버튼 문구는 CreditsView가 채우므로 key를 넘기지 않는다.
             RectTransform buttons = EditorUiFactory.CreateRow(panel, "Buttons", 54f, 12f);
             Button page = EditorUiFactory.CreateButton(buttons, "PageButton", "-", EditorUiFactory.ButtonColor, out Text pageLabel);
             Button close = EditorUiFactory.CreateButton(buttons, "CloseButton", "credits.close", EditorUiFactory.AccentColor);
@@ -194,11 +181,9 @@ namespace GuardVsMannequin.Editor
             return view;
         }
 
-        /// <summary>
-        /// ESC 메뉴(계속하기, 설정, 방 나가기)와 그 설정 화면을 만든다.
-        /// </summary>
+        /// <summary>룸과 게임 중 모두 같은 ESC 메뉴를 쓰도록 한곳에서 만든다.</summary>
         /// <param name="canvas">메뉴를 올릴 캔버스.</param>
-        /// <param name="lockCursorOnClose">메뉴를 닫을 때 커서를 다시 잠글지 여부. (게임 씬: true)</param>
+        /// <param name="lockCursorOnClose">메뉴를 닫을 때 커서를 다시 잠글지 여부.</param>
         public static PauseMenuView CreatePauseMenu(Transform canvas, bool lockCursorOnClose)
         {
             RectTransform menu = EditorUiFactory.CreatePanel(canvas, "PauseMenu", Vector2.zero, Vector2.one, new Color(0f, 0f, 0f, 0.6f));
@@ -230,16 +215,14 @@ namespace GuardVsMannequin.Editor
             serialized.ApplyModifiedPropertiesWithoutUndo();
 
             menu.gameObject.SetActive(false);
+            MenuSceneBuilder.AddMissingPlayerPanel(canvas.gameObject);
             return view;
         }
 
-        /// <summary>
-        /// 게임 HUD(상단 단계/시간/마네킹 수, 조준점, 대기 문구, 좌측 조작 안내, 우측 목표, 하단 스태미나·상태, 결과 화면)를 만든다.
-        /// 게임 상태 참조는 호출한 쪽에서 연결한다.
-        /// </summary>
+        /// <summary>HUD 프리팹이 게임 시스템에 의존하지 않도록 게임 상태 참조는 호출한 쪽에서 연결하게 HUD 모양만 만든다.</summary>
         public static GameHud CreateGameHud(Transform canvas)
         {
-            // 상단: 단계 | 시간, 남은 마네킹 / 전체 마네킹
+            // 상단: 단계·시간·남은 마네킹.
             RectTransform top = EditorUiFactory.CreatePanel(canvas, "TopPanel", new Vector2(0.32f, 0.9f), new Vector2(0.68f, 0.985f), new Color(0f, 0f, 0f, 0.45f));
             Text topText = EditorUiFactory.CreateText(top, "TopText", string.Empty, 26, TextAnchor.MiddleCenter, EditorUiFactory.TextColor);
             EditorUiFactory.Stretch(topText.rectTransform);
@@ -251,13 +234,13 @@ namespace GuardVsMannequin.Editor
             Text waiting = EditorUiFactory.CreateText(canvas, "WaitingText", "hud.waiting", 32, TextAnchor.MiddleCenter, EditorUiFactory.TextColor);
             waiting.rectTransform.sizeDelta = new Vector2(900f, 60f);
 
-            // 하단: 사망·미참가 시 관전 안내 (살아 있을 때의 체력·도구는 아래 영역들이 따로 보여준다)
+            // 하단: 사망·미참가 시 관전 안내.
             RectTransform bottom = EditorUiFactory.CreatePanel(canvas, "BottomPanel", new Vector2(0.18f, 0.02f), new Vector2(0.82f, 0.14f), new Color(0f, 0f, 0f, 0.45f));
             EditorUiFactory.AddVerticalLayout(bottom, 4f, 10);
             Text spectator = EditorUiFactory.CreateText(bottom, "ObjectiveText", string.Empty, 22, TextAnchor.MiddleCenter, EditorUiFactory.TextColor);
             spectator.gameObject.AddComponent<LayoutElement>().flexibleHeight = 1f;
 
-            // 좌측 조작 안내, 우측 목표, 하단 체력·스태미나 등 (결과 화면보다 먼저 만들어 아래에 그린다)
+            // 결과 화면 아래에 그려지도록 영역들을 먼저 만든다.
             AddMissingHudSections(canvas);
 
             // 결과
@@ -265,7 +248,7 @@ namespace GuardVsMannequin.Editor
             EditorUiFactory.AddVerticalLayout(result, 12f, 28);
             Text headline = EditorUiFactory.CreateText(result, "Headline", string.Empty, 34, TextAnchor.MiddleCenter, EditorUiFactory.AccentColor);
             EditorUiFactory.SetHeight(headline, 150f);
-            // 참가자가 많으면 스크롤한다. (최대 10명)
+            // 참가자가 많으면 스크롤한다.
             Text participants = EditorUiFactory.CreateScrollText(result, "Participants", string.Empty, 24, TextAnchor.UpperCenter, EditorUiFactory.TextColor);
             EditorUiFactory.FillRemainingHeight(participants.transform.parent, 120f);
             Text countdown = EditorUiFactory.CreateText(result, "Countdown", string.Empty, 22, TextAnchor.MiddleCenter, EditorUiFactory.TextColor);
@@ -277,7 +260,7 @@ namespace GuardVsMannequin.Editor
             TestEnvironmentSetupTool.SetField(hud, "crosshair", crosshair.gameObject);
             TestEnvironmentSetupTool.SetField(hud, "waitingText", waiting);
 
-            // 영역별 코드 (GameHud가 같은 캔버스 아래의 IHudSection을 찾아 갱신한다)
+            // GameHud가 같은 캔버스 아래의 IHudSection을 찾아 갱신한다.
             HudTopPanel topSection = canvas.gameObject.AddComponent<HudTopPanel>();
             TestEnvironmentSetupTool.SetField(topSection, "topPanel", top.gameObject);
             TestEnvironmentSetupTool.SetField(topSection, "topText", topText);
@@ -295,10 +278,7 @@ namespace GuardVsMannequin.Editor
             return hud;
         }
 
-        /// <summary>
-        /// HUD 캔버스에 없는 영역(좌측 조작 안내, 우측 목표, 하단 체력·스태미나·발각·손전등, 조준점 탄 게이지·쿨타임 바)만 만들어 붙인다.
-        /// 이미 있는 프리팹을 고치지 않고 영역만 더할 때도 쓴다. 결과 화면·ESC 메뉴보다 아래에 그려지도록 그 앞에 끼워 넣는다.
-        /// </summary>
+        /// <summary>기존 프리팹을 초기화하지 않고 빠진 HUD 영역만 결과 화면 아래에 더한다.</summary>
         /// <returns>새로 추가한 영역 수.</returns>
         public static int AddMissingHudSections(Transform canvas)
         {
@@ -350,7 +330,7 @@ namespace GuardVsMannequin.Editor
                 CreateCooldownRingSection(canvas);
                 added++;
             }
-            // 예전에 만든 영역의 글자(체력·스태미나·바 이름)를 지우고, 빠진 손전등 아이콘을 넣는다. (지금 모양이면 아무것도 하지 않음)
+            // 예전 HUD의 남은 글자를 지우고 빠진 손전등 아이콘을 넣는다.
             added += RemoveOldHudDecorations(canvas);
             if (canvas.GetComponent<HudTestRoomPanel>() == null)
             {
@@ -365,7 +345,7 @@ namespace GuardVsMannequin.Editor
         }
 
         /// <summary>
-        /// 이미 있는 테스트 메뉴에 나중에 생긴 버튼(룸으로 돌아가기)이 없으면 닫기 버튼 위에 더한다.
+        /// 손으로 다듬은 테스트 메뉴 프리팹을 초기화하지 않고도 새 기능을 쓸 수 있도록, 나중에 생긴 버튼(룸으로 돌아가기)이 없을 때만 닫기 버튼 위에 더한다.
         /// </summary>
         /// <returns>버튼을 더했는지 여부.</returns>
         private static bool AddMissingTestRoomButtons(HudTestRoomPanel section)
@@ -381,9 +361,7 @@ namespace GuardVsMannequin.Editor
             return true;
         }
 
-        /// <summary>
-        /// 테스트 메뉴의 "룸으로 돌아가기" 버튼을 닫기 버튼 바로 위에 만든다.
-        /// </summary>
+        /// <summary>새로 만들 때와 기존 프리팹에 더할 때 같은 모양이 되도록 버튼 생성을 한곳에 둔다.</summary>
         private static Button CreateTestReturnButton(Transform panel, Transform closeButton)
         {
             Button button = EditorUiFactory.CreateButton(panel, "ReturnToRoomButton", "test.returnToRoom", EditorUiFactory.ButtonColor);
@@ -392,10 +370,7 @@ namespace GuardVsMannequin.Editor
             return button;
         }
 
-        /// <summary>
-        /// 테스트 방 메뉴: 왼쪽 위 "F2 테스트 메뉴" 안내와, 오른쪽의 메뉴(상태, 가드↔마네킹 / 마네킹↔구울 / 1인칭↔3인칭, 게임 설정 줄, 닫기).
-        /// 게임 설정 줄은 맵을 뺀 모든 항목(룸에서 숨긴 이동 속도·공격 범위 포함)을 만든다.
-        /// </summary>
+        /// <summary>혼자 테스트할 때 역할·시점·설정을 판 중에 바로 바꾸도록 시야를 가리지 않는 오른쪽에 테스트 메뉴를 만든다.</summary>
         private static RectTransform CreateTestRoomSection(Transform canvas)
         {
             RectTransform root = EditorUiFactory.CreateRect(canvas, "TestRoomTools");
@@ -453,9 +428,7 @@ namespace GuardVsMannequin.Editor
             return root;
         }
 
-        /// <summary>
-        /// 중앙 좌측 조작 키 안내 영역. (내용은 HudControlsPanel이 키 설정에 맞춰 채운다)
-        /// </summary>
+        /// <summary>키 설정을 바꾸면 안내도 바뀌어야 하므로 빈 영역만 만들고 내용은 HudControlsPanel이 채운다.</summary>
         private static RectTransform CreateControlsSection(Transform canvas)
         {
             RectTransform panel = EditorUiFactory.CreatePanel(canvas, "ControlsPanel", new Vector2(0.01f, 0.37f), new Vector2(0.17f, 0.63f), new Color(0f, 0f, 0f, 0.35f));
@@ -471,9 +444,7 @@ namespace GuardVsMannequin.Editor
             return panel;
         }
 
-        /// <summary>
-        /// 중앙 우측 목표 영역: "목표" 제목, 목표 문구, 남은 수.
-        /// </summary>
+        /// <summary>무엇을 해야 하는지 잊지 않도록 조준점 근처에 목표 영역을 둔다.</summary>
         private static RectTransform CreateObjectiveSection(Transform canvas)
         {
             RectTransform panel = EditorUiFactory.CreatePanel(canvas, "ObjectivePanel", new Vector2(0.83f, 0.42f), new Vector2(0.99f, 0.58f), new Color(0f, 0f, 0f, 0.35f));
@@ -497,9 +468,7 @@ namespace GuardVsMannequin.Editor
             return panel;
         }
 
-        /// <summary>
-        /// 하단 중앙 체력 게이지: 어두운 바탕 위에 채움 막대(글자 없음). 바로 아래에 스태미나 막대가 온다.
-        /// </summary>
+        /// <summary>숫자 없이도 남은 체력을 한눈에 알도록 글자 없는 채움 막대로 만든다.</summary>
         private static RectTransform CreateHealthSection(Transform canvas)
         {
             RectTransform bar = EditorUiFactory.CreatePanel(canvas, "HealthBar", HealthAnchorMin, HealthAnchorMax, new Color(0f, 0f, 0f, 0.55f));
@@ -516,10 +485,7 @@ namespace GuardVsMannequin.Editor
             return bar;
         }
 
-        /// <summary>
-        /// 예전에 만든 HUD에서 지금은 쓰지 않는 글자를 지운다: 체력·스태미나 막대와 쿨타임 바 견본의 글자(Label).
-        /// 손전등 표시에 아이콘이 없으면(키만 있던 버전) 다시 넣는다. 이미 지금 모양이면 아무것도 하지 않는다.
-        /// </summary>
+        /// <summary>예전 HUD에서 지금은 쓰지 않는 글자를 지우고 빠진 손전등 아이콘을 다시 넣는다.</summary>
         /// <returns>지우거나 더한 오브젝트 수.</returns>
         private static int RemoveOldHudDecorations(Transform canvas)
         {
@@ -544,19 +510,14 @@ namespace GuardVsMannequin.Editor
             return changed;
         }
 
-        /// <summary>
-        /// 손전등 표시에 그림이 들어간 아이콘이 연결돼 있는지. (Unity의 == 비교로 사라진 그림도 없는 것으로 본다)
-        /// </summary>
+        /// <summary>사라진 그림도 없는 것으로 보도록 Unity의 == 비교로 손전등 아이콘 연결을 확인한다.</summary>
         private static bool HasFlashlightIcon(HudSwitchToolIndicator section)
         {
             Image icon = new SerializedObject(section).FindProperty("icon").objectReferenceValue as Image;
             return icon != null && icon.sprite != null;
         }
 
-        /// <summary>
-        /// 손전등 표시 영역 왼쪽에 아이콘을 두고 키 상자를 그 오른쪽으로 옮긴 뒤 영역에 연결한다.
-        /// 예전 아이콘 오브젝트가 남아 있으면 그것을 다시 쓴다.
-        /// </summary>
+        /// <summary>손전등 표시 왼쪽에 아이콘을 두고 키 상자를 오른쪽으로 옮긴다.</summary>
         private static void AddFlashlightIcon(RectTransform root, HudSwitchToolIndicator section)
         {
             Transform existing = root.Find("Icon");
@@ -582,10 +543,7 @@ namespace GuardVsMannequin.Editor
             TestEnvironmentSetupTool.SetField(section, "icon", icon);
         }
 
-        /// <summary>
-        /// 예전 배치(스태미나 막대가 하단 패널 위, 체력은 하단 문구)를 새 배치로 옮긴다:
-        /// 스태미나 막대를 체력 게이지 바로 아래로, 하단 패널의 상태 문구 줄은 지운다(체력·도구는 각자 영역이 보여줌).
-        /// </summary>
+        /// <summary>예전 배치의 스태미나 막대를 체력 게이지 아래로 옮기고 쓰지 않는 상태 문구 줄을 지운다.</summary>
         private static void MoveToVitalsLayout(Transform canvas)
         {
             HudStaminaBar stamina = canvas.GetComponent<HudStaminaBar>();
@@ -604,7 +562,7 @@ namespace GuardVsMannequin.Editor
         }
 
         /// <summary>
-        /// 체력 게이지 위 가운데: 수류탄에 맞아 위치가 드러난 동안 깜빡이는 눈 아이콘.
+        /// 위치가 드러난 것은 체력만큼 중요한 상태라 체력 게이지 바로 위 가운데에 깜빡이는 눈 아이콘을 둔다.
         /// </summary>
         private static RectTransform CreateRevealSection(Transform canvas)
         {
@@ -626,9 +584,7 @@ namespace GuardVsMannequin.Editor
             return rect;
         }
 
-        /// <summary>
-        /// 체력·스태미나 바 오른쪽: 손전등 아이콘과 단축키 상자. (색으로 켜짐·꺼짐·사용 불가를 구분)
-        /// </summary>
+        /// <summary>어두운 사냥 시간에 손전등 키를 잊지 않도록 체력 바 옆에 아이콘과 단축키를 두고 색으로 상태를 구분한다.</summary>
         private static RectTransform CreateSwitchToolSection(Transform canvas)
         {
             RectTransform root = EditorUiFactory.CreateRect(canvas, "FlashlightIndicator");
@@ -657,9 +613,7 @@ namespace GuardVsMannequin.Editor
             return root;
         }
 
-        /// <summary>
-        /// 조준점 왼쪽: 쿨타임 세로 바 목록. 오른쪽(조준점 쪽)부터 채우는 가로 줄과, 꺼 둔 바 견본(바탕·채움)을 만든다.
-        /// </summary>
+        /// <summary>시선을 옮기지 않고 쿨타임을 보도록 조준점 왼쪽에 두고, 역할마다 도구 수가 달라 바를 실행 중에 복제한다.</summary>
         private static RectTransform CreateCooldownBarsSection(Transform canvas)
         {
             RectTransform list = EditorUiFactory.CreateRect(canvas, "CooldownBars");
@@ -698,7 +652,7 @@ namespace GuardVsMannequin.Editor
         }
 
         /// <summary>
-        /// 하단 중앙 스태미나 막대: 어두운 바탕 위에 채움 막대(글자 없음). (체력 게이지 바로 아래)
+        /// 체력 게이지와 같은 모양으로 맞춰 함께 읽히도록 어두운 바탕 위 채움 막대(글자 없음)를 체력 게이지 바로 아래에 둔다.
         /// </summary>
         private static RectTransform CreateStaminaSection(Transform canvas)
         {
@@ -716,19 +670,14 @@ namespace GuardVsMannequin.Editor
             return bar;
         }
 
-        /// <summary>
-        /// 탄 영역이 지금 모양(조준점 게이지)인지. 예전 탄환 아이콘 영역이면 false.
-        /// </summary>
+        /// <summary>예전 탄환 아이콘 영역이 남은 프리팹을 바꾸려고 조준점 게이지가 연결돼 있는지 본다.</summary>
         private static bool HasAmmoGauge(HudAmmoDisplay section)
         {
             return new SerializedObject(section).FindProperty("gaugeFill").objectReferenceValue != null;
         }
 
-        /// <summary>
-        /// 조준점 둘레의 원형 탄 게이지: 옅은 바탕 고리 위에 채움 고리(Radial 360, 위에서 시작, 반시계)를 겹친다.
-        /// 조준점보다 아래에 그려지도록 조준점 바로 앞에 둔다. 예전 탄환 아이콘 영역(AmmoPanel)이 있으면 지우고 같은 컴포넌트를 다시 연결한다.
-        /// </summary>
-        /// <param name="section">이미 붙어 있는 영역 컴포넌트. 없으면 새로 붙인다.</param>
+        /// <summary>예전 탄환 아이콘 영역을 지우고 조준점 둘레의 원형 탄 게이지로 바꾼다.</summary>
+        /// <param name="section">이미 붙어 있는 영역 컴포넌트(없으면 새로 붙임).</param>
         private static void CreateAmmoSection(Transform canvas, HudAmmoDisplay section)
         {
             Transform oldPanel = canvas.Find("AmmoPanel");
@@ -743,9 +692,7 @@ namespace GuardVsMannequin.Editor
             TestEnvironmentSetupTool.SetField(section, "gaugeFill", fill);
         }
 
-        /// <summary>
-        /// 조준점 둘레의 원형 쿨타임 고리(구울 공격 등). 탄 게이지와 같은 모양이다.
-        /// </summary>
+        /// <summary>조준과 함께 쓰는 쿨타임은 조준점에서 바로 보이도록 둘레에 고리로 둔다.</summary>
         private static void CreateCooldownRingSection(Transform canvas)
         {
             Image fill = CreateCrosshairGauge(canvas, "CooldownRing");
@@ -755,10 +702,7 @@ namespace GuardVsMannequin.Editor
             TestEnvironmentSetupTool.SetField(section, "ringFill", fill);
         }
 
-        /// <summary>
-        /// 조준점 둘레 원형 게이지를 만든다: 옅은 바탕 고리 위에 채움 고리(Radial 360, 위에서 시작, 반시계)를 겹치고,
-        /// 조준점보다 아래에 그려지도록 조준점 바로 앞에 둔다. 채움 고리를 반환한다.
-        /// </summary>
+        /// <summary>탄 게이지와 쿨타임 고리가 같은 모양이 되도록 바탕·채움 고리 생성을 한곳에 둔다.</summary>
         private static Image CreateCrosshairGauge(Transform canvas, string name)
         {
             Sprite ring = HudSpriteFactory.GetAmmoGauge();
@@ -782,9 +726,7 @@ namespace GuardVsMannequin.Editor
             return fill;
         }
 
-        /// <summary>
-        /// 게이지를 꽉 채우는 고리 이미지 하나를 만든다. (클릭을 막지 않음)
-        /// </summary>
+        /// <summary>HUD 이미지가 결과 화면 버튼 클릭을 막지 않도록 클릭을 통과시킨다.</summary>
         private static Image CreateGaugeImage(RectTransform gauge, string name, Sprite sprite, Color color)
         {
             RectTransform rect = EditorUiFactory.CreateRect(gauge, name);
@@ -796,9 +738,7 @@ namespace GuardVsMannequin.Editor
             return image;
         }
 
-        /// <summary>
-        /// 결과 화면이나 ESC 메뉴가 있으면 그 앞에 둬서 그 아래에 그려지게 한다. 없으면 맨 뒤에 그대로 둔다.
-        /// </summary>
+        /// <summary>나중에 더한 HUD 영역이 결과 화면·ESC 메뉴 버튼을 가리지 않도록 그 앞에 끼워 넣는다.</summary>
         private static void InsertBeforeOverlays(Transform canvas, Transform section)
         {
             foreach (string overlayName in new[] { "ResultPanel", "PauseMenu" })
@@ -811,11 +751,9 @@ namespace GuardVsMannequin.Editor
             }
         }
 
-        /// <summary>
-        /// 설정 화면의 키 설정 목록에 없는 키(새로 추가된 달리기·점프 등)의 줄을 만들어 붙인다.
-        /// </summary>
+        /// <summary>손으로 다듬은 설정 화면을 지키려고 초기화하지 않고 목록에 없는 키의 줄만 더한다.</summary>
         /// <param name="settingsPanel">설정 화면 프리팹의 루트.</param>
-        /// <returns>새로 추가한 줄 수. 키 설정 목록을 찾지 못하면 -1.</returns>
+        /// <returns>새로 추가한 줄 수(키 설정 목록이 없으면 -1).</returns>
         public static int AddMissingRebindRows(GameObject settingsPanel)
         {
             ControlSettingsSection controls = settingsPanel.GetComponentInChildren<ControlSettingsSection>(true);
@@ -850,11 +788,9 @@ namespace GuardVsMannequin.Editor
             return added;
         }
 
-        /// <summary>
-        /// 설정 화면의 그래픽 페이지에 없는 줄을 만들어 붙인다: 프레임 제한(해상도 줄 아래), 카메라 흔들림(프레임 제한 줄 아래).
-        /// </summary>
+        /// <summary>기존 프리팹을 초기화하지 않고 새 그래픽 설정 줄만 관련 항목 아래에 더한다.</summary>
         /// <param name="settingsPanel">설정 화면 프리팹의 루트.</param>
-        /// <returns>새로 추가한 줄 수. 그래픽 페이지를 찾지 못하면 -1.</returns>
+        /// <returns>새로 추가한 줄 수(그래픽 페이지가 없으면 -1).</returns>
         public static int AddMissingGraphicsRows(GameObject settingsPanel)
         {
             DisplaySettingsSection display = settingsPanel.GetComponentInChildren<DisplaySettingsSection>(true);
@@ -873,12 +809,26 @@ namespace GuardVsMannequin.Editor
                 InsertAfter(page, CreateCameraSwayRow(page), "FrameLimitRow");
                 added++;
             }
+            if (settingsPanel.GetComponentInChildren<StatsDisplaySettingsSection>(true) == null)
+            {
+                InsertAfter(page, CreateStatsDisplayRow(page), "CameraSwayRow");
+                added++;
+            }
             return added;
         }
 
-        /// <summary>
-        /// 줄을 페이지의 기준 줄 바로 아래로 옮긴다. 기준 줄이 없으면 맨 아래에 그대로 둔다.
-        /// </summary>
+        /// <summary>새 설정 화면과 기존 프리팹 보강이 같은 줄을 쓰도록 생성을 한곳에 둔다.</summary>
+        private static Transform CreateStatsDisplayRow(Transform page)
+        {
+            CreateSelectorRow(page, "StatsDisplay", "options.statsDisplay", out Button previous, out Text value, out Button next);
+            StatsDisplaySettingsSection section = page.gameObject.AddComponent<StatsDisplaySettingsSection>();
+            TestEnvironmentSetupTool.SetField(section, "previousStatsDisplayButton", previous);
+            TestEnvironmentSetupTool.SetField(section, "nextStatsDisplayButton", next);
+            TestEnvironmentSetupTool.SetField(section, "statsDisplayValueText", value);
+            return previous.transform.parent;
+        }
+
+        /// <summary>새 줄이 관련 항목과 떨어지지 않도록 기준 줄 바로 아래로 옮긴다.</summary>
         private static void InsertAfter(Transform page, Transform row, string anchorRowName)
         {
             Transform anchorRow = page.Find(anchorRowName);
@@ -886,9 +836,7 @@ namespace GuardVsMannequin.Editor
                 row.SetSiblingIndex(anchorRow.GetSiblingIndex() + 1);
         }
 
-        /// <summary>
-        /// 카메라 흔들림 선택 줄을 만들고 설정 묶음을 페이지에 붙인다. 만든 줄을 반환한다.
-        /// </summary>
+        /// <summary>새 설정 화면과 기존 프리팹 보강이 같은 줄을 쓰도록 생성을 한곳에 둔다.</summary>
         private static Transform CreateCameraSwayRow(Transform page)
         {
             CreateSelectorRow(page, "CameraSway", "options.cameraSway", out Button previous, out Text value, out Button next);
@@ -899,9 +847,7 @@ namespace GuardVsMannequin.Editor
             return previous.transform.parent;
         }
 
-        /// <summary>
-        /// 프레임 제한 선택 줄을 만들고 설정 묶음을 페이지에 붙인다. 만든 줄을 반환한다.
-        /// </summary>
+        /// <summary>새 설정 화면과 기존 프리팹 보강이 같은 줄을 쓰도록 생성을 한곳에 둔다.</summary>
         private static Transform CreateFrameLimitRow(Transform page)
         {
             CreateSelectorRow(page, "FrameLimit", "options.frameLimit", out Button previous, out Text value, out Button next);
@@ -912,9 +858,7 @@ namespace GuardVsMannequin.Editor
             return previous.transform.parent;
         }
 
-        /// <summary>
-        /// 설정 페이지 하나를 만든다. 부모 영역을 꽉 채우고 내용을 위에서부터 쌓는다.
-        /// </summary>
+        /// <summary>탭마다 같은 틀을 쓰도록 위에서부터 쌓는 페이지 생성을 한곳에 둔다.</summary>
         private static RectTransform CreatePage(Transform parent, string name)
         {
             RectTransform page = EditorUiFactory.CreateRect(parent, name);
@@ -923,9 +867,7 @@ namespace GuardVsMannequin.Editor
             return page;
         }
 
-        /// <summary>
-        /// 이름 | ◀ | 값 | ▶ 형태의 선택 줄을 만든다. (값 문구는 설정 화면 코드가 채운다)
-        /// </summary>
+        /// <summary>◀ ▶ 선택 줄이 같은 모양이 되도록 한곳에서 만든다.</summary>
         private static void CreateSelectorRow(Transform parent, string name, string label, out Button previous, out Text value, out Button next)
         {
             RectTransform row = EditorUiFactory.CreateRow(parent, name + "Row", 44f, 16f);
@@ -939,9 +881,7 @@ namespace GuardVsMannequin.Editor
             EditorUiFactory.SetWidth(next, 56f);
         }
 
-        /// <summary>
-        /// 이름 | 슬라이더 | 값 형태의 한 줄을 만든다.
-        /// </summary>
+        /// <summary>음량·감도 줄이 같은 모양이 되도록 한곳에서 만든다.</summary>
         private static Slider CreateSliderRow(Transform parent, string name, string label, out Text valueText)
         {
             RectTransform row = EditorUiFactory.CreateRow(parent, name + "Row", 44f, 16f);
@@ -956,14 +896,12 @@ namespace GuardVsMannequin.Editor
             return slider;
         }
 
-        /// <summary>
-        /// 키 설정 한 줄(이름 | 현재 키 | 변경 | 초기화)을 만든다.
-        /// </summary>
+        /// <summary>새 화면과 기존 프리팹 보강이 같은 키 줄을 쓰도록 생성을 한곳에 둔다.</summary>
         private static RebindRowView CreateRebindRow(Transform parent, KeyBindingCatalog.Entry entry)
         {
             RectTransform row = EditorUiFactory.CreateRow(parent, $"Rebind_{entry.actionName}_{entry.partName}", 42f, 10f);
 
-            // 이름은 RebindRowView가 현재 언어로 채운다. (key를 넘기지 않음)
+            // 이름은 RebindRowView가 현재 언어로 채우므로 key를 넘기지 않는다.
             Text label = EditorUiFactory.CreateText(row, "Label", entry.actionName, 22, TextAnchor.MiddleLeft, EditorUiFactory.TextColor);
             EditorUiFactory.SetFlexibleWidth(label);
             Text key = EditorUiFactory.CreateText(row, "Key", "-", 22, TextAnchor.MiddleCenter, EditorUiFactory.NoticeColor);

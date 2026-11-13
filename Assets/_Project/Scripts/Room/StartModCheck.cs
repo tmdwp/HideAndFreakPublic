@@ -15,18 +15,15 @@ namespace GuardVsMannequin.Room
         Failed
     }
 
-    /// <summary>
-    /// 호스트가 시작을 누른 뒤 게스트들의 답을 기다리는 과정을 관리한다. 값만 판정하고 네트워크는 다루지 않는다. (서버 전용)
-    /// </summary>
+    /// <summary>네트워크 없이 시험하도록 시작 뒤 게스트들의 모드 확인 답을 기다리는 과정만 값으로 판정한다.</summary>
     public sealed class StartModCheck
     {
         private float deadline;
 
-        /// <summary>확인이 진행 중인지 여부.</summary>
         public bool IsRunning { get; private set; }
 
         /// <summary>
-        /// 확인을 시작한다.
+        /// 답하지 않는 게스트 때문에 영원히 기다리지 않도록 기한을 정해 시작한다.
         /// </summary>
         /// <param name="now">현재 시각(초).</param>
         /// <param name="timeout">답을 기다릴 시간(초).</param>
@@ -37,17 +34,15 @@ namespace GuardVsMannequin.Room
         }
 
         /// <summary>
-        /// 확인을 취소한다. (시작 전에 맵을 바꿨을 때)
+        /// 시작 전에 맵을 바꾸면 이전 맵 기준 답이 의미가 없어지므로 확인을 취소한다.
         /// </summary>
         public void Cancel()
         {
             IsRunning = false;
         }
 
-        /// <summary>
-        /// 게스트들의 답을 판정한다. 없다고 답한 사람이 있으면 바로, 답하지 않은 사람이 있으면 기한이 지난 뒤 실패다. 끝나면 확인을 마친다.
-        /// </summary>
-        /// <param name="members">참가자 목록. 호스트는 판정에서 뺀다.</param>
+        /// <summary>없다고 답한 사람이 있으면 바로, 답하지 않은 사람이 있으면 기한 뒤 실패로 본다.</summary>
+        /// <param name="members">호스트는 이미 맵을 가지고 있으므로 판정에서 뺀다.</param>
         /// <param name="now">현재 시각(초).</param>
         public StartModCheckResult Evaluate(IEnumerable<RoomMember> members, float now)
         {
@@ -68,7 +63,7 @@ namespace GuardVsMannequin.Room
         }
 
         /// <summary>
-        /// 확인을 마치고 결과를 돌려준다.
+        /// 결과가 나면 확인을 끝내야 다음 판정이 이어지지 않으므로, 끝내기와 결과 반환을 한 번에 한다.
         /// </summary>
         private StartModCheckResult Finish(StartModCheckResult result)
         {

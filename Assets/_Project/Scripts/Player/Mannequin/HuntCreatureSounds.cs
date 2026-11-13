@@ -5,15 +5,13 @@ using UnityEngine;
 
 namespace GuardVsMannequin.Player.Mannequin
 {
-    /// <summary>
-    /// 사냥 시간 마네킹(구울)의 몸에서 나는 소리. 모든 피어가 각자 보이는 움직임으로 재생한다. (네트워크 전송 없음)
-    /// - 숨소리·으르렁: 구울 주변에서 계속 반복하는 3D 소리. 멈춰 있으면 작게, 움직일수록 크게.
-    /// - 발소리: 움직인 거리가 한 걸음(기어가면 짧게)을 넘을 때마다 손발이 바닥을 짚는 소리.
-    /// 변신 중·사망·사냥 시간이 아니면 내지 않는다. 클립과 들리는 거리는 <see cref="NoiseLibrary"/>에서 정한다.
-    /// </summary>
+    /// <summary>네트워크 없이 각 피어가 보이는 움직임으로 구울 몸소리를 재생한다.</summary>
     [RequireComponent(typeof(NoiseEmitter), typeof(MannequinTransformer), typeof(PlayerHealth))]
     public class HuntCreatureSounds : MonoBehaviour
     {
+        // 한 프레임에 이보다 많이 움직이면 순간이동·되돌림으로 보고 걸음으로 치지 않는다(m).
+        private const float TeleportDistance = 2f;
+
         [Tooltip("멈춰 있을 때 숨소리 크기 배율.")]
         [SerializeField] private float idleBreathVolume = 0.45f;
 
@@ -40,7 +38,7 @@ namespace GuardVsMannequin.Player.Mannequin
         private float smoothedSpeed;
 
         /// <summary>
-        /// 구성 요소를 캐시한다.
+        /// 매 프레임 조회하지 않도록 미리 찾아 두고, 첫 프레임 이동량이 튀지 않도록 시작 위치를 기억한다.
         /// </summary>
         private void Awake()
         {
@@ -50,56 +48,51 @@ namespace GuardVsMannequin.Player.Mannequin
             lastPosition = transform.position;
         }
 
-        /// <summary>
-        /// 사냥 중인 구울이면 숨소리 크기와 발소리를 갱신하고, 아니면 숨소리를 멈춘다.
-        /// </summary>
+        /// <summary>소리를 동기화하지 않도록 실제 이동 거리로 숨소리 크기와 발소리를 정한다.</summary>
         private void Update()
         {
-            Vector3 position = transform.position;
-            Vector3 moved = position - lastPosition;
-            lastPosition = position;
-            moved.y = 0f;
+            Vector3 currentPosition = transform.position;
+            Vector3 movedDelta = currentPosition - lastPosition;
+            lastPosition = currentPosition;
+            movedDelta.y = 0f;
 
-            bool active = GameServices.CurrentStateOrWaiting == GameState.Hunting && !transformer.IsDisguised && health.IsAlive;
-            if (!active || Time.deltaTime <= 0f)
+            bool isActive = GameServices.CurrentStateOrWaiting == GameState.Hunting && !transformer.IsDisguised && health.IsAlive;
+            if (!isActive || Time.deltaTime <= 0f)
             {
                 SetBreathing(false, 0f);
                 strideProgress = 0f;
                 return;
             }
 
-            float distance = moved.magnitude;
-            // 순간이동·되돌림은 걸음으로 치지 않는다.
-            if (distance > 2f)
-                distance = 0f;
-            smoothedSpeed = Mathf.Lerp(smoothedSpeed, distance / Time.deltaTime, 1f - Mathf.Exp(-8f * Time.deltaTime));
+            float movedDistance = movedDelta.magnitude;
+            if (movedDistance > TeleportDistance)
+                movedDistance = 0f;
+            smoothedSpeed = Mathf.Lerp(smoothedSpeed, movedDistance / Time.deltaTime, 1f - Mathf.Exp(-8f * Time.deltaTime));
 
             float selfScale = IsLocalPlayer() ? ownerVolume : 1f;
             float loudness = Mathf.Lerp(idleBreathVolume, 1f, Mathf.Clamp01(smoothedSpeed / loudBreathSpeed));
             SetBreathing(true, loudness * selfScale);
 
-            strideProgress += distance;
-            float stride = smoothedSpeed >= crawlSpeed ? crawlStride : stalkStride;
-            if (strideProgress >= stride)
+            strideProgress += movedDistance;
+            float strideLength = smoothedSpeed >= crawlSpeed ? crawlStride : stalkStride;
+            if (strideProgress >= strideLength)
             {
-                strideProgress -= stride;
+                strideProgress -= strideLength;
                 noiseEmitter.PlayLocal(NoiseType.GhoulStep, selfScale);
             }
         }
 
-        /// <summary>이 구울이 이 클라이언트의 로컬 플레이어(본인)인지.</summary>
+        /// <summary>본인 귀 바로 옆에서 나는 소리는 줄여야 해서 로컬 플레이어인지 확인한다.</summary>
         private bool IsLocalPlayer()
         {
-            PlayerIdentity local = LocalPlayerEvents.Current;
-            return local != null && local.gameObject == gameObject;
+            PlayerIdentity localPlayer = LocalPlayerEvents.Current;
+            return localPlayer != null && localPlayer.gameObject == gameObject;
         }
 
-        /// <summary>
-        /// 숨소리 반복 재생을 켜고 크기를 맞추거나 끈다. 처음 켤 때 3D 오디오 소스를 만든다.
-        /// </summary>
-        private void SetBreathing(bool on, float loudness)
+        /// <summary>사냥하지 않는 구울에 소스를 붙이지 않도록 처음 켤 때 만든다.</summary>
+        private void SetBreathing(bool isOn, float loudness)
         {
-            if (!on)
+            if (!isOn)
             {
                 if (breathSource != null && breathSource.isPlaying)
                     breathSource.Stop();

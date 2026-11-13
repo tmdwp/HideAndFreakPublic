@@ -2,7 +2,9 @@ using System.Collections.Generic;
 using System.Linq;
 using GuardVsMannequin.Core;
 using GuardVsMannequin.Map;
+using GuardVsMannequin.Mods;
 using GuardVsMannequin.Objectives;
+using GuardVsMannequin.Player;
 using GuardVsMannequin.Props;
 using Unity.AI.Navigation;
 using UnityEngine;
@@ -10,11 +12,7 @@ using UnityEngine.SceneManagement;
 
 namespace GuardVsMannequin.Editor
 {
-    /// <summary>
-    /// 모드 맵 씬이 게임에서 동작하는지 검사한다. (모드 SDK의 "모드 내보내기" 전에 실행)
-    /// 오류가 하나라도 있으면 내보내지 않는다. 경고는 동작은 하지만 확인이 필요한 것이다.
-    /// 게임 프로젝트의 맵 검사와 달리 게임 코드(네트워크·HUD)를 몰라도 되는 항목만 본다.
-    /// </summary>
+    /// <summary>모드 맵이 게임에서 동작하는지 게임 코드 없이 확인할 수 있는 항목으로 내보내기 전에 검사한다.</summary>
     public static class ModMapValidator
     {
         /// <summary>검사 결과 한 줄.</summary>
@@ -24,6 +22,7 @@ namespace GuardVsMannequin.Editor
             public readonly string message;
             public readonly Object context;
 
+            /// <summary>Console에서 누르면 문제 오브젝트로 갈 수 있도록 오브젝트를 함께 담는다.</summary>
             public Issue(bool isError, string message, Object context = null)
             {
                 this.isError = isError;
@@ -35,15 +34,16 @@ namespace GuardVsMannequin.Editor
         private const int RecommendedMannequinSpawns = GameConstants.MaxPlayers - 1;
         private const int RecommendedGenerators = 12;
 
-        /// <summary>
-        /// 열린 씬 하나를 검사한다.
-        /// </summary>
+        // 게임이 뼈 판정(Hitbox)에 쓰는 레이어 번호.
+        private const int ReservedHitboxLayer = 8;
+
+        /// <summary>게임에서 열어 봐야 알 수 있는 문제를 내보내기 전에 찾으며, MapInfo가 하나가 아니면 기준이 없어 바로 멈춘다.</summary>
         public static List<Issue> Validate(Scene scene)
         {
             var issues = new List<Issue>();
-            List<T> Find<T>() where T : Component => scene.GetRootGameObjects().SelectMany(r => r.GetComponentsInChildren<T>(true)).ToList();
+            List<T> FindInScene<T>() where T : Component => scene.GetRootGameObjects().SelectMany(root => root.GetComponentsInChildren<T>(true)).ToList();
 
-            List<MapInfo> mapInfos = Find<MapInfo>();
+            List<MapInfo> mapInfos = FindInScene<MapInfo>();
             if (mapInfos.Count != 1)
             {
                 issues.Add(new Issue(true, $"MapInfo가 {mapInfos.Count}개입니다. 하나만 있어야 합니다."));
@@ -59,33 +59,44 @@ namespace GuardVsMannequin.Editor
             if (surface == null || surface.navMeshData == null)
                 issues.Add(new Issue(true, "MapInfo 오브젝트(또는 자식)에 NavMeshSurface가 없거나 굽지 않았습니다. NavMeshSurface의 Bake를 누르세요. (가드 스폰 후보)", mapInfo));
 
-            List<SpawnPoint> spawns = Find<SpawnPoint>();
-            int mannequins = spawns.Count(s => s.Role == PlayerRole.Mannequin);
-            if (mannequins == 0)
+            List<SpawnPoint> spawnPoints = FindInScene<SpawnPoint>();
+            int mannequinSpawnCount = spawnPoints.Count(spawnPoint => spawnPoint.Role == PlayerRole.Mannequin);
+            if (mannequinSpawnCount == 0)
                 issues.Add(new Issue(true, "마네킹 스폰 지점(SpawnPoint, Role=Mannequin)이 없습니다."));
-            else if (mannequins < RecommendedMannequinSpawns)
-                issues.Add(new Issue(false, $"마네킹 스폰 지점이 {mannequins}개입니다. {RecommendedMannequinSpawns}개 이상을 권장합니다."));
-            if (spawns.All(s => s.Role != PlayerRole.Guard))
+            else if (mannequinSpawnCount < RecommendedMannequinSpawns)
+                issues.Add(new Issue(false, $"마네킹 스폰 지점이 {mannequinSpawnCount}개입니다. {RecommendedMannequinSpawns}개 이상을 권장합니다."));
+            if (spawnPoints.All(spawnPoint => spawnPoint.Role != PlayerRole.Guard))
                 issues.Add(new Issue(false, "가드 스폰 후보(SpawnPoint, Role=Guard)가 없습니다. 바닥 무작위 위치만 씁니다."));
 
-            int generators = Find<GeneratorSpawnPoint>().Count;
-            if (generators == 0)
+            int generatorCount = FindInScene<GeneratorSpawnPoint>().Count;
+            if (generatorCount == 0)
                 issues.Add(new Issue(true, "전원 장치 후보(GeneratorSpawnPoint)가 없습니다."));
-            else if (generators < RecommendedGenerators)
-                issues.Add(new Issue(false, $"전원 장치 후보가 {generators}개입니다. {RecommendedGenerators}개를 권장합니다."));
+            else if (generatorCount < RecommendedGenerators)
+                issues.Add(new Issue(false, $"전원 장치 후보가 {generatorCount}개입니다. {RecommendedGenerators}개를 권장합니다."));
 
-            // 게임 시스템·카메라는 게임이 붙이므로 맵에 두면 안 된다. (FishNet을 참조하지 않으려고 이름으로 확인)
-            if (Find<Component>().Any(c => c != null && c.GetType().FullName == "FishNet.Object.NetworkObject"))
-                issues.Add(new Issue(true, "맵 씬에 네트워크 오브젝트가 있습니다. 맵에는 환경·지점·사물·조명만 둡니다."));
-            if (Find<Camera>().Count > 0)
-                issues.Add(new Issue(false, "맵 씬에 카메라가 있습니다. 게임이 카메라를 붙이므로 지우세요."));
+            // 게임이 번들을 불러올 때도 같은 규칙으로 검사하므로, 걸리는 맵은 게임에서 열리지 않는다.
+            var violations = new List<string>();
+            foreach (GameObject root in scene.GetRootGameObjects())
+                ModComponentPolicy.CollectViolations(root, violations);
+            foreach (CharacterSkin skin in new[] { mapInfo.MannequinSkin, mapInfo.GuardSkin, mapInfo.MannequinHuntSkin })
+            {
+                if (skin != null && skin.modelPrefab != null)
+                    ModComponentPolicy.CollectViolations(skin.modelPrefab, violations);
+                if (skin != null && skin.fireAnimationEvents)
+                    issues.Add(new Issue(false, $"외형 '{skin.name}'의 Fire Animation Events는 모드에서 항상 꺼집니다.", skin));
+            }
+            foreach (string violation in violations)
+                issues.Add(new Issue(true, $"허용되지 않은 컴포넌트입니다 - {violation}. 맵에는 환경·지점·사물·조명만 둡니다. (카메라·네트워크 오브젝트·UI·게임 스크립트 불가)"));
 
-            List<Light> lights = Find<Light>();
-            int unregistered = lights.Count(l => l.GetComponentInParent<MapLight>() == null);
-            if (unregistered > 0)
-                issues.Add(new Issue(false, $"MapLight가 아닌 조명이 {unregistered}개 있습니다. 사냥 시간에 꺼지지 않습니다."));
+            if (FindInScene<Transform>().Any(sceneTransform => sceneTransform.gameObject.layer == ReservedHitboxLayer))
+                issues.Add(new Issue(false, $"레이어 {ReservedHitboxLayer}번 오브젝트가 있습니다. 게임이 쓰는 레이어라 충돌이 동작하지 않습니다. 다른 레이어로 옮기세요."));
 
-            List<TransformableProp> props = Find<TransformableProp>();
+            List<Light> lights = FindInScene<Light>();
+            int unregisteredLightCount = lights.Count(sceneLight => sceneLight.GetComponentInParent<MapLight>() == null);
+            if (unregisteredLightCount > 0)
+                issues.Add(new Issue(false, $"MapLight가 아닌 조명이 {unregisteredLightCount}개 있습니다. 사냥 시간에 꺼지지 않습니다."));
+
+            List<TransformableProp> props = FindInScene<TransformableProp>();
             if (props.Count == 0)
                 issues.Add(new Issue(false, "변신 가능 사물(TransformableProp)이 없습니다."));
             foreach (TransformableProp prop in props)

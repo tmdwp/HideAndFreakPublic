@@ -8,13 +8,7 @@ using UnityEngine;
 
 namespace GuardVsMannequin.Editor
 {
-    /// <summary>
-    /// 모드 SDK 패키지(.unitypackage)를 만든다. (게임 프로젝트 전용 메뉴)
-    /// 담는 것: 콘텐츠 어셈블리(맵·사물·외형 컴포넌트, FishNet·ECM2 무참조), 콘텐츠 에디터 도구(맵 도구, 맵 검사, 모드 내보내기),
-    /// 게임과 같은 그래픽 설정(<see cref="ModSdkGraphicsExporter"/>), 예제 모드 템플릿(<see cref="ModSdkTemplateBuilder"/>).
-    /// 게임 코드(GuardVsMannequin.Runtime)와 유료 에셋(ECM2)은 담지 않는다.
-    /// 출력: &lt;프로젝트&gt;/Builds/ModSDK/ — 패키지, 제작 안내서(ModdingGuide.md), 필요 환경(requirements.txt)
-    /// </summary>
+    /// <summary>게임 코드와 유료 에셋 없이 맵 제작에 필요한 것만 담은 모드 SDK 패키지를 만든다.</summary>
     public static class ModSdkPackageExporter
     {
         private const string OutputFolder = "Builds/ModSDK";
@@ -22,9 +16,7 @@ namespace GuardVsMannequin.Editor
         private static readonly string[] PackagedFolders = { "Assets/_Project/Content", "Assets/_Project/ContentEditor", ModSdkSettings.Root };
         private static readonly string[] RequiredPackages = { "com.unity.render-pipelines.universal", "com.unity.ai.navigation" };
 
-        /// <summary>
-        /// SDK 패키지와 안내 파일을 만든다.
-        /// </summary>
+        /// <summary>SDK가 게임과 같은 규칙으로 검사하도록 게임 설정·Unity 버전·씬 이름을 파일로 함께 담는다.</summary>
         [MenuItem(EditorMenus.Root + "모드/모드 SDK 패키지 만들기")]
         public static void Export()
         {
@@ -55,27 +47,25 @@ namespace GuardVsMannequin.Editor
             EditorUtility.RevealInFinder(packagePath);
         }
 
-        /// <summary>
-        /// 모드 제작 프로젝트에 필요한 Unity 버전과 패키지 버전을 적는다. (번들은 같은 Unity 버전으로 만들어야 읽힌다)
-        /// </summary>
+        /// <summary>제작자가 맞는 Unity·패키지 버전을 미리 준비하도록 지금 게임의 manifest.json에서 필요 환경을 적는다.</summary>
         private static string BuildRequirements()
         {
-            var text = new StringBuilder();
-            text.AppendLine("Hide&Freak Mod SDK - System Requirements ");
-            text.AppendLine($"Game Version: {Application.version}");
-            text.AppendLine($"Unity Version: {UnityVersionRules.DescribeRange(Application.unityVersion)} (same {Application.unityVersion.Split('.')[0]}.{Application.unityVersion.Split('.')[1]} line, below game version. Newer versions are not allowed)");
-            text.AppendLine($"  Recommended: {Application.unityVersion} (same as game version)");
-            text.AppendLine("Render Pipeline: URP");
-            text.AppendLine("Packages (install same versions in Package Manager):");
+            var requirements = new StringBuilder();
+            requirements.AppendLine("Hide&Freak Mod SDK - System Requirements ");
+            requirements.AppendLine($"Game Version: {Application.version}");
+            requirements.AppendLine($"Unity Version: {UnityVersionRules.DescribeRange(Application.unityVersion)} (same {Application.unityVersion.Split('.')[0]}.{Application.unityVersion.Split('.')[1]} line, below game version. Newer versions are not allowed)");
+            requirements.AppendLine($"  Recommended: {Application.unityVersion} (same as game version)");
+            requirements.AppendLine("Render Pipeline: URP");
+            requirements.AppendLine("Packages (install same versions in Package Manager):");
 
             string manifest = File.Exists("Packages/manifest.json") ? File.ReadAllText("Packages/manifest.json") : string.Empty;
-            foreach (string package in RequiredPackages)
+            foreach (string packageName in RequiredPackages)
             {
-                Match match = Regex.Match(manifest, $"\"{Regex.Escape(package)}\"\\s*:\\s*\"([^\"]+)\"");
-                text.AppendLine($"  - {package} {(match.Success ? match.Groups[1].Value : "(same as game version)")}");
+                Match versionMatch = Regex.Match(manifest, $"\"{Regex.Escape(packageName)}\"\\s*:\\s*\"([^\"]+)\"");
+                requirements.AppendLine($"  - {packageName} {(versionMatch.Success ? versionMatch.Groups[1].Value : "(same as game version)")}");
             }
-            text.AppendLine("Build Target: Windows (StandaloneWindows64)");
-            return text.ToString();
+            requirements.AppendLine("Build Target: Windows (StandaloneWindows64)");
+            return requirements.ToString();
         }
     }
 }

@@ -4,10 +4,7 @@ using UnityEngine.Rendering;
 
 namespace GuardVsMannequin.Player
 {
-    /// <summary>
-    /// 아바타가 로컬 소유자인지에 따라 카메라, 입력, 물리 시뮬레이션을 켜고 끈다.
-    /// 이동은 소유자 권한(NetworkTransform)으로 동기화하고, 원격 아바타는 시뮬레이션하지 않는다.
-    /// </summary>
+    /// <summary>내 아바타에서만 카메라·입력·물리가 돌도록 소유 여부에 따라 켜고 끈다.</summary>
     [RequireComponent(typeof(PlayerIdentity))]
     public class PlayerOwnershipSetup : NetworkBehaviour
     {
@@ -26,7 +23,7 @@ namespace GuardVsMannequin.Player
         private ICharacterMotor motor;
 
         /// <summary>
-        /// 같은 오브젝트의 PlayerIdentity와 캐릭터 이동 구현을 캐시한다.
+        /// 이동 어셈블리가 빠져 있으면 아바타가 조용히 움직이지 않으므로, 구성 요소를 찾으면서 없을 때 바로 알린다.
         /// </summary>
         private void Awake()
         {
@@ -37,7 +34,7 @@ namespace GuardVsMannequin.Player
         }
 
         /// <summary>
-        /// 클라이언트에서 스폰되면 소유 여부에 맞게 구성한다.
+        /// 소유 여부는 클라이언트에서 스폰된 뒤에야 확정되므로 이 시점에 구성한다.
         /// </summary>
         public override void OnStartClient()
         {
@@ -50,7 +47,7 @@ namespace GuardVsMannequin.Player
         }
 
         /// <summary>
-        /// 로컬 소유자 아바타가 제거되면 알린다.
+        /// 카메라·HUD가 관전으로 넘어갈 수 있도록 내 아바타가 사라지면 알린다.
         /// </summary>
         public override void OnStopClient()
         {
@@ -61,15 +58,18 @@ namespace GuardVsMannequin.Player
         }
 
         /// <summary>
-        /// 카메라와 입력을 켜고, 캐릭터 이동 구현에 카메라를 연결(보간 포함)한 뒤 로컬 플레이어로 등록한다.
+        /// 카메라·입력을 켜고 보간을 건 뒤에 알려야 구독자가 완성된 상태를 받으므로, 등록은 맨 마지막에 한다.
         /// </summary>
         private void SetupAsOwner()
         {
             playerCamera.gameObject.SetActive(true);
             motor?.SetupAsOwner(playerCamera);
             SetBehavioursEnabled(true);
+            // 프리팹을 고치지 않아도 모든 역할이 사물을 밀 수 있도록, 충돌을 직접 겪는 소유자 아바타에만 붙인다.
+            if (motor != null && !TryGetComponent(out PropPhysics.PropPushReporter _))
+                gameObject.AddComponent<PropPhysics.PropPushReporter>();
 
-            // 1인칭 역할은 외형(CharacterSkinView) 렌더러도 그림자만 남긴다.
+            // 1인칭 역할은 자기 몸이 카메라를 가리지 않게 외형 렌더러도 그림자만 남긴다.
             Renderer[] targets = hideSkinForOwner ? CharacterSkinView.ResolveBodyRenderers(this, hiddenForOwner) : hiddenForOwner;
             foreach (Renderer target in targets)
                 target.shadowCastingMode = ShadowCastingMode.ShadowsOnly;
@@ -78,7 +78,7 @@ namespace GuardVsMannequin.Player
         }
 
         /// <summary>
-        /// 원격 아바타는 카메라와 입력을 끄고, NetworkTransform이 위치를 적용하도록 시뮬레이션을 멈춘다.
+        /// 남의 아바타가 내 입력에 반응하거나 스스로 시뮬레이션하면 NetworkTransform 위치와 어긋나므로 모두 끈다.
         /// </summary>
         private void SetupAsRemote()
         {
@@ -88,7 +88,7 @@ namespace GuardVsMannequin.Player
         }
 
         /// <summary>
-        /// 소유자 전용 컴포넌트를 일괄로 켜고 끈다.
+        /// 소유자 전용 목록은 인스펙터에서 정하므로, 종류를 몰라도 한 번에 켜고 끈다.
         /// </summary>
         private void SetBehavioursEnabled(bool enabledState)
         {

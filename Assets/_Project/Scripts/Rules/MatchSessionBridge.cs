@@ -5,12 +5,7 @@ using UnityEngine;
 
 namespace GuardVsMannequin.Rules
 {
-    /// <summary>
-    /// 룸과 게임 판을 잇는다. (서버 전용)
-    /// - 게임 씬이 열리면 모든 플레이어가 씬을 불러올 때까지 기다렸다가 판을 시작한다.
-    /// - 판이 끝나 대기 상태로 돌아가면 모두 룸 씬으로 돌려보낸다.
-    /// 룸 없이 실행한 경우에는 아무것도 하지 않는다.
-    /// </summary>
+    /// <summary>모두 씬을 불러온 뒤 판을 시작하고 판이 끝나면 룸으로 돌려보내도록 룸과 게임 판을 잇는다.</summary>
     public class MatchSessionBridge : NetworkBehaviour
     {
         [SerializeField] private GameStateMachine stateMachine;
@@ -22,11 +17,11 @@ namespace GuardVsMannequin.Rules
         [SerializeField] private float maxLoadingWait = 120f;
 
         private float waitStartTime;
-        private bool matchStarted;
-        private bool returningToRoom;
+        private bool isMatchStarted;
+        private bool isReturningToRoom;
 
         /// <summary>
-        /// 대기 시작 시각을 기록하고 상태 변경을 구독한다.
+        /// 로딩 대기 시간을 이 씬이 서버에서 시작된 시점부터 재고, 판이 끝나는 것을 알기 위해 상태 변경을 듣는다.
         /// </summary>
         public override void OnStartServer()
         {
@@ -36,7 +31,7 @@ namespace GuardVsMannequin.Rules
         }
 
         /// <summary>
-        /// 상태 변경 구독을 해제한다.
+        /// 서버가 멈춘 뒤 콜백이 남지 않도록 구독을 끊는다.
         /// </summary>
         public override void OnStopServer()
         {
@@ -44,12 +39,10 @@ namespace GuardVsMannequin.Rules
             stateMachine.ServerStateChanged -= OnServerStateChanged;
         }
 
-        /// <summary>
-        /// 모든 플레이어가 준비되면 판을 시작한다.
-        /// </summary>
+        /// <summary>늦은 사람이 시작을 놓치지 않도록 모두 준비될 때까지 기다리되, 끊긴 사람 때문에 멈추지 않게 상한을 둔다.</summary>
         private void Update()
         {
-            if (!this.IsServerReady() || matchStarted || GameServices.Room == null)
+            if (!this.IsServerReady() || isMatchStarted || GameServices.Room == null)
                 return;
             if (stateMachine.CurrentState != GameState.Waiting)
                 return;
@@ -64,53 +57,50 @@ namespace GuardVsMannequin.Rules
                 Debug.LogWarning($"[MatchSessionBridge] 일부 플레이어가 맵을 불러오지 못한 채 {elapsed:F0}초가 지나 판을 시작합니다.");
 
             if (stateMachine.TryStartMatch(out string failReason))
-                matchStarted = true;
+                isMatchStarted = true;
             else if (timedOut)
             {
-                // 인원이 부족해 시작할 수 없으면 룸으로 돌아간다.
+                // 인원이 부족해 시작할 수 없으면 게임 씬에 갇히지 않도록 룸으로 돌아간다.
                 Debug.LogWarning($"[MatchSessionBridge] 판을 시작하지 못해 룸으로 돌아갑니다: {failReason}");
                 ReturnToRoom();
             }
         }
 
         /// <summary>
-        /// 접속한 모든 클라이언트가 이 게임 씬을 불러왔는지 확인한다.
-        /// 아직 못 불러온 클라이언트 중 "로딩 중" 알림을 보내고 있는 클라이언트가 있으면 anyStillLoading = true.
+        /// 느리지만 살아 있는 사람과 멈춘 사람을 구분해 기다릴 시간을 달리하려고, 로딩 중 알림을 보내는 사람이 있는지도 함께 알려 준다.
         /// </summary>
         private bool AllPlayersLoadedScene(out bool anyStillLoading)
         {
             anyStillLoading = false;
             bool allLoaded = true;
-            foreach (NetworkConnection conn in ServerManager.Clients.Values)
+            foreach (NetworkConnection connection in ServerManager.Clients.Values)
             {
-                if (conn.Scenes.Contains(gameObject.scene))
+                if (connection.Scenes.Contains(gameObject.scene))
                     continue;
 
                 allLoaded = false;
-                if (GameServices.SceneFlow != null && GameServices.SceneFlow.IsClientLoading(conn.ClientId))
+                if (GameServices.SceneFlow != null && GameServices.SceneFlow.IsClientLoading(connection.ClientId))
                     anyStillLoading = true;
             }
             return allLoaded && ServerManager.Clients.Count > 0;
         }
 
-        /// <summary>
-        /// 결과 표시가 끝나 대기 상태로 돌아가면 룸으로 이동한다.
-        /// </summary>
-        private void OnServerStateChanged(GameState prev, GameState next)
+        /// <summary>판 시작 전 대기와 구분하려고 결과 화면 뒤의 대기만 룸 복귀로 본다.</summary>
+        private void OnServerStateChanged(GameState previousState, GameState nextState)
         {
-            if (prev == GameState.Ended && next == GameState.Waiting)
+            if (previousState == GameState.Ended && nextState == GameState.Waiting)
                 ReturnToRoom();
         }
 
         /// <summary>
-        /// 한 번만 룸으로 돌아간다.
+        /// 시간 초과와 판 종료가 겹쳐 씬 전환이 두 번 요청되지 않도록 한 번만 보낸다.
         /// </summary>
         private void ReturnToRoom()
         {
-            if (returningToRoom)
+            if (isReturningToRoom)
                 return;
 
-            returningToRoom = true;
+            isReturningToRoom = true;
             GameServices.SceneFlow?.ReturnToRoom();
         }
     }

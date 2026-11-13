@@ -18,12 +18,18 @@ MonoBehaviour:
   author: Hide&Freak
   description: "\uBAA8\uB4DC SDK \uC608\uC81C \uB9F5. \uC774 \uC124\uC815\uC744 \uBCF5\uC0AC\uD574
     \uC790\uAE30 \uBAA8\uB4DC\uB97C \uB9CC\uB4DC\uC138\uC694."
-  minGameVersion: 0.4.0
+  downloadUrl: 
+  minGameVersion: 0.6.0
   dependencies: []
   maps:
   - scene: {fileID: 102900000, guid: aa22ba81947d66c4292edbedb1567294, type: 3}
     mapKey: example
     displayName: Example Map
+    names:
+    - language: ko
+      text: "\uC608\uC81C \uB9F5"
+    - language: en
+      text: Example Map
     minPlayers: 0
     maxPlayers: 0
     settings:
@@ -32,5 +38,4 @@ MonoBehaviour:
       min: 1
       max: 2
   sharedAssets: []
-  strings: {fileID: 4900000, guid: 9f1abb135f1b58c4c984fb13766c2910, type: 3}
   copyToModsFolder: 

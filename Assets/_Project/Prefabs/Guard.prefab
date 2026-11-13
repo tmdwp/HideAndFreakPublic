@@ -193,6 +193,7 @@ GameObject:
   - component: {fileID: 7713920465182736401}
   - component: {fileID: 7713920465182736403}
   - component: {fileID: 7713920465182736420}
+  - component: {fileID: 5565078179149458433}
   m_Layer: 0
   m_Name: Guard
   m_TagString: Untagged
@@ -480,7 +481,7 @@ MonoBehaviour:
     X: 0
     Y: 0
     Z: 0
-  _synchronizeScale: 1
+  _synchronizeScale: 0
   _scaleSensitivity: 0.001
   _scaleSnapping:
     X: 0
@@ -1536,3 +1537,22 @@ MonoBehaviour:
   maxHeartbeatPitch: 1.8
   shakeDuration: 0.8
   shakeAngle: 2.5
+--- !u!114 &5565078179149458433
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 3154698559590718275}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 7028177c3c0e40bab780fa41ea7c1142, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: GuardVsMannequin.Movement.ECM2::GuardVsMannequin.Player.ClimbAbility
+  climbSpeedScale: 0.7
+  detectRadius: 0.8
+  standOff: {x: 0.25, y: 0.12}
+  holdGain: 8
+  reattachDelay: 0.4
+  exitLift: 0.35
+  jumpOffVelocity: {x: 2.5, y: 2}

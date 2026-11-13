@@ -18,16 +18,16 @@ namespace GuardVsMannequin.Core
     {
         None = 0,
 
-        /// <summary>마네킹 전멸. (가드 승리)</summary>
+        /// <summary>마네킹 전멸로 가드 승리.</summary>
         AllMannequinsEliminated = 1,
 
-        /// <summary>제한 시간 동안 목표 미달성. (가드 승리)</summary>
+        /// <summary>제한 시간 동안 목표 미달성으로 가드 승리.</summary>
         ObjectiveFailed = 2,
 
-        /// <summary>사냥 시간 종료까지 가드 생존. (가드 승리)</summary>
+        /// <summary>사냥 시간 종료까지 가드 생존으로 가드 승리.</summary>
         GuardsSurvived = 3,
 
-        /// <summary>사냥 시간 중 가드 전멸. (마네킹 승리)</summary>
+        /// <summary>사냥 시간 중 가드 전멸로 마네킹 승리.</summary>
         AllGuardsEliminated = 4
     }
 
@@ -49,17 +49,17 @@ namespace GuardVsMannequin.Core
         private readonly SyncVar<MatchWinner> winner = new(MatchWinner.None);
         private readonly SyncVar<WinReason> reason = new(WinReason.None);
 
-        /// <summary>판이 끝났을 때 공개되는 참가자 결과. (진행 중에는 비어 있어 사망 정보가 새지 않음)</summary>
+        /// <summary>진행 중에 채워 두면 누가 죽었는지 클라이언트에 새므로, 판이 끝날 때만 채운다.</summary>
         private readonly SyncList<ParticipantResult> publishedParticipants = new();
 
-        /// <summary>서버에서만 관리하는 이번 판 참가자와 아바타.</summary>
+        /// <summary>생존 판정에 아바타 참조가 필요하지만 동기화할 수는 없어서 서버에만 따로 둔다.</summary>
         private readonly List<(string name, PlayerRole role, NetworkObject avatar)> serverParticipants = new();
 
-        /// <summary>공개된 참가자 결과. 판이 끝나기 전에는 비어 있다.</summary>
+        /// <summary>판이 끝나기 전에는 비어 있다.</summary>
         public IReadOnlyList<ParticipantResult> Participants => publishedParticipants;
 
         /// <summary>
-        /// 새 판을 위해 참가자 목록을 비운다. (서버 전용, 스폰 직전에 호출)
+        /// 지난 판 참가자가 섞이지 않도록 스폰 직전에 서버에서 호출한다.
         /// </summary>
         [Server]
         public void ResetParticipants()
@@ -68,17 +68,26 @@ namespace GuardVsMannequin.Core
             publishedParticipants.Clear();
         }
 
-        /// <summary>
-        /// 이번 판 참가자를 등록한다. 결과 공개 시점에 아바타가 남아 있으면 생존으로 본다. (서버 전용)
-        /// </summary>
+        /// <summary>결과 공개 때 아바타가 남아 있는지로 생존을 가리도록 아바타를 함께 기억한다.</summary>
         [Server]
         public void RegisterParticipant(string displayName, PlayerRole role, NetworkObject avatar)
         {
             serverParticipants.Add((displayName, role, avatar));
         }
 
+        /// <summary>다시 들어온 사람이 탈락으로 잘못 나오지 않도록 새 아바타로 바꿔 둔다.</summary>
+        [Server]
+        public void ReplaceAvatar(NetworkObject previous, NetworkObject current)
+        {
+            for (int i = 0; i < serverParticipants.Count; i++)
+            {
+                if (ReferenceEquals(serverParticipants[i].avatar, previous))
+                    serverParticipants[i] = (serverParticipants[i].name, serverParticipants[i].role, current);
+            }
+        }
+
         /// <summary>
-        /// 서버에서 상태 변경을 구독한다.
+        /// 새 판이 시작될 때 지난 결과를 지우려고 서버에서 상태 변경을 듣는다.
         /// </summary>
         public override void OnStartServer()
         {
@@ -87,7 +96,7 @@ namespace GuardVsMannequin.Core
         }
 
         /// <summary>
-        /// 상태 변경 구독을 해제한다.
+        /// 서버가 멈춘 뒤에도 콜백이 남지 않도록 구독을 끊는다.
         /// </summary>
         public override void OnStopServer()
         {
@@ -96,23 +105,20 @@ namespace GuardVsMannequin.Core
         }
 
         /// <summary>
-        /// 새 판(준비 단계)이 시작되면 이전 결과를 지운다.
+        /// 준비 단계에 지난 판 결과가 남아 있으면 HUD가 결과를 다시 띄우므로 지운다.
         /// </summary>
-        private void OnServerStateChanged(GameState prev, GameState next)
+        private void OnServerStateChanged(GameState previousState, GameState nextState)
         {
-            if (next == GameState.Preparation)
+            if (nextState == GameState.Preparation)
                 Clear();
         }
 
-        /// <summary>승리한 진영. 결정 전에는 None.</summary>
+        /// <summary>결정 전에는 None.</summary>
         public MatchWinner Winner => winner.Value;
 
-        /// <summary>승패 사유.</summary>
         public WinReason Reason => reason.Value;
 
-        /// <summary>
-        /// 결과를 기록한다. (서버 전용)
-        /// </summary>
+        /// <summary>승자가 정해지는 순간에만 참가자 결과를 공개하도록 기록과 공개를 한곳에서 처리한다.</summary>
         [Server]
         public void SetResult(MatchWinner newWinner, WinReason newReason)
         {
@@ -123,9 +129,7 @@ namespace GuardVsMannequin.Core
                 PublishParticipants();
         }
 
-        /// <summary>
-        /// 새 판을 위해 승패와 공개된 결과를 지운다. (서버 전용, 참가자 등록은 유지)
-        /// </summary>
+        /// <summary>새 판에 이전 승패가 보이지 않게 지우되, 참가자 등록은 스폰 쪽이 관리하므로 남긴다.</summary>
         [Server]
         public void Clear()
         {
@@ -135,8 +139,7 @@ namespace GuardVsMannequin.Core
         }
 
         /// <summary>
-        /// 참가자별 생존 여부를 확정해 모든 클라이언트에 공개한다.
-        /// 사망하거나 접속을 끊은 참가자는 아바타가 제거되어 탈락으로 표시된다.
+        /// 죽거나 나간 참가자는 아바타가 이미 제거됐으므로, 아바타가 남아 있는지만으로 생존을 확정할 수 있다.
         /// </summary>
         private void PublishParticipants()
         {

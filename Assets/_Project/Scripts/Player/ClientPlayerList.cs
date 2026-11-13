@@ -2,19 +2,16 @@ using System.Collections.Generic;
 
 namespace GuardVsMannequin.Player
 {
-    /// <summary>
-    /// 이 클라이언트에서 보이는(스폰되어 살아 있는) 플레이어 아바타 목록.
-    /// 사망하면 아바타가 제거되므로 목록에는 생존자만 남는다. 관전 대상 선택에 사용한다.
-    /// </summary>
+    /// <summary>관전 대상을 고르도록 이 클라이언트에서 살아 있는 플레이어 아바타를 모은다.</summary>
     public static class ClientPlayerList
     {
         private static readonly List<PlayerIdentity> players = new();
 
-        /// <summary>생존 중인 아바타 목록. (스폰 순서)</summary>
+        /// <summary>관전 대상을 넘길 때 순서가 매번 같도록 스폰 순서를 유지한다.</summary>
         public static IReadOnlyList<PlayerIdentity> Players => players;
 
         /// <summary>
-        /// 클라이언트에 스폰된 아바타를 추가한다.
+        /// 같은 아바타가 두 번 들어가면 관전 순서에 두 번 나오므로 중복을 막는다.
         /// </summary>
         public static void Add(PlayerIdentity identity)
         {
@@ -23,7 +20,7 @@ namespace GuardVsMannequin.Player
         }
 
         /// <summary>
-        /// 클라이언트에서 제거된 아바타를 뺀다.
+        /// 죽은 아바타를 관전 대상으로 고르지 않도록 제거될 때 뺀다.
         /// </summary>
         public static void Remove(PlayerIdentity identity)
         {

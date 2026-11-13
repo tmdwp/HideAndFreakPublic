@@ -2,29 +2,25 @@ using UnityEngine;
 
 namespace GuardVsMannequin.Player.Guard
 {
-    /// <summary>
-    /// 총 탄창 규칙: 탄창을 다 쓰면 자동으로, 한 발이라도 쓴 뒤 요청하면(R) 바로 장전한다.
-    /// 장전 시간은 채울 탄 수 × 발당 장전 시간이다. (시간 한 줄기 — 소유자 예측용과 서버 검증용을 따로 만든다)
-    /// 서버용은 네트워크 지연으로 요청이 조금 일찍 도착할 수 있어 장전 끝을 <c>earlyTolerance</c>만큼 앞당겨 본다(<see cref="ToolCooldown"/>와 같은 방식).
-    /// </summary>
+    /// <summary>소유자 예측과 서버 검증이 같은 규칙을 쓰도록 탄창과 장전 규칙을 한곳에 둔다.</summary>
     public sealed class GunMagazine
     {
         private readonly float earlyTolerance;
         private int roundsFired;
-        // 장전이 끝나는 시각. 장전 중이 아니면 음수.
+        // 장전이 끝나는 시각(장전 중이 아니면 음수).
         private float reloadEndTime = -1f;
 
         /// <summary>
-        /// 탄창 규칙을 만든다.
+        /// 소유자 예측과 서버 검증이 같은 규칙을 쓰되 허용 오차만 다르게 둘 수 있도록 오차를 받는다.
         /// </summary>
-        /// <param name="earlyTolerance">장전 끝을 앞당겨 볼 시간(초). 소유자 예측은 0, 서버 검증은 허용 오차.</param>
+        /// <param name="earlyTolerance">장전 끝을 앞당겨 볼 허용 오차(초).</param>
         public GunMagazine(float earlyTolerance)
         {
             this.earlyTolerance = earlyTolerance;
         }
 
         /// <summary>
-        /// 남은 탄 수.
+        /// 장전 완료를 따로 알리는 타이머가 없어서, 읽을 때마다 끝났는지 먼저 확인한다.
         /// </summary>
         public int GetAmmo(int magazineSize, float now)
         {
@@ -32,20 +28,16 @@ namespace GuardVsMannequin.Player.Guard
             return Mathf.Max(0, magazineSize - roundsFired);
         }
 
-        /// <summary>
-        /// 장전 남은 시간(초). 장전 중이 아니면 0.
-        /// </summary>
+        /// <summary>장전 완료를 알리는 타이머가 없어 읽을 때마다 끝났는지 먼저 확인한다.</summary>
         public float GetReloadRemaining(float now)
         {
             FinishReloadIfDue(now);
             return reloadEndTime < 0f ? 0f : reloadEndTime - now;
         }
 
-        /// <summary>
-        /// 한 발을 쓴다. 장전 중이거나 탄이 없으면 false. 마지막 발이면 장전을 시작한다.
-        /// </summary>
-        /// <param name="reloadTimePerRound">한 발을 채우는 데 걸리는 시간(초).</param>
-        /// <param name="startedReload">이번 발로 장전을 시작했는지.</param>
+        /// <summary>마지막 발 뒤 따로 R을 누르지 않아도 되도록 탄창이 비면 바로 장전한다.</summary>
+        /// <param name="reloadTimePerRound">단위는 초.</param>
+        /// <param name="startedReload">장전 동작을 재생할지 정하도록 이번 발로 장전을 시작했는지 알려 준다.</param>
         public bool TryFire(int magazineSize, float reloadTimePerRound, float now, out bool startedReload)
         {
             startedReload = false;
@@ -62,17 +54,15 @@ namespace GuardVsMannequin.Player.Guard
             return true;
         }
 
-        /// <summary>
-        /// 수동 장전을 시작한다. 이미 장전 중이거나 쓴 탄이 없으면 false.
-        /// </summary>
-        /// <param name="reloadTimePerRound">한 발을 채우는 데 걸리는 시간(초).</param>
+        /// <summary>쓴 탄이 없을 때 장전하면 시간만 잡아먹으므로 거부한다.</summary>
+        /// <param name="reloadTimePerRound">단위는 초.</param>
         public bool TryStartReload(int magazineSize, float reloadTimePerRound, float now)
         {
             FinishReloadIfDue(now);
             if (reloadEndTime >= 0f)
                 return false;
 
-            // 탄창 크기가 줄어 쓴 탄 수가 넘친 경우도 탄창 크기만큼만 채운다.
+            // 테스트 방에서 탄창 크기를 줄이면 쓴 탄 수가 넘칠 수 있어서 탄창 크기만큼만 채운다.
             roundsFired = Mathf.Min(roundsFired, magazineSize);
             if (roundsFired <= 0)
                 return false;
@@ -81,9 +71,7 @@ namespace GuardVsMannequin.Player.Guard
             return true;
         }
 
-        /// <summary>
-        /// 쓴 탄 수 × 발당 시간만큼 장전을 시작한다.
-        /// </summary>
+        /// <summary>조금 쏘고 장전하면 빨리 끝나도록 쓴 탄 수에 비례해 시간을 잡는다.</summary>
         private void BeginReload(float reloadTimePerRound, float now)
         {
             float reloadTime = roundsFired * reloadTimePerRound;
@@ -91,7 +79,7 @@ namespace GuardVsMannequin.Player.Guard
         }
 
         /// <summary>
-        /// 다른 쪽(서버)이 알려준 상태로 맞춘다. (소유자 예측이 어긋났을 때)
+        /// 서버가 요청을 거부하면 소유자 예측이 어긋나므로 서버가 알려준 상태로 맞춘다.
         /// </summary>
         public void Overwrite(int magazineSize, int ammo, float reloadRemaining, float now)
         {
@@ -100,7 +88,7 @@ namespace GuardVsMannequin.Player.Guard
         }
 
         /// <summary>
-        /// 장전 시간이 지났으면 탄창을 채운다.
+        /// 장전 완료 이벤트를 따로 두지 않고, 상태를 읽거나 바꾸기 전에 시각만 보고 채운다.
         /// </summary>
         private void FinishReloadIfDue(float now)
         {

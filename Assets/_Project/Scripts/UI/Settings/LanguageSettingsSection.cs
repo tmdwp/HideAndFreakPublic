@@ -4,10 +4,7 @@ using UnityEngine.UI;
 
 namespace GuardVsMannequin.UI
 {
-    /// <summary>
-    /// 언어 설정(◀ 언어 이름 ▶). 목록은 strings.csv의 언어 열 순서이며, 열을 추가하면 자동으로 나타난다.
-    /// "모두 기본값으로"로는 되돌리지 않는다.
-    /// </summary>
+    /// <summary>strings.csv에 열을 추가하면 자동으로 나타나는 언어 설정.</summary>
     public class LanguageSettingsSection : MonoBehaviour, ISettingsSection
     {
         [SerializeField] private Button previousLanguageButton;
@@ -15,7 +12,7 @@ namespace GuardVsMannequin.UI
         [SerializeField] private Text languageValueText;
 
         /// <summary>
-        /// 버튼 이벤트를 연결한다.
+        /// 설정 화면이 처음 열릴 때 한 번만 연결해 이벤트가 중복되지 않게 한다.
         /// </summary>
         public void Initialize()
         {
@@ -24,7 +21,7 @@ namespace GuardVsMannequin.UI
         }
 
         /// <summary>
-        /// 현재 언어 이름을 그 언어로 표시한다.
+        /// 잘못 고른 언어를 읽지 못해도 되돌아올 수 있도록 언어 이름은 그 언어 자신으로 표시한다.
         /// </summary>
         public void Refresh()
         {
@@ -32,15 +29,13 @@ namespace GuardVsMannequin.UI
         }
 
         /// <summary>
-        /// 언어는 기본값으로 되돌리지 않는다.
+        /// 기본값으로 되돌리면 읽을 수 없는 언어로 바뀔 수 있어 비워 둔다.
         /// </summary>
         public void ResetToDefaults()
         {
         }
 
-        /// <summary>
-        /// 이전/다음 언어로 바꾼다. (키 설정 중에는 바꾸지 않음) 화면 갱신은 설정 화면이 언어 변경 알림으로 한다.
-        /// </summary>
+        /// <summary>키 설정 중 언어가 바뀌면 입력 대기 문구가 꼬이므로 막는다.</summary>
         private void ChangeLanguage(int direction)
         {
             if (RebindRowView.IsAnyRebinding)
@@ -50,14 +45,14 @@ namespace GuardVsMannequin.UI
             if (languages.Count == 0)
                 return;
 
-            int index = 0;
+            int languageIndex = 0;
             for (int i = 0; i < languages.Count; i++)
             {
                 if (languages[i] == Loc.CurrentLanguage)
-                    index = i;
+                    languageIndex = i;
             }
-            index = (index + direction + languages.Count) % languages.Count;
-            Loc.SetLanguage(languages[index]);
+            languageIndex = (languageIndex + direction + languages.Count) % languages.Count;
+            Loc.SetLanguage(languages[languageIndex]);
         }
     }
 }

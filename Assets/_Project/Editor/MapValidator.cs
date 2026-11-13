@@ -11,10 +11,7 @@ using UnityEngine.SceneManagement;
 
 namespace GuardVsMannequin.Editor
 {
-    /// <summary>
-    /// 열린 맵 씬이 게임에서 동작하는 데 필요한 것을 갖췄는지 검사한다. (맵 제작 도우미의 "맵 검사")
-    /// 오류는 게임이 동작하지 않는 문제, 경고는 동작은 하지만 확인이 필요한 문제다.
-    /// </summary>
+    /// <summary>판을 열어 보기 전에 열린 맵 씬이 게임에 필요한 것을 갖췄는지 검사한다.</summary>
     public static class MapValidator
     {
         /// <summary>검사 결과 한 줄.</summary>
@@ -24,6 +21,7 @@ namespace GuardVsMannequin.Editor
             public readonly string message;
             public readonly Object context;
 
+            /// <summary>도우미 창의 "선택" 버튼이 문제 오브젝트로 갈 수 있도록 오브젝트를 함께 담는다.</summary>
             public Issue(bool isError, string message, Object context = null)
             {
                 this.isError = isError;
@@ -32,7 +30,7 @@ namespace GuardVsMannequin.Editor
             }
         }
 
-        // 최대 인원 기준 필요한 지점 수 (가드 최대 5명, 마네킹 최대 9명, 전원 장치 최대 12개)
+        // 최대 인원 기준 필요한 지점 수.
         private const int MaxGuards = 5;
         private const int MaxMannequins = GameConstants.MaxPlayers - 1;
         private const int MaxGenerators = 12;
@@ -40,9 +38,7 @@ namespace GuardVsMannequin.Editor
         /// <summary>전원 장치 후보로부터 이 거리 안의 사물은 주변 구조물로 보고 변신 대상에서 빼길 권한다.</summary>
         private const float GeneratorSurroundRadius = 1.5f;
 
-        /// <summary>
-        /// 열린 씬을 검사한다.
-        /// </summary>
+        /// <summary>판을 열어 봐야 알 수 있는 문제를 미리 찾으며, MapInfo가 하나가 아니면 기준이 없어 바로 멈춘다.</summary>
         public static List<Issue> Validate()
         {
             var issues = new List<Issue>();
@@ -71,13 +67,13 @@ namespace GuardVsMannequin.Editor
             CheckLights(issues);
             CheckProps(issues, mapInfo);
 
-            if (scene.GetRootGameObjects().All(r => r.name != MapAuthoringTools.BoundaryName))
+            if (scene.GetRootGameObjects().All(rootObject => rootObject.name != MapAuthoringTools.BoundaryName))
                 issues.Add(new Issue(false, "투명 경계(Boundary (Invisible))가 없습니다. 벽을 타고 맵 밖으로 나갈 수 있습니다. '경계 맞추기'를 실행하세요."));
 
-            if (!EditorBuildSettings.scenes.Any(s => s.path == scene.path && s.enabled) || MapCatalog.FindByScenePath(scene.path) == null)
+            if (!EditorBuildSettings.scenes.Any(buildScene => buildScene.path == scene.path && buildScene.enabled) || MapCatalog.FindByScenePath(scene.path) == null)
                 issues.Add(new Issue(false, "맵 목록에 등록되지 않았습니다. 직접 만든 맵은 Scenes/Custom 폴더에 두고 '맵 목록 갱신'을 실행하세요."));
 
-            // 게임 시스템·HUD·씬 카메라는 공용 씬(Game_Systems)에 있다. 맵 씬에 있으면 판 중에 두 벌이 된다.
+            // 공용 씬에 있는 시스템이 맵 씬에도 있으면 판 중에 두 벌이 된다.
             if (Object.FindObjectsByType<FishNet.Object.NetworkObject>(FindObjectsInactive.Include).Length > 0)
                 issues.Add(new Issue(true, "맵 씬에 네트워크 오브젝트(예전 GameSystems 등)가 있습니다. 게임 시스템은 공용 씬(Game_Systems)에 있으므로 지우세요."));
             if (Object.FindObjectsByType<Camera>(FindObjectsInactive.Include).Length > 0)
@@ -88,74 +84,55 @@ namespace GuardVsMannequin.Editor
             return issues;
         }
 
-        /// <summary>
-        /// 가드·마네킹 스폰 지점과 전원 장치 후보 수를 확인한다.
-        /// </summary>
+        /// <summary>지점이 최대 인원보다 적으면 같은 자리에 겹쳐 나오므로 최대 인원 기준으로 센다.</summary>
         private static void CheckSpawns(List<Issue> issues)
         {
-            SpawnPoint[] spawns = Object.FindObjectsByType<SpawnPoint>(FindObjectsInactive.Include);
-            int guards = spawns.Count(s => s.Role == PlayerRole.Guard);
-            int mannequins = spawns.Count(s => s.Role == PlayerRole.Mannequin);
-            if (guards == 0)
+            SpawnPoint[] spawnPoints = Object.FindObjectsByType<SpawnPoint>(FindObjectsInactive.Include);
+            int guardSpawnCount = spawnPoints.Count(spawnPoint => spawnPoint.Role == PlayerRole.Guard);
+            int mannequinSpawnCount = spawnPoints.Count(spawnPoint => spawnPoint.Role == PlayerRole.Mannequin);
+            if (guardSpawnCount == 0)
                 issues.Add(new Issue(true, "가드 스폰 지점이 없습니다."));
-            else if (guards < MaxGuards)
-                issues.Add(new Issue(false, $"가드 스폰 지점이 {guards}개입니다. 최대 인원({MaxGuards}명)보다 적으면 같은 지점에 겹쳐 나옵니다."));
+            else if (guardSpawnCount < MaxGuards)
+                issues.Add(new Issue(false, $"가드 스폰 지점이 {guardSpawnCount}개입니다. 최대 인원({MaxGuards}명)보다 적으면 같은 지점에 겹쳐 나옵니다."));
 
-            if (mannequins == 0)
+            if (mannequinSpawnCount == 0)
                 issues.Add(new Issue(true, "마네킹 스폰 지점이 없습니다."));
-            else if (mannequins < MaxMannequins)
-                issues.Add(new Issue(false, $"마네킹 스폰 지점이 {mannequins}개입니다. 최대 인원({MaxMannequins}명)보다 적으면 같은 지점에 겹쳐 나옵니다."));
+            else if (mannequinSpawnCount < MaxMannequins)
+                issues.Add(new Issue(false, $"마네킹 스폰 지점이 {mannequinSpawnCount}개입니다. 최대 인원({MaxMannequins}명)보다 적으면 같은 지점에 겹쳐 나옵니다."));
 
-            int generators = Object.FindObjectsByType<GeneratorSpawnPoint>(FindObjectsInactive.Include).Length;
-            if (generators == 0)
+            int generatorCount = Object.FindObjectsByType<GeneratorSpawnPoint>(FindObjectsInactive.Include).Length;
+            if (generatorCount == 0)
                 issues.Add(new Issue(true, "전원 장치 후보가 없습니다."));
-            else if (generators < MaxGenerators)
-                issues.Add(new Issue(false, $"전원 장치 후보가 {generators}개입니다. 룸 설정 최댓값({MaxGenerators}개)보다 적으면 그 수까지만 나옵니다."));
+            else if (generatorCount < MaxGenerators)
+                issues.Add(new Issue(false, $"전원 장치 후보가 {generatorCount}개입니다. 룸 설정 최댓값({MaxGenerators}개)보다 적으면 그 수까지만 나옵니다."));
         }
 
-        /// <summary>
-        /// 가드 스폰 후보를 확인한다. 후보가 없어도 NavMesh 위 무작위 위치를 쓰지만, 마네킹 스폰 지점과 가까운 후보는 쓰이지 않는다.
-        /// </summary>
+        /// <summary>가드 스폰 후보가 없으면 바닥 무작위 위치만 쓰게 되어 맵 제작자가 의도한 자리가 무시되므로 알려 준다.</summary>
         private static void CheckGuardSpawns(List<Issue> issues)
         {
-            SpawnPoint[] spawns = Object.FindObjectsByType<SpawnPoint>(FindObjectsInactive.Include);
-            Vector3[] mannequins = spawns.Where(s => s.Role == PlayerRole.Mannequin).Select(s => s.transform.position).ToArray();
-            SpawnPoint[] guards = spawns.Where(s => s.Role == PlayerRole.Guard).ToArray();
-            if (guards.Length == 0)
-            {
+            SpawnPoint[] spawnPoints = Object.FindObjectsByType<SpawnPoint>(FindObjectsInactive.Include);
+            if (!spawnPoints.Any(spawnPoint => spawnPoint.Role == PlayerRole.Guard))
                 issues.Add(new Issue(false, "가드 스폰 후보가 없습니다. 바닥(NavMesh) 무작위 위치만 씁니다."));
-                return;
-            }
-
-            float minDistance = GameTuning.GuardSpawnMinDistance;
-            foreach (SpawnPoint guard in guards)
-            {
-                if (mannequins.Any(m => Vector3.Distance(m, guard.transform.position) < minDistance))
-                    issues.Add(new Issue(false, $"가드 스폰 후보가 마네킹 스폰 지점과 {minDistance}m보다 가깝습니다. 이 후보는 거의 쓰이지 않습니다.", guard));
-            }
         }
 
         /// <summary>
-        /// 사냥 시간에 꺼질 조명이 있는지 확인한다.
+        /// 사냥 시간의 어둠은 MapLight만 끌 수 있고, 구운 조명은 실행 중에 끌 수 없어 사냥 시간에도 밝게 남으므로 둘 다 확인한다.
         /// </summary>
         private static void CheckLights(List<Issue> issues)
         {
             Light[] lights = Object.FindObjectsByType<Light>(FindObjectsInactive.Include);
-            int unregistered = lights.Count(l => l.GetComponentInParent<MapLight>() == null);
+            int unregisteredCount = lights.Count(sceneLight => sceneLight.GetComponentInParent<MapLight>() == null);
             if (lights.Length == 0)
                 issues.Add(new Issue(false, "맵에 조명이 없습니다."));
-            else if (unregistered > 0)
-                issues.Add(new Issue(false, $"MapLight가 아닌 조명이 {unregistered}개 있습니다. 사냥 시간에 꺼지지 않습니다. '모든 조명 등록'을 실행하세요."));
+            else if (unregisteredCount > 0)
+                issues.Add(new Issue(false, $"MapLight가 아닌 조명이 {unregisteredCount}개 있습니다. 사냥 시간에 꺼지지 않습니다. '모든 조명 등록'을 실행하세요."));
 
-            int baked = lights.Count(l => l.lightmapBakeType == LightmapBakeType.Baked);
-            if (baked > 0)
-                issues.Add(new Issue(false, $"구운(Baked) 조명이 {baked}개 있습니다. 라이트맵을 굽지 않으면 빛이 없고, 구우면 사냥 시간에도 밝게 남습니다."));
+            int bakedCount = lights.Count(sceneLight => sceneLight.lightmapBakeType == LightmapBakeType.Baked);
+            if (bakedCount > 0)
+                issues.Add(new Issue(false, $"구운(Baked) 조명이 {bakedCount}개 있습니다. 라이트맵을 굽지 않으면 빛이 없고, 구우면 사냥 시간에도 밝게 남습니다."));
         }
 
-        /// <summary>
-        /// 변신 가능 사물이 있고, 각 사물이 그대로 복사될 수 있는지 확인한다.
-        /// (번호는 씬 저장 때 자동으로 매겨지므로 검사 전에 다시 매긴다)
-        /// </summary>
+        /// <summary>저장 전 상태에 속지 않도록 번호를 다시 매긴 뒤 검사한다.</summary>
         private static void CheckProps(List<Issue> issues, MapInfo mapInfo)
         {
             TransformableProp[] props = Object.FindObjectsByType<TransformableProp>(FindObjectsInactive.Include);
@@ -173,41 +150,39 @@ namespace GuardVsMannequin.Editor
             {
                 if (PropCopyChecks.TryFindProblem(prop, out string problem, out bool isError))
                     issues.Add(new Issue(isError, $"'{prop.name}': {problem}", prop));
-                else if (TryFindPlacementProblem(prop, generatorPoints, out string placement))
-                    issues.Add(new Issue(false, $"'{prop.name}': {placement}", prop));
+                else if (TryFindPlacementProblem(prop, generatorPoints, out string placementProblem))
+                    issues.Add(new Issue(false, $"'{prop.name}': {placementProblem}", prop));
             }
         }
 
-        /// <summary>
-        /// 변신 대상이 되면 안 되는 사물(전원 장치, 천장·바닥, 전원 장치 주변 구조물)인지 확인한다.
-        /// </summary>
+        /// <summary>전원 장치·천장·바닥으로 변신하면 목표가 사라지거나 바닥이 꺼지므로 막는다.</summary>
         private static bool TryFindPlacementProblem(TransformableProp prop, GeneratorSpawnPoint[] generatorPoints, out string message)
         {
             message = null;
             if (prop.GetComponentInParent<Generator>() != null)
                 message = "전원 장치는 변신 대상이 될 수 없습니다. 등록을 해제하세요.";
             else if (IsFloorOrCeiling(prop.name))
-                message = "천장과 바닥은 변신 대상이 될 수 없습니다. 벽으로 지정하거나 등록을 해제하세요.";
+                message = "천장과 바닥은 변신 대상이 될 수 없습니다. 등록을 해제하세요.";
             else if (IsNearGenerator(prop, generatorPoints))
                 message = $"전원 장치 후보 {GeneratorSurroundRadius}m 안의 구조물입니다. 전원 장치를 가릴 수 있으니 등록 해제를 권장합니다.";
             return message != null;
         }
 
-        /// <summary>이름으로 천장·바닥인지 판단한다.</summary>
+        /// <summary>천장·바닥을 표시하는 컴포넌트가 없어 모델 이름 규칙으로 판단한다.</summary>
         private static bool IsFloorOrCeiling(string objectName)
         {
             string lowerName = objectName.ToLowerInvariant();
             return lowerName.Contains("floor") || lowerName.Contains("ceiling");
         }
 
-        /// <summary>사물의 충돌체(없으면 위치)가 전원 장치 후보와 가까운지 확인한다.</summary>
+        /// <summary>큰 사물은 기준점이 멀어도 표면이 장치에 닿을 수 있어 충돌체의 가장 가까운 점으로 잰다.</summary>
         private static bool IsNearGenerator(TransformableProp prop, GeneratorSpawnPoint[] generatorPoints)
         {
-            Collider collider = prop.GetComponent<Collider>();
-            foreach (GeneratorSpawnPoint point in generatorPoints)
+            Collider propCollider = prop.GetComponent<Collider>();
+            foreach (GeneratorSpawnPoint generatorPoint in generatorPoints)
             {
-                Vector3 closest = collider != null ? collider.ClosestPoint(point.transform.position) : prop.transform.position;
-                if (Vector3.Distance(closest, point.transform.position) <= GeneratorSurroundRadius)
+                Vector3 closestPoint = propCollider != null ? propCollider.ClosestPoint(generatorPoint.transform.position) : prop.transform.position;
+                if (Vector3.Distance(closestPoint, generatorPoint.transform.position) <= GeneratorSurroundRadius)
                     return true;
             }
             return false;

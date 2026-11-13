@@ -2,32 +2,28 @@ using GuardVsMannequin.Localization;
 
 namespace GuardVsMannequin.Mods
 {
-    /// <summary>
-    /// 등록소(<see cref="ContentRegistry"/>)에 오른 맵 하나. 맵 정보와 어디서 왔는지(내장 / 모드)를 함께 가진다.
-    /// </summary>
+    /// <summary>등록소에 오른 맵 하나와 그 출처.</summary>
     public sealed class MapEntry
     {
-        /// <summary>맵 정보(map.json).</summary>
+        /// <summary>map.json 내용.</summary>
         public MapManifest Manifest { get; }
 
-        /// <summary>이 맵을 제공한 콘텐츠 출처 ID. (내장: "builtin", 모드: 모드 ID)</summary>
+        /// <summary>필요한 모드 목록을 만들려고 기억하는 출처 모드 ID.</summary>
         public string SourceId { get; }
 
-        /// <summary>맵 씬이 들어 있는 번들 파일 경로. 내장 맵이면 null.</summary>
+        /// <summary>씬을 불러오기 전에 번들을 열어야 해서 기억하는 경로.</summary>
         public string BundlePath { get; }
 
-        /// <summary>전역 고유 ID.</summary>
+        /// <summary>PC마다 목록 번호가 달라도 같은 맵을 가리키는 전역 고유 ID.</summary>
         public string Id => Manifest.id;
 
-        /// <summary>불러올 씬 이름.</summary>
         public string SceneName => Manifest.scene;
 
-        /// <summary>게임에 들어 있는 맵인지 여부.</summary>
+        /// <summary>내장 맵은 번들 없이 빌드 설정의 씬을 쓰므로 번들 경로가 없는지로 구분한다.</summary>
         public bool IsBuiltIn => BundlePath == null;
 
-        /// <param name="manifest">맵 정보.</param>
-        /// <param name="sourceId">출처 ID.</param>
-        /// <param name="bundlePath">번들 경로. 내장 맵이면 null.</param>
+        /// <summary>내장 맵과 모드 맵을 같은 방식으로 다루려고 출처 정보를 함께 묶는다.</summary>
+        /// <param name="bundlePath">내장 맵이면 null.</param>
         public MapEntry(MapManifest manifest, string sourceId, string bundlePath)
         {
             Manifest = manifest;
@@ -35,9 +31,7 @@ namespace GuardVsMannequin.Mods
             BundlePath = bundlePath;
         }
 
-        /// <summary>
-        /// 현재 언어의 표시 이름. 번역 key가 없으면 적힌 이름, 그것도 없으면 씬 이름.
-        /// </summary>
+        /// <summary>언어를 바꾸면 바로 반영되도록 매번 찾고, 번역이 없으면 빈 이름이 되지 않게 씬 이름까지 쓴다.</summary>
         public string DisplayName
         {
             get

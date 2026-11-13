@@ -1,14 +1,12 @@
 namespace GuardVsMannequin.Core
 {
-    /// <summary>
-    /// 판 진행을 조작하는 명령. (호스트만 실행할 수 있음)
-    /// </summary>
+    /// <summary>호스트만 실행할 수 있는 판 진행 명령.</summary>
     public interface IMatchControl
     {
-        /// <summary>이 피어가 판을 조작할 수 있는지(서버인지) 여부.</summary>
+        /// <summary>UI가 호스트 전용 버튼을 숨길지 정하려고 쓴다.</summary>
         bool CanControlMatch { get; }
 
-        /// <summary>판을 끝내고 모두를 룸으로 돌려보낸다. 조작할 수 없으면 아무것도 하지 않는다.</summary>
+        /// <summary>클라이언트가 판을 끝낼 수 없도록 호스트가 아니면 무시하고 모두를 룸으로 돌려보낸다.</summary>
         void ReturnToRoom();
     }
 }

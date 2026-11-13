@@ -11,35 +11,31 @@ namespace GuardVsMannequin.Mods
         /// <summary>플레이어가 껐다.</summary>
         Disabled,
 
-        /// <summary>오류로 쓸 수 없다. (<see cref="ModInfo.Error"/>)</summary>
+        /// <summary>오류로 쓸 수 없는 상태.</summary>
         Error
     }
 
-    /// <summary>
-    /// 설치된 모드 하나. 정보 파일·폴더·상태를 가진다. (로비 "모드" 화면과 모드 일치 확인에 쓴다)
-    /// </summary>
+    /// <summary>모드 화면과 모드 일치 확인이 쓰는 설치된 모드 하나.</summary>
     public sealed class ModInfo
     {
-        /// <summary>모드 정보. 정보 파일을 읽지 못했으면 null.</summary>
+        /// <summary>정보 파일을 읽지 못한 모드도 목록에 오류로 보여 주려고 null을 허용한다.</summary>
         public ModManifest Manifest { get; }
 
-        /// <summary>모드 폴더 경로.</summary>
         public string FolderPath { get; }
 
-        /// <summary>현재 상태.</summary>
         public ModStatus Status { get; private set; }
 
-        /// <summary>오류 내용. (오류가 아니면 null)</summary>
+        /// <summary>모드 화면에서 무엇이 잘못됐는지 보여 주려고 남긴다.</summary>
         public string Error { get; private set; }
 
-        /// <summary>모드 ID. 정보 파일을 읽지 못했으면 폴더 이름.</summary>
+        /// <summary>정보 파일을 읽지 못해도 구분할 수 있도록 폴더 이름으로 대신한다.</summary>
         public string Id => Manifest?.id ?? Path.GetFileName(FolderPath);
 
-        /// <summary>표시 이름.</summary>
+        /// <summary>이름이 비어 있어도 목록이 빈칸이 되지 않도록 ID로 대신한다.</summary>
         public string DisplayName => string.IsNullOrEmpty(Manifest?.name) ? Id : Manifest.name;
 
-        /// <param name="manifest">모드 정보. (읽지 못했으면 null)</param>
-        /// <param name="folderPath">모드 폴더.</param>
+        /// <summary>검사 전에는 쓸 수 있는 것으로 시작하고, 검사에서 문제가 나오면 오류로 바꾼다.</summary>
+        /// <param name="manifest">읽지 못했으면 null.</param>
         public ModInfo(ModManifest manifest, string folderPath)
         {
             Manifest = manifest;
@@ -48,7 +44,7 @@ namespace GuardVsMannequin.Mods
         }
 
         /// <summary>
-        /// 오류로 표시한다.
+        /// 오류가 난 모드를 쓰지 않으면서도 목록에서는 이유를 보여 주도록 상태와 내용을 함께 남긴다.
         /// </summary>
         public void MarkError(string error)
         {
@@ -57,7 +53,7 @@ namespace GuardVsMannequin.Mods
         }
 
         /// <summary>
-        /// 꺼진 상태로 표시한다. (오류가 있는 모드는 오류 상태를 유지)
+        /// 오류가 있는 모드를 껐다가 다시 켜면 문제를 모른 채 쓰게 되므로 오류 상태는 덮어쓰지 않는다.
         /// </summary>
         public void MarkDisabled()
         {
@@ -66,7 +62,7 @@ namespace GuardVsMannequin.Mods
         }
 
         /// <summary>
-        /// 모드 폴더 안 파일의 전체 경로. 파일 이름이 비었으면 null.
+        /// 정보 파일에 적힌 이름은 비어 있을 수 있어서, 비면 경로를 만들지 않고 null을 준다.
         /// </summary>
         public string GetFilePath(string fileName)
         {

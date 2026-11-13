@@ -6,10 +6,7 @@ using UnityEngine;
 
 namespace GuardVsMannequin.Player
 {
-    /// <summary>
-    /// 플레이어 체력을 서버 권한으로 관리하고 동기화한다.
-    /// 다른 플레이어의 체력은 UI에 표시하지 않지만, 값 자체는 동기화된다.
-    /// </summary>
+    /// <summary>조작을 막도록 플레이어 체력을 서버 권한으로 관리하고 동기화한다.</summary>
     [RequireComponent(typeof(PlayerIdentity))]
     public class PlayerHealth : NetworkBehaviour, IDamageable
     {
@@ -18,10 +15,10 @@ namespace GuardVsMannequin.Player
 
         private PlayerIdentity identity;
 
-        /// <summary>서버에서 체력이 0이 되었을 때. (사망자, 공격자)</summary>
+        /// <summary>사망 후 처리가 공격자를 알도록 사망자와 공격자를 함께 알린다.</summary>
         public event Action<PlayerHealth, NetworkObject> ServerDied;
 
-        /// <summary>체력이 줄었을 때. 각 피어에서 한 번씩 호출된다. (피격 애니메이션 등 연출용)</summary>
+        /// <summary>피격 애니메이션 같은 연출이 모든 화면에서 나오도록 피어마다 한 번씩 알린다.</summary>
         public event Action Damaged;
 
         public int CurrentHealth => currentHealth.Value;
@@ -30,7 +27,7 @@ namespace GuardVsMannequin.Player
         public PlayerRole Role => identity.Role;
 
         /// <summary>
-        /// 같은 오브젝트의 PlayerIdentity를 캐시한다.
+        /// 피해 판정마다 GetComponent를 부르지 않도록 미리 찾아 두고, 피격 연출용 동기화 콜백을 건다.
         /// </summary>
         private void Awake()
         {
@@ -39,7 +36,7 @@ namespace GuardVsMannequin.Player
         }
 
         /// <summary>
-        /// 동기화 콜백을 해제한다.
+        /// 파괴된 뒤 콜백이 불리지 않도록 해제한다.
         /// </summary>
         private void OnDestroy()
         {
@@ -47,30 +44,32 @@ namespace GuardVsMannequin.Player
         }
 
         /// <summary>
-        /// 체력이 줄었으면 피어마다 한 번만 알린다. (호스트는 클라이언트 콜백에서만 처리)
+        /// 호스트는 서버·클라이언트 콜백이 둘 다 오므로, 연출이 두 번 나오지 않게 클라이언트 쪽에서만 알린다.
         /// </summary>
-        private void OnCurrentHealthChanged(int prev, int next, bool asServer)
+        private void OnCurrentHealthChanged(int previousHealth, int nextHealth, bool asServer)
         {
             if (asServer && IsClientInitialized)
                 return;
-            if (next < prev)
+            if (nextHealth < previousHealth)
                 Damaged?.Invoke();
         }
 
-        /// <summary>
-        /// 스폰 직전에 최대 체력을 지정하고 가득 채운다.
-        /// </summary>
+        /// <summary>스폰 데이터에 실려 가도록 스폰 직전에 체력을 정하고, 즉사하지 않게 최소 1로 둔다.</summary>
         public void ServerInitialize(int newMaxHealth)
         {
             maxHealth.Value = Mathf.Max(1, newMaxHealth);
             currentHealth.Value = maxHealth.Value;
         }
 
-        /// <summary>
-        /// 최대 체력을 변경한다. 사냥 시간 체력 배율 적용에 사용한다. (Phase 3)
-        /// </summary>
-        /// <param name="newMaxHealth">새 최대 체력.</param>
-        /// <param name="refill">true면 체력을 가득 채우고, false면 현재 비율을 유지한다.</param>
+        /// <summary>재접속으로 체력을 회복하는 꼼수를 막도록 끊기기 전 체력으로 되돌린다.</summary>
+        public void ServerRestore(int savedCurrent, int savedMax)
+        {
+            maxHealth.Value = Mathf.Max(1, savedMax);
+            currentHealth.Value = Mathf.Clamp(savedCurrent, 1, maxHealth.Value);
+        }
+
+        /// <summary>사냥 시간 체력 배율을 적용하되 이미 맞은 만큼은 남도록 비율을 유지한다.</summary>
+        /// <param name="refill">true면 가득 채우고, false면 현재 비율을 유지한다.</param>
         [Server]
         public void SetMaxHealth(int newMaxHealth, bool refill)
         {
@@ -83,7 +82,7 @@ namespace GuardVsMannequin.Player
         }
 
         /// <summary>
-        /// 피해 규칙을 확인한 뒤 체력을 깎고, 0이 되면 사망 이벤트를 발생시킨다.
+        /// 도구 쪽이 피해 규칙을 몰라도 되도록, 같은 편 공격 등은 여기서 다시 확인해 거른다.
         /// </summary>
         [Server]
         public void TakeDamage(int amount, NetworkObject attacker)

@@ -2,7 +2,6 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using System.Security.Cryptography;
 using System.Text;
 using GuardVsMannequin.Mods;
 using UnityEditor;
@@ -12,20 +11,14 @@ using UnityEngine.SceneManagement;
 
 namespace GuardVsMannequin.Editor
 {
-    /// <summary>
-    /// "모드 내보내기": 모드 설정(<see cref="ModProject"/>)으로 번들과 mod.json을 만든다.
-    /// 1. 맵 씬마다 검사(<see cref="ModMapValidator"/>) → 오류가 있으면 중단
-    /// 2. 변신 사물 번호를 매기고(<see cref="PropIndexer"/>) 씬 저장
-    /// 3. 에셋 번들(공유 에셋)·씬 번들(맵 씬)을 Windows용으로 빌드
-    /// 4. mod.json(번들 지문 포함)·strings.csv를 &lt;프로젝트&gt;/ModExports/&lt;모드 ID&gt;/에 쓰고, 지정했으면 게임 Mods 폴더로 복사
-    /// </summary>
+    /// <summary>모드 설정으로 검사·번호 매기기·번들 빌드·mod.json 작성을 한 번에 해 내보낸다.</summary>
     public static class ModExporter
     {
         private const string ExportRoot = "ModExports";
+        private const string ExampleSceneName = "Example_TemplateMap";
+        private const string ExampleModId = "example.template";
 
-        /// <summary>
-        /// Project 창에서 고른 모드 설정을 내보낸다.
-        /// </summary>
+        /// <summary>모드 설정이 여러 개일 수 있어 Project 창에서 고른 것을 내보낸다.</summary>
         [MenuItem(EditorMenus.Mod + "모드 내보내기 (선택한 Mod Project)")]
         public static void ExportSelected()
         {
@@ -37,9 +30,7 @@ namespace GuardVsMannequin.Editor
             Export(project);
         }
 
-        /// <summary>
-        /// 모드를 내보낸다. 성공하면 출력 폴더 경로, 실패하면 null.
-        /// </summary>
+        /// <summary>게임에서 거부될 모드를 만들지 않도록 번들 빌드 전에 검사하고, 지문은 실제 번들 파일로 계산한다.</summary>
         public static string Export(ModProject project)
         {
             if (!EditorSceneManager.SaveCurrentModifiedScenesIfUserWantsTo())
@@ -55,7 +46,7 @@ namespace GuardVsMannequin.Editor
             string sceneBundleName = $"{project.modId}.scenes.bundle";
 
             var builds = new List<AssetBundleBuild>();
-            string[] sharedAssetPaths = project.sharedAssets.Where(a => a != null).Select(AssetDatabase.GetAssetPath).Distinct().ToArray();
+            string[] sharedAssetPaths = project.sharedAssets.Where(asset => asset != null).Select(AssetDatabase.GetAssetPath).Distinct().ToArray();
             if (sharedAssetPaths.Length > 0)
                 builds.Add(new AssetBundleBuild { assetBundleName = assetBundleName, assetNames = sharedAssetPaths });
             if (scenePaths.Count > 0)
@@ -66,9 +57,9 @@ namespace GuardVsMannequin.Editor
                 return null;
             }
 
-            AssetBundleManifest built = BuildPipeline.BuildAssetBundles(outputFolder, builds.ToArray(),
+            AssetBundleManifest buildManifest = BuildPipeline.BuildAssetBundles(outputFolder, builds.ToArray(),
                 BuildAssetBundleOptions.ChunkBasedCompression | BuildAssetBundleOptions.StrictMode, BuildTarget.StandaloneWindows64);
-            if (built == null)
+            if (buildManifest == null)
             {
                 EditorUtility.DisplayDialog("모드 내보내기", "번들 빌드에 실패했습니다. Console을 확인하세요.", "확인");
                 return null;
@@ -77,23 +68,19 @@ namespace GuardVsMannequin.Editor
             bool hasAssets = sharedAssetPaths.Length > 0;
             bool hasScenes = scenePaths.Count > 0;
             ModManifest manifest = CreateManifest(project, hasAssets ? assetBundleName : null, hasScenes ? sceneBundleName : null);
-            manifest.contentHash = HashFiles(outputFolder, manifest.assetBundle, manifest.sceneBundle);
+            manifest.contentHash = ModContentHash.Compute(outputFolder, manifest.assetBundle, manifest.sceneBundle);
             File.WriteAllText(Path.Combine(outputFolder, "mod.json"), JsonUtility.ToJson(manifest, true), new UTF8Encoding(false));
-            if (project.strings != null)
-                File.WriteAllText(Path.Combine(outputFolder, "strings.csv"), project.strings.text, new UTF8Encoding(false));
+            WriteStringsFile(project, outputFolder);
             DeleteBuildLeftovers(outputFolder);
 
-            string copied = CopyToGame(project, outputFolder);
-            string message = $"내보냈습니다: {Path.GetFullPath(outputFolder)}" + (copied != null ? $"\n게임 폴더로 복사: {copied}" : string.Empty);
+            string copiedFolder = CopyToGame(project, outputFolder);
+            string message = $"내보냈습니다: {Path.GetFullPath(outputFolder)}" + (copiedFolder != null ? $"\n게임 폴더로 복사: {copiedFolder}" : string.Empty);
             Debug.Log($"[ModExporter] {message}");
             EditorUtility.DisplayDialog("모드 내보내기", message, "확인");
             return outputFolder;
         }
 
-        /// <summary>
-        /// 그래픽 설정이 게임과 다르면 적용할지 묻는다. 취소하면 false.
-        /// (설정이 다르면 셰이더 변형이 빠져 게임에서 분홍색이나 잘못된 빛으로 보일 수 있다)
-        /// </summary>
+        /// <summary>그래픽 설정이 다르면 셰이더 변형이 빠져 게임에서 다르게 보이므로 내보내기 전에 맞출지 묻는다.</summary>
         private static bool ConfirmGraphicsSettings()
         {
             if (ModSdkSettings.IsGameGraphicsApplied())
@@ -110,9 +97,7 @@ namespace GuardVsMannequin.Editor
             return true;
         }
 
-        /// <summary>
-        /// 모드 정보와 맵 씬을 검사하고, 사물 번호를 매겨 저장한다. 오류가 있으면 false.
-        /// </summary>
+        /// <summary>제작자가 게임을 켜 보기 전에 모든 문제를 한 번에 보도록 오류를 모아 보여 준다.</summary>
         private static bool ValidateProject(ModProject project, out List<string> scenePaths)
         {
             scenePaths = new List<string>();
@@ -135,12 +120,15 @@ namespace GuardVsMannequin.Editor
                 }
                 if (string.IsNullOrEmpty(map.mapKey) || !mapKeys.Add(map.mapKey))
                     errors.AppendLine($"{map.scene.name}: mapKey가 비었거나 겹칩니다.");
-                // 게임 내장 씬과 이름이 같으면 게임이 모드를 거부한다. (PC마다 다른 씬이 열리거나 게스트가 씬을 찾지 못함)
+                // 게임 내장 씬과 이름이 같으면 게임이 모드를 거부한다.
                 if (ModSdkSettings.IsGameSceneName(map.scene.name))
                     errors.AppendLine($"{map.scene.name}: 게임에 들어 있는 씬과 이름이 같습니다. 씬 파일 이름을 바꾸세요. (예: {project.modId.Replace('.', '_')}_{map.scene.name})");
 
-                string path = AssetDatabase.GetAssetPath(map.scene);
-                Scene scene = EditorSceneManager.OpenScene(path, OpenSceneMode.Single);
+                if (map.scene.name == ExampleSceneName && project.modId != ExampleModId)
+                    Debug.LogWarning($"[ModExporter] 씬 이름이 예제와 같습니다. 예제 모드와 함께 켜면 이 모드를 쓸 수 없으니 씬 파일 이름을 바꾸세요. (예: {project.modId.Replace('.', '_')}_Map)");
+
+                string scenePath = AssetDatabase.GetAssetPath(map.scene);
+                Scene scene = EditorSceneManager.OpenScene(scenePath, OpenSceneMode.Single);
                 foreach (ModMapValidator.Issue issue in ModMapValidator.Validate(scene))
                 {
                     if (issue.isError)
@@ -150,8 +138,14 @@ namespace GuardVsMannequin.Editor
                 }
                 PropIndexer.AssignIndices(scene);
                 EditorSceneManager.SaveScene(scene);
-                scenePaths.Add(path);
+                scenePaths.Add(scenePath);
             }
+
+            var sharedViolations = new List<string>();
+            foreach (GameObject prefab in project.sharedAssets.OfType<GameObject>())
+                ModComponentPolicy.CollectViolations(prefab, sharedViolations);
+            foreach (string violation in sharedViolations)
+                errors.AppendLine($"공유 에셋의 허용되지 않은 컴포넌트 - {violation}");
 
             if (errors.Length == 0)
                 return true;
@@ -160,20 +154,27 @@ namespace GuardVsMannequin.Editor
             return false;
         }
 
-        /// <summary>
-        /// 다운로드 주소를 읽고, 게임에서 열 수 없는 주소면 제작자에게 경고한다.
-        /// </summary>
+        /// <summary>번역을 모두 지웠을 때 옛 이름이 남지 않도록 지난 파일을 지우고, 게임이 읽는 BOM 없는 UTF-8로 쓴다.</summary>
+        private static void WriteStringsFile(ModProject project, string outputFolder)
+        {
+            string stringsPath = Path.Combine(outputFolder, "strings.csv");
+            string content = ModStringsFile.Build(project.modId, project.maps.Where(map => map.scene != null));
+            if (content != null)
+                File.WriteAllText(stringsPath, content, new UTF8Encoding(false));
+            else if (File.Exists(stringsPath))
+                File.Delete(stringsPath);
+        }
+
+        /// <summary>다른 플레이어가 링크를 볼 수 없는 주소면 제작자에게 미리 경고한다.</summary>
         private static string GetCheckedUrl(ModProject project)
         {
             string url = (project.downloadUrl ?? string.Empty).Trim();
             if (url.Length > 0 && !ModLinkPolicy.TryGetSafeUrl(url, out _))
-                Debug.LogWarning($"[모드 내보내기] 다운로드 주소 '{url}'는 게임에서 열 수 없습니다. https://github.com/... 또는 Steam 창작마당 주소를 쓰세요. 다른 플레이어에게는 모드 이름과 ID만 보입니다.");
+                Debug.LogWarning($"[모드 내보내기] 다운로드 주소 '{url}'는 게임에서 열 수 없습니다. GitHub 저장소 주소(https://github.com/소유자/저장소, 뒤에 /releases 가능)나 Steam 창작마당 주소를 쓰세요. 파일을 바로 받는 주소는 열리지 않습니다. 다른 플레이어에게는 모드 이름과 ID만 보입니다.");
             return url;
         }
 
-        /// <summary>
-        /// 모드 설정으로 mod.json 내용을 만든다.
-        /// </summary>
+        /// <summary>제작자가 JSON을 직접 쓰지 않도록 설정 값으로 mod.json 내용을 만든다.</summary>
         private static ModManifest CreateManifest(ModProject project, string assetBundle, string sceneBundle)
         {
             var manifest = new ModManifest
@@ -186,11 +187,11 @@ namespace GuardVsMannequin.Editor
                 url = GetCheckedUrl(project),
                 gameVersion = project.minGameVersion,
                 unityVersion = Application.unityVersion,
-                dependencies = project.dependencies.Where(d => !string.IsNullOrWhiteSpace(d)).ToList(),
+                dependencies = project.dependencies.Where(dependency => !string.IsNullOrWhiteSpace(dependency)).ToList(),
                 assetBundle = assetBundle,
                 sceneBundle = sceneBundle
             };
-            foreach (ModProject.MapSetting map in project.maps.Where(m => m.scene != null))
+            foreach (ModProject.MapSetting map in project.maps.Where(mapSetting => mapSetting.scene != null))
             {
                 manifest.maps.Add(new MapManifest
                 {
@@ -200,54 +201,37 @@ namespace GuardVsMannequin.Editor
                     name = map.displayName,
                     minPlayers = map.minPlayers,
                     maxPlayers = map.maxPlayers,
-                    settings = map.settings.Select(s => new MapSettingRange { id = s.id, value = s.value, min = s.min, max = s.max }).ToList()
+                    settings = map.settings.Select(range => new MapSettingRange { id = range.id, value = range.value, min = range.min, max = range.max }).ToList()
                 });
             }
             return manifest;
         }
 
         /// <summary>
-        /// 번들 파일 내용의 지문(SHA-256 앞 16자리). 같은 모드 파일인지 비교하는 데 쓴다.
-        /// </summary>
-        private static string HashFiles(string folder, params string[] fileNames)
-        {
-            using SHA256 sha = SHA256.Create();
-            foreach (string fileName in fileNames.Where(f => !string.IsNullOrEmpty(f)))
-            {
-                byte[] bytes = File.ReadAllBytes(Path.Combine(folder, fileName));
-                sha.TransformBlock(bytes, 0, bytes.Length, null, 0);
-            }
-            sha.TransformFinalBlock(Array.Empty<byte>(), 0, 0);
-            return BitConverter.ToString(sha.Hash, 0, 8).Replace("-", string.Empty).ToLowerInvariant();
-        }
-
-        /// <summary>
-        /// 번들 빌드가 남기는 파일(폴더 이름 번들, .manifest)을 지운다. 게임에는 번들과 mod.json만 필요하다.
+        /// 게임에는 번들과 mod.json만 필요하므로, 배포할 때 헷갈리지 않게 빌드가 남기는 파일(폴더 이름 번들, .manifest)을 지운다.
         /// </summary>
         private static void DeleteBuildLeftovers(string folder)
         {
-            foreach (string file in Directory.GetFiles(folder, "*.manifest"))
-                File.Delete(file);
-            string folderBundle = Path.Combine(folder, Path.GetFileName(folder));
-            if (File.Exists(folderBundle))
-                File.Delete(folderBundle);
+            foreach (string manifestFile in Directory.GetFiles(folder, "*.manifest"))
+                File.Delete(manifestFile);
+            string folderBundlePath = Path.Combine(folder, Path.GetFileName(folder));
+            if (File.Exists(folderBundlePath))
+                File.Delete(folderBundlePath);
         }
 
-        /// <summary>
-        /// 지정한 게임 Mods 폴더로 복사한다. 복사한 경로를 반환한다. (지정하지 않았으면 null)
-        /// </summary>
+        /// <summary>내보낸 뒤 바로 시험하도록 대상 폴더를 비운 뒤 게임 Mods 폴더로 복사한다.</summary>
         private static string CopyToGame(ModProject project, string outputFolder)
         {
             if (string.IsNullOrWhiteSpace(project.copyToModsFolder))
                 return null;
 
-            string target = Path.Combine(project.copyToModsFolder, project.modId);
-            if (Directory.Exists(target))
-                Directory.Delete(target, true);
-            Directory.CreateDirectory(target);
-            foreach (string file in Directory.GetFiles(outputFolder))
-                File.Copy(file, Path.Combine(target, Path.GetFileName(file)), true);
-            return target;
+            string targetFolder = Path.Combine(project.copyToModsFolder, project.modId);
+            if (Directory.Exists(targetFolder))
+                Directory.Delete(targetFolder, true);
+            Directory.CreateDirectory(targetFolder);
+            foreach (string exportedFile in Directory.GetFiles(outputFolder))
+                File.Copy(exportedFile, Path.Combine(targetFolder, Path.GetFileName(exportedFile)), true);
+            return targetFolder;
         }
     }
 }

@@ -6,21 +6,16 @@ using UnityEngine;
 
 namespace GuardVsMannequin.Player.Guard
 {
-    /// <summary>
-    /// 가드의 수류탄(우클릭). 던지면 포물선으로 날아가 닿는 순간 터지고,
-    /// 반경 안의 실제 마네킹(변신 여부 무관, 벽 너머 제외)에게 외곽선 표시·감속을 건다. 피해는 없다.
-    /// 판정은 서버가 한다: 클라이언트는 조준만 보내고, 서버가 궤적·폭발 지점을 정해 모두에게 같은 연출(<see cref="GrenadeView"/>)을 보낸다.
-    /// 궤적이 결정적이므로 수류탄을 네트워크 오브젝트로 만들지 않는다.
-    /// </summary>
+    /// <summary>숨은 마네킹을 찾아내도록 반경 안 마네킹에 외곽선 표시와 감속을 거는 가드의 수류탄.</summary>
     public class GrenadeTool : NetworkBehaviour, ICooldownGauge
     {
-        /// <summary>비정상 원점을 대체할 눈 높이(m).</summary>
+        /// <summary>클라이언트가 보낸 원점이 비정상일 때 대신 쓸 눈 높이(m).</summary>
         private const float EyeHeight = 1.6f;
 
-        /// <summary>던지는 위치를 몸에서 앞으로 띄우는 거리(m).</summary>
+        /// <summary>던지자마자 자기 몸에 닿아 터지지 않도록 몸에서 앞으로 띄우는 거리(m).</summary>
         private const float ThrowForwardOffset = 0.6f;
 
-        /// <summary>조준보다 살짝 위로 던지는 각도 보정(위쪽 성분).</summary>
+        /// <summary>조준점 그대로 던지면 금방 바닥에 떨어지므로 살짝 위로 띄우는 보정(위쪽 성분).</summary>
         private const float UpwardBias = 0.15f;
 
         [SerializeField] private GrenadeView view;
@@ -33,19 +28,16 @@ namespace GuardVsMannequin.Player.Guard
 
         public string DisplayName => Loc.Get("tool.grenade");
 
-        // 출발 보호(탐색 시작 직후 도구 잠금)도 쿨타임처럼 남은 시간으로 보여준다.
-        public float CooldownRemaining => Mathf.Max(cooldown.LocalRemaining, DamageRules.GetGuardToolLockRemaining(GameServices.State));
+        public float CooldownRemaining => cooldown.LocalRemaining;
         public bool IsReady => CooldownRemaining <= 0f && DamageRules.CanUseGuardTools(GameServices.State);
 
         /// <inheritdoc />
         public float CooldownProgress => cooldown.LocalProgress;
 
-        /// <summary>호스트 설정의 수류탄 쿨타임.</summary>
+        /// <summary>테스트 방에서 설정을 바꾸면 바로 반영되도록 매번 읽는다.</summary>
         private static float Cooldown => GameServices.CurrentSettingsOrDefault.grenadeCooldown;
 
-        /// <summary>
-        /// 조준·입력·외형 구현을 캐시한다.
-        /// </summary>
+        /// <summary>투척마다 찾지 않도록 미리 찾아 둔다.</summary>
         private void Awake()
         {
             aimProvider = GetComponent<IAimProvider>();
@@ -56,7 +48,7 @@ namespace GuardVsMannequin.Player.Guard
         }
 
         /// <summary>
-        /// 소유자만 우클릭 입력을 구독한다.
+        /// 남의 아바타가 내 우클릭에 반응하지 않도록 소유자만 입력을 듣는다.
         /// </summary>
         public override void OnStartClient()
         {
@@ -66,7 +58,7 @@ namespace GuardVsMannequin.Player.Guard
         }
 
         /// <summary>
-        /// 입력 구독을 해제한다.
+        /// 아바타가 사라진 뒤 입력 이벤트가 이 객체를 부르지 않도록 구독을 끊는다.
         /// </summary>
         public override void OnStopClient()
         {
@@ -76,7 +68,7 @@ namespace GuardVsMannequin.Player.Guard
         }
 
         /// <summary>
-        /// 쿨타임이 끝났으면 조준 광선을 서버로 보낸다.
+        /// HUD 쿨타임이 바로 돌도록 소유자 화면에서 먼저 시작하고, 궤적·판정은 서버에 맡긴다.
         /// </summary>
         private void OnSecondaryPressed()
         {
@@ -89,7 +81,7 @@ namespace GuardVsMannequin.Player.Guard
         }
 
         /// <summary>
-        /// 서버에서 투척을 검증하고 궤적·폭발 지점을 정한다.
+        /// 클라이언트는 조작할 수 있으므로 서버가 쿨타임·원점을 다시 확인하고, 튕기는 경로를 한 번만 정해 모두에게 같은 경로를 보낸다.
         /// </summary>
         [ServerRpc]
         private void ThrowServerRpc(Vector3 origin, Vector3 direction)
@@ -106,21 +98,20 @@ namespace GuardVsMannequin.Player.Guard
             Vector3 start = origin + throwDirection * ThrowForwardOffset;
             Vector3 velocity = throwDirection * GameTuning.GrenadeThrowSpeed;
 
-            GrenadeTrajectory.TryFindImpact(start, velocity, GameTuning.GrenadeMaxFlightTime, transform, out Vector3 impact, out float flightTime);
-            ThrownObserversRpc(start, velocity, flightTime);
-            StartCoroutine(ExplodeAfter(impact, flightTime));
+            float fuseTime = GameTuning.GrenadeFuseTime;
+            GrenadeSegment[] segments = GrenadeTrajectory.Simulate(start, velocity, fuseTime, transform);
+            ThrownObserversRpc(segments, fuseTime);
+            StartCoroutine(ExplodeAfter(GrenadeTrajectory.GetPosition(segments, fuseTime), fuseTime));
         }
 
-        /// <summary>
-        /// 비행 시간 뒤 폭발 지점 주변의 마네킹에게 효과를 건다. (서버)
-        /// </summary>
-        private IEnumerator ExplodeAfter(Vector3 impact, float flightTime)
+        /// <summary>터지는 연출과 효과가 같은 순간이 되도록 신관 시간만큼 기다린 뒤 서버에서 효과를 건다.</summary>
+        private IEnumerator ExplodeAfter(Vector3 impactPoint, float fuseTime)
         {
-            yield return new WaitForSeconds(flightTime);
+            yield return new WaitForSeconds(fuseTime);
             if (!IsServerInitialized)
                 yield break;
 
-            foreach (PlayerIdentity mannequin in finder.Find(impact, GameTuning.GrenadeRadius, requireLineOfSight: true))
+            foreach (PlayerIdentity mannequin in finder.Find(impactPoint, GameTuning.GrenadeRadius, requireLineOfSight: true))
             {
                 if (mannequin.TryGetComponent(out StatusEffects effects))
                     effects.ApplyGrenadeHit();
@@ -128,15 +119,15 @@ namespace GuardVsMannequin.Player.Guard
         }
 
         /// <summary>
-        /// 모든 클라이언트에서 같은 궤적의 수류탄 연출과 던지는 동작을 재생한다.
+        /// 튕김은 피어마다 물리 상태가 달라 어긋날 수 있으므로 서버가 정한 구간을 그대로 보내 모든 화면이 같은 수류탄을 그리게 한다.
         /// </summary>
         [ObserversRpc]
-        private void ThrownObserversRpc(Vector3 start, Vector3 velocity, float flightTime)
+        private void ThrownObserversRpc(GrenadeSegment[] segments, float fuseTime)
         {
             if (view != null)
-                view.Play(start, velocity, flightTime);
+                view.Play(segments, fuseTime);
 
-            // 외형 애니메이터에 Throw 트리거가 있을 때만 던지는 동작을 재생한다.
+            // 외형마다 애니메이터가 달라 Throw 트리거가 없을 수 있으므로 있는 경우에만 재생한다.
             if (skinView != null)
                 skinView.TryPlayTrigger(CharacterAnimatorParameters.Throw);
         }

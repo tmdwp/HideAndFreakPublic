@@ -13,7 +13,9 @@
   <assembly fullname="Unity.RenderPipelines.Universal.Runtime" preserve="all" />
   <assembly fullname="Unity.RenderPipelines.Core.Runtime" preserve="all" />
 
-  <!-- 모드 맵·소품에 들어갈 수 있는 엔진 컴포넌트 -->
+  <!-- 모드 맵·소품에 들어갈 수 있는 엔진 컴포넌트 (ModComponentPolicy 허용 목록과 맞춘다) -->
+  <assembly fullname="UnityEngine.CoreModule" preserve="all" />
+  <assembly fullname="UnityEngine.WindModule" preserve="all" />
   <assembly fullname="UnityEngine.AudioModule" preserve="all" />
   <assembly fullname="UnityEngine.ParticleSystemModule" preserve="all" />
   <assembly fullname="UnityEngine.TerrainModule" preserve="all" />

@@ -116,6 +116,61 @@ class MeshBuilder:
         bmesh.ops.transform(self.bm, matrix=matrix, verts=verts)
         self.applyFaces(verts, matName, lambda f: len(f.verts) == 4)
 
+    def hollowCylinder(self, radiusBottom, radiusTop, depth, wall, center, matName, floor=None, innerMat=None, segments=16, rot=None):
+        """
+        속이 빈 원통: 바깥 옆면 + 윗 테두리 + 안쪽 옆면 + (floor가 있으면) 안쪽 바닥·바깥 바닥, 없으면 아래도 뚫린 관.
+        컵·양동이·휴지통(floor 두께 지정), 테이프 심지·갓(floor=None). 기본은 Z축 방향이고 rot으로 눕히거나 납작하게(Diagonal) 바꾼다.
+        안쪽 면은 innerMat(없으면 matName)으로 칠한다. 닫힌 면이라 법선은 build()에서 바깥을 보게 맞춰진다.
+        """
+        bm = self.bm
+        z0, z1 = -depth / 2, depth / 2
+        zf = z0 + floor if floor is not None else z0
+
+        def radiusAt(z):
+            return radiusBottom + (radiusTop - radiusBottom) * (z - z0) / depth
+
+        def ring(radius, z):
+            return [bm.verts.new((radius * math.cos(2 * math.pi * k / segments), radius * math.sin(2 * math.pi * k / segments), z))
+                    for k in range(segments)]
+
+        outerBottom = ring(radiusBottom, z0)
+        outerTop = ring(radiusTop, z1)
+        innerTop = ring(radiusTop - wall, z1)
+        innerBottom = ring(radiusAt(zf) - wall, zf)
+        rims = []
+        for k in range(segments):
+            k2 = (k + 1) % segments
+            bm.faces.new([outerBottom[k], outerBottom[k2], outerTop[k2], outerTop[k]])
+            rims.append(bm.faces.new([outerTop[k], outerTop[k2], innerTop[k2], innerTop[k]]))
+            bm.faces.new([innerTop[k], innerTop[k2], innerBottom[k2], innerBottom[k]])
+        if floor is not None:
+            bm.faces.new(innerBottom)
+            bm.faces.new(list(reversed(outerBottom)))
+        else:
+            for k in range(segments):
+                k2 = (k + 1) % segments
+                rims.append(bm.faces.new([innerBottom[k], innerBottom[k2], outerBottom[k2], outerBottom[k]]))
+
+        allVerts = outerBottom + outerTop + innerTop + innerBottom
+        matrix = Matrix.Translation(center) @ (rot or Matrix())
+        bmesh.ops.transform(bm, matrix=matrix, verts=allVerts)
+        self.applyFaces(outerBottom + outerTop, matName, lambda f: len(f.verts) == 4)
+        self.applyFaces(innerTop + innerBottom, innerMat or matName, lambda f: len(f.verts) == 4)
+        # 테두리 고리 면은 평평하게 (옆면만 부드럽게)
+        for face in rims:
+            face.smooth = False
+
+    def hollowBox(self, size, wall, center, matName, floor=None, innerMat=None):
+        """위가 열린 상자(세면대·서랍 통): 바닥판(floor 두께, 기본 wall) + 옆판 4개. center는 상자 중심, size는 바깥 크기."""
+        sx, sy, sz = size
+        cx, cy, cz = center
+        floor = wall if floor is None else floor
+        inner = innerMat or matName
+        self.box((sx, sy, floor), (cx, cy, cz - sz / 2 + floor / 2), inner)
+        for side in (-1, 1):
+            self.box((wall, sy, sz), (cx + side * (sx / 2 - wall / 2), cy, cz), matName)
+            self.box((sx - 2 * wall, wall, sz), (cx, cy + side * (sy / 2 - wall / 2), cz), matName)
+
     def sphere(self, radius, center, matName, segments=12, scale=(1.0, 1.0, 1.0)):
         """구(scale로 납작하게 할 수 있다)."""
         verts = bmesh.ops.create_uvsphere(self.bm, u_segments=segments, v_segments=segments // 2,

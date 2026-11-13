@@ -21,33 +21,32 @@ namespace GuardVsMannequin.UI
         private HudContext context;
         private RefreshTimer refreshTimer;
 
-        /// <summary>
-        /// 룸으로 이동 버튼을 연결한다. (호스트만 가능, <see cref="IMatchControl"/>)
-        /// </summary>
+        /// <summary>화면이 네트워크를 몰라도 되도록 룸 복귀는 인터페이스에 맡긴다.</summary>
         public void Bind(HudContext hudContext)
         {
             context = hudContext;
             returnToRoomButton.onClick.AddListener(() => context.MatchControl.ReturnToRoom());
         }
 
-        /// <inheritdoc />
+        /// <summary>
+        /// 네트워크 준비 전에는 결과가 없으므로 숨긴다.
+        /// </summary>
         public void Hide()
         {
             resultPanel.SetActive(false);
         }
 
-        /// <inheritdoc />
+        /// <summary>가비지를 줄이려고 일정 간격으로만 갱신하고, 다른 사람이 정한 이름은 정리해서 쓴다.</summary>
         public void Refresh(GameState state)
         {
-            bool visible = state == GameState.Ended;
-            resultPanel.SetActive(visible);
-            if (!visible)
+            bool isVisible = state == GameState.Ended;
+            resultPanel.SetActive(isVisible);
+            if (!isVisible)
             {
                 // 다시 보일 때 바로 최신 문구를 보여주도록 한다.
                 refreshTimer.Reset();
                 return;
             }
-            // 결과·참가자 목록 문구를 새로 만드므로 일정 간격으로만 갱신한다.
             if (!refreshTimer.Tick())
                 return;
 
@@ -56,8 +55,9 @@ namespace GuardVsMannequin.UI
             builder.Clear();
             foreach (ParticipantResult participant in context.MatchResult.Participants)
             {
-                string status = Loc.Get(participant.survived ? "result.survived" : "result.eliminated");
-                builder.AppendLine($"{DisplayTextSanitizer.Clean(participant.displayName, DisplayTextSanitizer.MaxPlayerNameLength)}  ·  {HudText.GetRoleName(participant.role)}  ·  {status}");
+                string statusLabel = Loc.Get(participant.survived ? "result.survived" : "result.eliminated");
+                string participantName = DisplayTextSanitizer.Clean(participant.displayName, DisplayTextSanitizer.MaxPlayerNameLength);
+                builder.AppendLine($"{participantName}  ·  {HudText.GetRoleName(participant.role)}  ·  {statusLabel}");
             }
             resultParticipantsText.text = builder.ToString();
 
@@ -65,13 +65,11 @@ namespace GuardVsMannequin.UI
             returnToRoomButton.gameObject.SetActive(context.MatchControl.CanControlMatch);
         }
 
-        /// <summary>
-        /// 승리 진영, 사유, 나의 승패를 한 문단으로 만든다.
-        /// </summary>
+        /// <summary>진영 승패만으로는 내가 이겼는지 알기 어려워 나의 승패를 덧붙인다.</summary>
         private string GetResultHeadline()
         {
             MatchResult matchResult = context.MatchResult;
-            string winner = Loc.Get(matchResult.Winner switch
+            string winnerLabel = Loc.Get(matchResult.Winner switch
             {
                 MatchWinner.Guard => "result.guardWin",
                 MatchWinner.Mannequin => "result.mannequinWin",
@@ -86,13 +84,13 @@ namespace GuardVsMannequin.UI
                 WinReason.AllGuardsEliminated => "result.reason.allGuards",
                 _ => string.Empty
             };
-            string reason = Loc.Get(reasonKey);
+            string reasonLabel = Loc.Get(reasonKey);
 
             PlayerRole localRole = context.LocalPlayer.LastRole;
             bool isWinner = RoleDefinitions.Get(localRole).IsWinner(matchResult.Winner);
-            string personal = localRole == PlayerRole.None ? string.Empty : "\n" + Loc.Get(isWinner ? "result.victory" : "result.defeat");
+            string personalResult = localRole == PlayerRole.None ? string.Empty : "\n" + Loc.Get(isWinner ? "result.victory" : "result.defeat");
 
-            return $"{winner}\n{reason}{personal}";
+            return $"{winnerLabel}\n{reasonLabel}{personalResult}";
         }
     }
 }

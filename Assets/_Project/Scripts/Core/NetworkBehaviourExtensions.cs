@@ -2,15 +2,11 @@ using FishNet.Object;
 
 namespace GuardVsMannequin.Core
 {
-    /// <summary>
-    /// NetworkBehaviour를 네트워크 초기화 전에도 안전하게 조회하기 위한 확장 메서드.
-    /// FishNet은 초기화 전에 내부 NetworkObject 캐시가 null이라
-    /// IsServerInitialized/IsClientInitialized 등을 읽으면 NullReferenceException이 발생한다.
-    /// </summary>
+    /// <summary>FishNet은 초기화 전 내부 캐시가 null이라 네트워크 초기화 전에도 안전하게 조회하는 확장 메서드.</summary>
     public static class NetworkBehaviourExtensions
     {
         /// <summary>
-        /// 네트워크 초기화가 끝나 FishNet 상태 프로퍼티를 읽을 수 있는지 확인한다.
+        /// 초기화 전에 FishNet 상태 프로퍼티를 읽으면 예외가 나므로, 읽기 전에 이것으로 먼저 거른다.
         /// </summary>
         public static bool IsNetworkReady(this NetworkBehaviour behaviour)
         {
@@ -18,7 +14,7 @@ namespace GuardVsMannequin.Core
         }
 
         /// <summary>
-        /// 클라이언트에서 초기화되었는지 안전하게 확인한다.
+        /// IsClientInitialized를 바로 읽으면 초기화 전에 예외가 나므로 대신 쓴다.
         /// </summary>
         public static bool IsClientReady(this NetworkBehaviour behaviour)
         {
@@ -26,7 +22,7 @@ namespace GuardVsMannequin.Core
         }
 
         /// <summary>
-        /// 서버에서 초기화되었는지 안전하게 확인한다.
+        /// IsServerInitialized를 바로 읽으면 초기화 전에 예외가 나므로 대신 쓴다.
         /// </summary>
         public static bool IsServerReady(this NetworkBehaviour behaviour)
         {

@@ -81,7 +81,7 @@ Waiting ─▶ Preparation ─▶ Playing ─▶ Hunting ─▶ Ended
 |---|---|---|
 | 1 | **공동 전원 장치 파괴 속도** | 참여 인원 `n`일 때 **총 속도 = 1.4^(n−1)** (1인 = 1.0, 2인 = 1.4, 3인 = 1.96, 4인 = 2.744). 초당 진행도 = `1.4^(n−1) / 파괴 소요 시간`. 개인 기여분 = 총 속도 / n. 한 명이라도 상호작용이 끊기면 **그 사람은 이탈**하고, **참여자가 0명이 되면 진행도 초기화** |
 | 2 | **목표 수행 횟수 0회** | `Playing` 단계 진입 후 **룸 설정 `huntDelay`(기본 35초) 뒤 자동으로 사냥 시간** 시작 (가드 보호 목적). HUD의 목표 칸에 **가드 보호 시간과 사냥 시간 시작까지 남은 시간**을 표시한다 (`HuntTiming`) |
-| 3 | **판 시작 준비** | 모두 스폰된 뒤 **3초 카운트다운** 동안 아무도 움직일 수 없음. 가드는 마네킹 스폰 지점에서 먼 **무작위 위치**에서 시작하고, 탐색 시작 후 **10초 동안 도구를 쓸 수 없음**(출발 보호). (Phase 7-A에서 가드 대기실을 대체) |
+| 3 | **판 시작** | 스폰 직후 바로 탐색 시작, 이동·공격·변신 제한 없음. 대신 **시작 후 3초(`MatchOpeningTime`) 동안 모든 플레이어 시야가 검은 안개로 줄고, 마네킹은 전원 장치와 상호작용할 수 없음**. 가드는 마네킹 스폰 지점에서 먼 **무작위 위치**에서 시작. (예전 3초 이동 불가·가드 10초 도구 잠금을 대체) |
 | 4 | **사냥 시간 중 가드 무기** | 사냥 시간에도 **총 사용 가능** (발사 간격·탄창·장전 동일). 마네킹 체력 배율은 **호스트 설정값 `huntHealthMultiplier`** (기본값 10) |
 | 5 | **변신 불가 사물** | 천장, 바닥, **조명 기구**, **전원 장치**, **전원 장치 주변 구조물** |
 | 6 | **조명 방식** | **실시간 조명** + URP **Forward+** 렌더러. 전구는 Emission 머티리얼과 Light 컴포넌트를 함께 끄고 켬 |
@@ -530,7 +530,7 @@ Phase 7은 **A. 게임플레이 개편**(7-A1~7-A5)을 먼저 하고 **B. 모드
 - **변신 외형 복사(2026-10-05)**: 예전에는 맵 생성 때 저장한 사물 목록(`PropDatabase_<맵>`)의 번호를 동기화해, 맵을 고친 뒤에는 크기·머티리얼이 어긋나고 벽 조건에 걸린 가구(책장·옷장)가 상자로 변신했다. 이제는 다음과 같이 동작한다.
   - 번호: `TransformableProp`마다 씬 안 번호를 매긴다(`PropIndexer`: 씬 저장 때 + 빌드·플레이 모드 씬 처리 때, 계층 순서라 결정적). 서버는 번호만 동기화한다(`MannequinTransformer.currentPropIndex`). **Protocol p4 → p5.**
   - 외형: 각 PC가 번호로 사물을 찾아(`PropRegistry`) 메시·머티리얼·실제 크기·기울기를 자식 조각까지 그대로 복사한다(`PropAppearance`, 하위 LOD·다른 변신 사물의 자식 제외). 좌우 방향은 마네킹이 바라보는 방향을 따른다.
-  - 벽: `TransformableProp.isWall`이 켜진 사물은 예전처럼 고정 크기 벽 조각(1.2×2×0.25m, 첫 머티리얼).
+  - 벽: (2026-11-09 변경) 벽은 변신 대상이 아니다. `TransformableProp.isWall`이 켜진 예전 등록은 `CanDisguiseAs`가 거짓이라 변신·섞기·튕겨나가기에서 빠지고, 벽 조각 외형·'벽으로 등록' 메뉴는 삭제했다.
   - 제한: 가장 긴 변이 `DisguiseMaxSize`(3m)를 넘으면 변신 불가. 서버는 사물 경계까지의 거리도 검증한다(변신 사거리 + 1.5m).
   - 도구: 맵 제작 도우미의 "변신 사물로 등록"은 **선택한 오브젝트(부모) 단위**로 자식 조각까지 합친다. 맵 검사는 충돌체·메시 없음(오류), 너무 큼·파티클/조명/스킨 메시 포함·정적 배칭(경고)을 알린다(`PropCopyChecks`). 맵 최적화는 변신 사물의 자식 조각도 정적 배칭에서 뺀다.
   - 이전(완료, 2026-10-05): 일회용 메뉴로 기존 맵 5개의 벽 조각 여부를 옮기고(가구로 보이는 것은 복사로 전환) 번호를 매긴 뒤, 이전 도구와 `PropDatabase`·`PropDefinition`·에셋 `ScriptableObjects/PropDatabase_*`를 삭제했다.
@@ -604,7 +604,15 @@ Phase 7은 **A. 게임플레이 개편**(7-A1~7-A5)을 먼저 하고 **B. 모드
 - 링크: `mod.json`의 `url`(SDK `ModProject.downloadUrl`). 호스트가 바꿀 수 있는 값이라 받는 쪽이 `ModLinkPolicy`로 검사한다(https, `github.com`, `steamcommunity.com`의 창작마당 경로만, 사용자 정보·포트·비ASCII 금지). 전체 주소를 보여 주고 확인을 받은 뒤 연다. 이름은 `DisplayTextSanitizer`로 정리하고 리치 텍스트를 끈다.
 - 시작 방해: 모드 없는 게스트가 있으면 호스트는 맵을 바꾸거나, Phase 10 추방을 쓴다.
 - 보안 점검 후 보강(2026-11-04): 씬을 불러올 수 없으면 FishNet 씬 대기열이 멈추지 않게 건너뛰고 대기열이 끝난 뒤 방을 나간다(`ModSceneProcessor`). `mod.json` 번들 이름은 경로 없는 파일 이름만 허용(`ModScanner`). 방 암호를 5번 연속 틀리면 그 주소를 60초 막는다(`PasswordAttemptLimiter`). 게스트도 받은 플레이어 이름을 정리한다.
-- 남은 위험: 모드 번들을 불러올 때 컴포넌트 허용 목록이 없다(맵 검사는 제작자 PC에서만 돈다). `github.com`이면 어떤 저장소든 열린다(자체 AppID 후 창작마당만 허용 검토). `contentHash`는 번들로 다시 계산하지 않는다. Phase 9에서 `HostAddress` 대신 `GetLobbyOwner`를 쓴다.
+- 보강(2026-11-05):
+  - 컴포넌트 허용 목록 `ModComponentPolicy`(Content, SDK 내보내기와 게임이 같은 규칙). 게임은 빌드에 없는 씬을 불러오면 `ModSceneGuard`로 씬 전체와 맵이 지정한 외형 모델을 검사하고, 걸리면 씬을 끈 뒤 대기열이 끝나고 방을 나간다(`notice.modRejected`). 통과한 씬의 애니메이터와 맵 외형은 애니메이션 이벤트를 끈다.
+  - 번들 지문 `ModContentHash`: `ModScanner`가 실제 파일로 다시 계산해 mod.json과 비교한다(파일 크기·수정 시각이 같으면 캐시). 서명이 아니므로 파일과 mod.json을 함께 고치면 통과한다.
+  - `ModLinkPolicy`: GitHub는 저장소 첫 화면과 릴리스 화면만 연다. 파일 바로 받기, 계정 기능 화면, 쿼리·조각이 붙은 주소는 막는다.
+  - 의존 모드·공유 에셋 번들을 불러오지 못하면 이제 맵 불러오기 실패로 처리한다(`ModBundleCache`).
+- 수정(2026-11-06, ModTest 프로젝트 시험에서 발견): `MapPropSetup`이 `ModSceneGuard`보다 먼저 `PropBody`(Runtime)를 붙여 변신 사물이 있는 모든 모드 맵이 거부되던 문제 → `MapPropSetup`이 준비 전에 검사를 부르고 검사는 씬당 한 번만 한다. 켜진 모드끼리 맵 씬 이름이 겹치면 다른 모드의 번들이 열리던 문제 → `ModService.ResolveDuplicateScenes`가 뒤 모드를 오류로 둔다.
+- 변경(2026-11-06): 맵 이름 번역을 `ModProject.MapSetting.names`에서 관리한다. `ModStringsFile`이 내보낼 때 `strings.csv`를 만들고 키도 정한다. `ModProject.strings`와 예제의 `strings.csv`는 삭제. 게임이 읽는 형식은 그대로다.
+- 수정(2026-11-06): SDK 프로젝트의 Graphics 셰이더 변형 제거 설정이 게임과 달라 번들에 `DOTS_INSTANCING_ON`(GPU Resident Drawer)과 안개 변형이 빠지던 문제. `ModSdkGraphicsExporter`가 게임 값을 `game_shader_stripping.txt`에 적고, `ModSdkSettings.ApplyGameGraphics`가 적용하며, 내보내기 전 확인이 값을 비교한다.
+- 남은 위험: 씬 내용은 활성화된 뒤에야 볼 수 있어, 허용되지 않은 컴포넌트의 Awake·OnEnable은 검사 전에 실행된다(이후 Start·Update는 막음). 허용 사이트의 저장소 내용 자체는 보증하지 못한다(자체 AppID 후 창작마당만 허용 검토). 호스트가 보낸 지문·링크는 받는 쪽 규칙으로만 믿는다.
 
 **구현 결과 (2026-10-05, Unity 확인 전)**
 - 등록소: `ContentRegistry`(내장 `BuiltInContentSource` → 켜진 모드 `ModContentSource`, 모드 ID 순). 맵 번호 = 목록 번호. 룸의 맵 이름·범위는 등록소에서 읽는다(`GameSettingDefinitions.Get(Map)`). `game_settings.csv`의 Map 줄 범위는 더 이상 쓰지 않는다.
@@ -617,7 +625,7 @@ Phase 7은 **A. 게임플레이 개편**(7-A1~7-A5)을 먼저 하고 **B. 모드
 
 **검토가 필요한 위험**
 - (B1로 해소) 맵 씬에 FishNet 씬 오브젝트가 없으므로 번들 씬의 SceneId 문제가 없다. 단, 번들 씬을 FishNet `SceneManager`가 이름으로 불러오려면 모든 PC에서 번들이 먼저 로드되어 있어야 한다(B5의 씬 처리기 확장).
-- 셰이더: 모드는 URP Lit 등 게임에 포함된 셰이더만 쓰도록 검사 도구가 제한한다(번들에 셰이더가 중복으로 들어가 빌드 크기·변형 증가 방지). 빌드에서 제외된 셰이더 변형은 모드에서 분홍색으로 보일 수 있어, 필요한 변형 목록을 `BuildOptimizationSettings`와 맞춘다.
+- 셰이더: 모드 머티리얼의 셰이더는 번들에 함께 들어가며 검사 도구가 제한하지 않는다(2026-11-06 확인, 안내는 가이드 3.13). 번들에 셰이더가 중복으로 들어가 크기·변형이 늘 수 있다. 번들 셰이더는 제작 프로젝트의 그래픽 API로 컴파일되므로 `game_graphics_apis.txt`로 게임 값에 맞춘다. 빌드에서 제외된 셰이더 변형은 모드에서 분홍색으로 보일 수 있어, 필요한 변형 목록을 `BuildOptimizationSettings`와 맞춘다.
 - AssetBundle은 Unity 버전·빌드 대상(Windows)이 같아야 한다. 게임 Unity 버전을 올리면 모드도 다시 빌드해야 하므로 `mod.json`의 Unity 버전으로 걸러낸다.
 - 신뢰할 수 없는 번들 로드는 코드 실행은 없지만 비정상 파일로 인한 크래시 가능성이 있다. 직접 설치한 모드만 로드한다(호스트에게서 자동 다운로드하지 않음).
 
@@ -636,7 +644,7 @@ Phase 7은 **A. 게임플레이 개편**(7-A1~7-A5)을 먼저 하고 **B. 모드
 
 **배포·저장소**
 - [ ] 🔴 Steam AppID가 480(Spacewar, 공용 테스트 ID)이다. 출시 전에 자체 AppID를 받아 `steam_appid.txt`를 바꾸고, 로비 공개 범위 안내(`SteamLobbyService`)도 고친다. (공용 ID라 로비 목록이 다른 게임과 섞이고, 초대·오버레이가 불안정할 수 있음)
-- [ ] 🔴 공개 저장소의 `feature/phase6` 원격 기록에 유료 에셋(ECM2 등)이 이미 올라가 있다. 저장소를 비공개로 바꾸거나 기록을 정리한다. 미푸시 로컬 커밋에도 에셋 스토어 팩(Low Poly Character Series 1_SWAT)·Ghoul.fbx가 있어 푸시를 보류 중이다.
+- [x] 🔴 (2026-10-26 처리: 저장소 tmdwp/HideAndFreak를 비공개로 전환하고 `feature/phase6` 푸시, 공개용은 별도 저장소 HideAndFreakPublic에 유료 에셋을 뺀 `public` 브랜치로 올림) 공개 저장소의 `feature/phase6` 원격 기록에 유료 에셋(ECM2 등)이 올라가 있었다.
 - [x] 🟠 (2026-10-21 처리: 이동 코드를 인터페이스로 분리) `public` 브랜치는 ECM2를 빼지만 Runtime 어셈블리가 ECM2를 참조하므로 그대로는 컴파일되지 않는다.
   - Runtime·Editor 어셈블리는 ECM2를 참조하지 않는다. 게임 코드는 `ICharacterMotor`(속도·캡슐·카메라·순간이동·소유자 설정)만 쓴다.
   - ECM2 구현은 `Scripts/MovementEcm2`(`GuardVsMannequin.Movement.ECM2`: `PlayerCharacter`, `GuardCharacter`, `MannequinCharacter`, `WallClimbAbility`, `DisguiseRotationAbility`, `PlayerMovementDriver`, `CameraAimProvider`, `PendingLookYaw`)와 `Editor/MovementEcm2`(`Ecm2AvatarMovementRig`)로 옮겼다. 파일 GUID는 그대로라 프리팹 연결은 유지된다.
@@ -661,8 +669,8 @@ Phase 7은 **A. 게임플레이 개편**(7-A1~7-A5)을 먼저 하고 **B. 모드
 - [ ] 🟡 모드 번들은 Unity 버전·빌드 대상이 같아야 한다. 게임 Unity 버전(현재 6000.4.2f1)을 올리면 `UnityVersionRules` 허용 범위와 모드 SDK를 함께 갱신한다.
 
 **성능·품질**
-- [ ] 🟡 HUD·룸 UI가 매 프레임 `Loc.Format`으로 문자열을 새로 만든다(약 10곳). 값이 바뀔 때만 갱신해 GC 할당을 줄인다.
-- [ ] 🟡 자동 테스트가 없다. 순수 로직(`MatchJudge`, `RoleAssigner`, `GameSettingsValidator`, `PropLayoutPlanner`, `ModSetComparer`, `UnityVersionRules`)부터 EditMode 테스트를 만든다.
+- [x] 🟡 (2026-11-12 처리: 남아 있던 테스트 방 패널은 0.2초 간격, 로딩 화면은 보이는 값이 바뀔 때만 갱신. 나머지는 이전에 `RefreshTimer`·변경 검사로 처리됨) HUD·룸 UI가 매 프레임 `Loc.Format`으로 문자열을 새로 만들었다.
+- [x] 🟡 (2026-11-12 처리: `Tests/EditMode`에 `MatchJudgeTests`, `GameSettingsRulesTests`(설정 보정·`RoleAssigner`), `PropLayoutPlannerTests`, `UnityVersionRulesTests`, `StaminaAndOpeningTests`(`StaminaModel`·`MatchOpeningRules`) 추가. `ModSetComparer`는 `RequiredModComparer`로 바뀌어 기존 모드 테스트가 다룸) 순수 로직에 자동 테스트가 없었다. 앞으로 판정·보정 규칙을 바꾸면 같은 폴더에 테스트를 함께 고친다.
 - [ ] 🟡 Unity가 업그레이드한 `ProjectSettings`(`DynamicsManager`·`Physics2DSettings` 형식 변경, 빌드 목록의 없는 씬 `Map_Map_Laboratory` 정리)를 커밋해 PC마다 설정이 달라지지 않게 한다.
 
 ### Phase 8 — 사물 물리 반응 + 총 탄창 (계획, 2026-10-21)
@@ -968,12 +976,29 @@ Phase 7은 **A. 게임플레이 개편**(7-A1~7-A5)을 먼저 하고 **B. 모드
 - **유예 악용:** 질 것 같을 때 일부러 끊었다가 들어오는 행동. 다시 들어오면 저장한 위치·체력 그대로라 이득이 거의 없다. 유예 중 받은 피해는 없음(아바타가 없으므로).
 - **버전:** 새 메시지와 요청 필드가 생기므로 **`GameVersion.Protocol` +1**, Player Settings Version은 마이너 버전을 올린다.
 
+**사용자 확정 (2026-11-04)**
+- 구현 범위: 직접 방으로 확인할 수 있는 10-0·10-3·10-1을 먼저 하고, 방장 넘기기(10-2)는 Steam 계정 2개로 시험할 수 있을 때 한다. 그때까지 호스트가 나가면 지금처럼 방이 닫힌다.
+- 사냥 시간에도 재접속을 허용한다. (사냥 진입 때 대기 자리를 정리하지 않음. 위 10-1의 정리 문구는 판 종료 때만 적용)
+- ESC 메뉴로 일부러 나가면 즉시 탈락하고 돌아올 수 없다. (`DeclareLeavingServerRpc`)
+- 방장이 바뀌면 추방 목록은 초기화한다. (게스트에게 동기화하지 않음, 10-2의 `HostHandoverBroadcast`에도 넣지 않음)
+
+**구현하며 바뀐 점 (2026-11-04)**
+- `HostAddress`는 Phase 9에서 없어졌다. 10-2는 `GetLobbyOwner`로 새 방장을 찾도록 구현한다.
+- 추방 UI는 참가자 줄마다 버튼을 다는 대신 `HostPlayerPanel` 창 하나를 룸(방 코드 줄 버튼)과 ESC 메뉴에서 함께 쓴다.
+- 게임을 껐다 켠 뒤의 복귀(PlayerPrefs에 10분 저장)는 10-2와 함께 한다. Steam 계정으로만 시험할 수 있기 때문이다. 직접 방은 토큰이 실행마다 바뀌어 원래 불가능하다.
+- 재접속한 게스트는 맵을 먼저 불러온 뒤 방 정보를 받으므로, 사물 섞기·몸체 준비를 방 정보가 올 때까지 미룬다(`MapPropSetup.RunPending`). 옮겨진 사물 위치는 게스트가 요청해서 받는다(`RequestSnapshotServerRpc`).
+- 끊긴 것을 서버가 아직 모르면 새 접속이 이전 연결을 끊는다.
+- 맵을 불러오는 동안은 유예 시간 대신 120초 불러오기 기한을 쓴다. 불러오다 다시 끊기면 처음 끊긴 시각으로 판단한다.
+- 직접 방의 추방은 토큰 기준이라 게임을 다시 켜면 들어올 수 있다. (Steam 방은 SteamID 기준)
+- 시험용: 에디터·개발 빌드의 게스트가 F9를 누르면 알림 없이 연결만 끊는다.
+- 호스트가 나갈 때 게스트가 멈추던 문제(2026-11-05): 끊기면 `DefaultScene`이 동기 `LoadScene`으로 로비를 불러오는데, `allowSceneActivation`이 꺼진 로딩이 남아 있으면 교착될 수 있어 `ModSceneProcessor`가 끊길 때 풀어 준다. 수정 후 재현되지 않았지만, 멈춘 시점의 게스트가 로딩 중이었는지는 확인하지 못했다. 다시 나오면 메인 스레드 네이티브 스택을 확인한다.
+
 **구현 순서 (작고 독립적인 것부터)**
-- [ ] 10-0. `PlayerKey`·`RoomMembership`(+ EditMode 테스트).
-- [ ] 10-3. 방장 추방(룸 → 게임 중).
-- [ ] 10-2a. 룸 단계 방장 넘기기(정상 종료).
-- [ ] 10-1. 재접속(대기 자리, 상태 저장·복원, 판 상태 따라잡기, 다시 참가 UI).
-- [ ] 10-2b. 게임 중 호스트 이탈, 갑자기 꺼진 경우의 자동 방장 넘기기.
+- [x] 10-0. `PlayerKey`·`RoomMembership`(+ EditMode 테스트).
+- [x] 10-3. 방장 추방(룸 → 게임 중).
+- [ ] 10-2a. 룸 단계 방장 넘기기(정상 종료). (보류: Steam 계정 2개 필요)
+- [x] 10-1. 재접속(대기 자리, 상태 저장·복원, 판 상태 따라잡기, 다시 참가 UI).
+- [ ] 10-2b. 게임 중 호스트 이탈, 갑자기 꺼진 경우의 자동 방장 넘기기. (보류: Steam 계정 2개 필요)
 - [ ] 10-6. 2PC 확인: 게스트 랜선 끊고 60초 안에 복귀, 유예 초과, 가드 끊김 때 판 유지, 정상·비정상 호스트 이탈, 추방 후 재입장 거부.
 - Phase 9(공개방)와 함께 갈 경우: 로비 `State` 키와 게임 중 `SetJoinable` 유지는 10-1에서 바꾸므로, 9-1을 먼저 하고 10-1에서 맞춘다.
 
@@ -1071,7 +1096,8 @@ Phase 7은 **A. 게임플레이 개편**(7-A1~7-A5)을 먼저 하고 **B. 모드
 - [x] 11-3. 가드·총·손전등 → 1인칭 팔다리, 조준 IK, 총 위치 조정. — 2026-11-03 확인(가드·마네킹 머리 반지름도 키움).
 - [x] 11-4·11-5. 구울 모델·애니메이션 → 테스트 방 구울 전환으로 확인. — 2026-11-03 확인. 함께 반영: 임시 절차적 감정 표현 삭제, 공격 중 이동 잠금(`MannequinAttackMoveLock` 0.9초), 기어가기 팔 수정, 1인칭 구울 팔 표시(`FirstPersonBodyView` Generic 지원), 1인칭 카메라가 머리를 따라감(`SkinEyePoint`), 뼈를 따라가는 피격 판정 캡슐(`SkinHitboxes`, `Hitbox` 레이어, 총만 `AimRaycaster.TryRaycastHittable`).
 - [x] 11-6. 구울 소리·가드 화면 연출, 사냥 시간 시작 비명. — 2026-11-03 확인. 함께 반영: 구울 본인 숨소리·발소리 0.25배, 가드 손전등이 1인칭 총(FirstPersonGun) 아래에 있어 손에 든 총을 쓰면 꺼지던 문제(CameraPivot 아래로 이동), 본인 손전등 그림자 시작 거리 0.8m, 사냥 시작 흔들림이 카메라에 누적되던 문제.
-- [ ] 11-7. 옛 외형 에셋 정리, 크레딧·문서, 2PC 확인.
+- [x] 11-7a. 옛 외형 에셋 정리, 크레딧·문서. — 2026-11-05: GUID 참조 검사 후 `Low Poly Character Series 1_SWAT`, Kevin `Unity Demo Scenes`(더미 모델·데모 씬), 옛 `Ghoul.fbx`·`Ghoul_Scribble.png`·`M_Ghoul`·`Ghoul_AttackHunched.anim` 삭제. Kevin 애니메이션과 `Models`(클립의 아바타 원본)는 유지.
+- [ ] 11-7b. 새 외형 2PC 확인.
 
 ---
 
@@ -1104,7 +1130,7 @@ Phase 7은 **A. 게임플레이 개편**(7-A1~7-A5)을 먼저 하고 **B. 모드
 
 ### 4.5 사운드
 - [ ] 가드: 총소리, 쿨다운 완료음, 수류탄 던지는 소리·폭발음(지금은 합성음), 손전등 클릭, 발소리
-- [ ] 마네킹: 탐지 소음, 변신 상태 주기 소음, 변신/해제, 공격, 발소리
+- [ ] 마네킹: 변신/해제, 공격, 발소리 (탐지 소음은 탐지기 삭제로, 변신 중 주기 소음은 2026-11-12 삭제로 필요 없음)
 - [ ] 전원 장치: 파괴 진행 루프, 폭발
 - [ ] 사냥 시간: 전원 차단음, BGM
 - [ ] 기타: 시작 카운트다운, 환경음, 로비 BGM, UI 클릭, 승리/패배 징글

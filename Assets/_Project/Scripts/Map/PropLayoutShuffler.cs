@@ -8,30 +8,24 @@ using UnityEngine.SceneManagement;
 
 namespace GuardVsMannequin.Map
 {
-    /// <summary>
-    /// 맵 씬을 불러오면 변신 사물 배치를 판마다 바꾼다. (모든 PC가 각자 같은 계산을 하므로 위치를 따로 보내지 않음)
-    /// 시드는 호스트가 판을 시작할 때 정해 룸으로 보낸다(<see cref="IRoomInfo.PropLayoutSeed"/>). 계산은 <see cref="PropLayoutPlanner"/>가 한다.
-    /// 1. 크기가 비슷한 사물끼리 자리를 바꾼다.
-    /// 2. 사물마다 조금 옮기고 돌려 본 뒤, 다른 물체와 겹치거나 받침이 없거나 스폰 지점을 막으면 돌리기만, 그것도 안 되면 자리만 바꾼 상태로 둔다.
-    /// 벽 조각으로 변신하는 사물(IsWall)과 너무 커서 변신할 수 없는 사물은 옮기지 않는다.
-    /// 플레이어·전원 장치는 이보다 나중에 스폰되므로 검사에 들어가지 않는다.
-    /// </summary>
+    /// <summary>위치를 따로 보내지 않도록 모든 PC가 같은 시드로 판마다 변신 사물 배치를 바꾼다.</summary>
     public static class PropLayoutShuffler
     {
-        // 겹침 검사 상자를 사방으로 줄이는 여유(m). 받침 면이나 살짝 닿은 이웃은 겹침으로 치지 않는다.
+        // 살짝 닿은 이웃은 겹침으로 치지 않도록 검사 상자를 줄이는 여유(m).
         private const float OverlapMargin = 0.05f;
         // 받침 검사: 바닥 가운데 점 위에서 아래로 쏘는 광선
         private const float SupportProbeHeight = 0.2f;
         private const float SupportProbeDepth = 0.3f;
-        // 스폰 지점(플레이어·전원 장치)에서 사물 가장자리까지 비워 둘 거리(m)와, 다른 층으로 보는 높이 차이(m)
+        // 스폰 지점에서 비워 둘 거리와 다른 층으로 보는 높이 차이(m).
         private const float SpawnClearance = 0.5f;
         private const float SpawnFloorTolerance = 2f;
 
+        // 검사마다 배열을 새로 만들지 않도록 재사용한다.
         private static readonly Collider[] overlapBuffer = new Collider[32];
         private static readonly RaycastHit[] rayBuffer = new RaycastHit[16];
 
         /// <summary>
-        /// 옮길 사물 하나와 원래 상태.
+        /// 실패하면 원래 방향 기준으로 다시 놓아야 해서, 옮길 사물과 원래 상태를 함께 기억한다.
         /// </summary>
         private sealed class MovableProp
         {
@@ -44,9 +38,7 @@ namespace GuardVsMannequin.Map
             public PropLayoutPlanner.Spot spot;
         }
 
-        /// <summary>
-        /// 판 중에 맵 씬이 열리면 배치를 섞는다. 룸 없이 맵 씬만 실행하면 섞지 않는다. (맵 씬 준비 순서는 <see cref="MapPropSetup"/>)
-        /// </summary>
+        /// <summary>맵 씬만 열어 편집·테스트할 때 헷갈리지 않도록 룸이 없으면 섞지 않는다.</summary>
         public static void ShuffleForMatch(Scene scene)
         {
             IRoomInfo room = GameServices.Room;
@@ -56,9 +48,7 @@ namespace GuardVsMannequin.Map
             Shuffle(scene, room.PropLayoutSeed);
         }
 
-        /// <summary>
-        /// 씬의 변신 사물 배치를 시드로 섞는다.
-        /// </summary>
+        /// <summary>떠나지 않은 사물에 걸리지 않도록 먼저 모두 옮긴 뒤 하나씩 흩고, 안 되면 단계적으로 물러난다.</summary>
         private static void Shuffle(Scene scene, int seed)
         {
             List<MovableProp> props = CollectProps(scene);
@@ -70,50 +60,46 @@ namespace GuardVsMannequin.Map
                 GameTuning.PropShuffleSizeTolerance, GameTuning.PropJitterDistance, GameTuning.PropJitterRotation);
             List<Vector3> spawnPositions = CollectSpawnPositions(scene);
 
-            // 1단계: 모두 바뀐 자리로 옮긴다. (흩기 검사가 아직 떠나지 않은 사물에 걸리지 않도록 먼저 끝낸다)
             for (int i = 0; i < props.Count; i++)
                 Place(props[i], spots[plan[i].spot].bottomCenter, 0f);
             Physics.SyncTransforms();
 
-            // 2단계: 조금 옮기고 돌린다. 안 되면 돌리기만, 그것도 안 되면 자리만 바꾼 상태.
-            int moved = 0, scattered = 0;
+            int movedCount = 0, scatteredCount = 0;
             for (int i = 0; i < props.Count; i++)
             {
                 if (plan[i].spot != i)
-                    moved++;
-                Vector3 bottom = spots[plan[i].spot].bottomCenter;
-                if (TryPlace(props[i], bottom + plan[i].jitter, plan[i].yaw, true, spawnPositions)
-                    || TryPlace(props[i], bottom, plan[i].yaw, false, spawnPositions))
+                    movedCount++;
+                Vector3 bottomCenter = spots[plan[i].spot].bottomCenter;
+                if (TryPlace(props[i], bottomCenter + plan[i].jitter, plan[i].yaw, true, spawnPositions)
+                    || TryPlace(props[i], bottomCenter, plan[i].yaw, false, spawnPositions))
                 {
-                    scattered++;
+                    scatteredCount++;
                     continue;
                 }
-                Place(props[i], bottom, 0f);
+                Place(props[i], bottomCenter, 0f);
                 Physics.SyncTransforms();
             }
 
-            Debug.Log($"[PropLayoutShuffler] {scene.name}: 변신 사물 {props.Count}개 중 {moved}개 자리 바꿈, {scattered}개 흩음/돌림 (시드 {seed})");
+            Debug.Log($"[PropLayoutShuffler] {scene.name}: 변신 사물 {props.Count}개 중 {movedCount}개 자리 바꿈, {scatteredCount}개 흩음/돌림 (시드 {seed})");
         }
 
-        /// <summary>
-        /// 옮길 변신 사물을 번호순으로 모은다. 벽 조각·변신 불가 사물·다른 변신 사물 안에 든 사물은 뺀다.
-        /// </summary>
+        /// <summary>모든 PC가 같은 순서로 계산하도록 번호순으로 모으고, 옮기면 맵이 깨지는 사물은 뺀다.</summary>
         private static List<MovableProp> CollectProps(Scene scene)
         {
             var result = new List<MovableProp>();
             IEnumerable<TransformableProp> candidates = scene.GetRootGameObjects()
                 .SelectMany(root => root.GetComponentsInChildren<TransformableProp>())
-                .Where(prop => !prop.IsWall && prop.CanDisguiseAs)
+                .Where(prop => prop.CanDisguiseAs)
                 .Where(prop => prop.transform.parent == null || prop.transform.parent.GetComponentInParent<TransformableProp>() == null)
                 .OrderBy(prop => prop.Index);
 
             foreach (TransformableProp prop in candidates)
             {
-                Renderer[] renderers = prop.GetComponentsInChildren<Renderer>().Where(r => r.enabled && !(r is ParticleSystemRenderer)).ToArray();
+                Renderer[] renderers = prop.GetComponentsInChildren<Renderer>().Where(propRenderer => propRenderer.enabled && !(propRenderer is ParticleSystemRenderer)).ToArray();
                 if (renderers.Length == 0)
                     continue;
-                // 정적 배칭에 묶인 메시는 옮겨도 화면에서 그대로이므로 옮기지 않는다. (맵 최적화가 변신 사물은 배칭에서 뺌)
-                if (renderers.Any(r => r.isPartOfStaticBatch))
+                // 정적 배칭된 메시는 옮겨도 화면에서 그대로이므로 옮기지 않는다.
+                if (renderers.Any(propRenderer => propRenderer.isPartOfStaticBatch))
                 {
                     Debug.LogWarning($"[PropLayoutShuffler] '{prop.name}'이 정적 배칭에 묶여 있어 옮기지 않습니다. 맵 최적화를 다시 실행하세요.", prop);
                     continue;
@@ -135,7 +121,7 @@ namespace GuardVsMannequin.Map
         }
 
         /// <summary>
-        /// 비워 둘 스폰 지점(플레이어 스폰, 전원 장치 자리) 위치를 모은다.
+        /// 플레이어·전원 장치는 섞은 뒤에 스폰되어 겹침 검사에 걸리지 않으므로, 그 자리를 막지 않도록 위치를 따로 모은다.
         /// </summary>
         private static List<Vector3> CollectSpawnPositions(Scene scene)
         {
@@ -149,21 +135,19 @@ namespace GuardVsMannequin.Map
         }
 
         /// <summary>
-        /// 겉모습 바닥 가운데 점이 bottom에 오도록, 원래 방향에서 세로축으로 yaw만큼 돌려 놓는다.
+        /// 사물마다 기준점 위치가 달라서, 겉모습 바닥 가운데 점이 목표에 오도록 기준점 오프셋을 돌려 함께 옮긴다.
         /// </summary>
-        private static void Place(MovableProp movable, Vector3 bottom, float yaw)
+        private static void Place(MovableProp movable, Vector3 bottomCenter, float yaw)
         {
             Quaternion turn = Quaternion.AngleAxis(yaw, Vector3.up);
-            movable.prop.transform.SetPositionAndRotation(bottom + turn * movable.pivotOffset, turn * movable.originalRotation);
+            movable.prop.transform.SetPositionAndRotation(bottomCenter + turn * movable.pivotOffset, turn * movable.originalRotation);
         }
 
-        /// <summary>
-        /// 놓아 보고 쓸 수 있는 자리인지 검사한다. 안 되면 false. (사물은 놓은 상태로 남으므로 호출한 쪽이 다음 후보를 놓는다)
-        /// </summary>
-        /// <param name="needSupport">자리에서 옮겼으면 true. 받침(바닥·탁자 등) 위에 있는지도 확인한다.</param>
-        private static bool TryPlace(MovableProp movable, Vector3 bottom, float yaw, bool needSupport, List<Vector3> spawnPositions)
+        /// <summary>실제 경계로 검사하려면 놓아 봐야 하므로 먼저 놓고 검사한다.</summary>
+        /// <param name="needSupport">자리에서 옮겼으면 받침 밖으로 밀려났을 수 있어서 받침 검사도 한다.</param>
+        private static bool TryPlace(MovableProp movable, Vector3 bottomCenter, float yaw, bool needSupport, List<Vector3> spawnPositions)
         {
-            Place(movable, bottom, yaw);
+            Place(movable, bottomCenter, yaw);
             Physics.SyncTransforms();
 
             Bounds bounds = GetBounds(movable.renderers);
@@ -173,7 +157,7 @@ namespace GuardVsMannequin.Map
         }
 
         /// <summary>
-        /// 겉모습 상자(조금 줄인 것)가 자기 것이 아닌 콜라이더와 겹치지 않는지.
+        /// 받침 면이나 살짝 닿은 이웃까지 겹침으로 치면 거의 모든 자리가 실패하므로 상자를 조금 줄여서 본다.
         /// </summary>
         private static bool IsClear(MovableProp movable, Bounds bounds)
         {
@@ -189,12 +173,12 @@ namespace GuardVsMannequin.Map
         }
 
         /// <summary>
-        /// 바닥 가운데 점 바로 아래에 받쳐 주는 물체가 있는지. (탁자 끝에서 밀려나 허공에 뜨는 것 방지)
+        /// 탁자 끝에서 밀려나 허공에 뜨지 않도록 바닥 가운데 점 바로 아래에 받쳐 주는 물체가 있는지 본다.
         /// </summary>
         private static bool IsSupported(MovableProp movable, Bounds bounds)
         {
-            var origin = new Vector3(bounds.center.x, bounds.min.y + SupportProbeHeight, bounds.center.z);
-            int count = Physics.RaycastNonAlloc(origin, Vector3.down, rayBuffer, SupportProbeHeight + SupportProbeDepth,
+            var probeOrigin = new Vector3(bounds.center.x, bounds.min.y + SupportProbeHeight, bounds.center.z);
+            int count = Physics.RaycastNonAlloc(probeOrigin, Vector3.down, rayBuffer, SupportProbeHeight + SupportProbeDepth,
                 Physics.DefaultRaycastLayers, QueryTriggerInteraction.Ignore);
             for (int i = 0; i < count; i++)
             {
@@ -205,24 +189,24 @@ namespace GuardVsMannequin.Map
         }
 
         /// <summary>
-        /// 같은 층의 스폰 지점이 사물 가장자리에서 일정 거리 밖에 있는지.
+        /// 위·아래층 스폰 지점까지 막는 것으로 보면 다층 맵에서 거의 못 옮기므로, 같은 층의 스폰 지점만 거리로 비교한다.
         /// </summary>
         private static bool IsAwayFromSpawns(Bounds bounds, List<Vector3> spawnPositions)
         {
-            float radius = Mathf.Max(bounds.extents.x, bounds.extents.z) + SpawnClearance;
-            foreach (Vector3 spawn in spawnPositions)
+            float clearRadius = Mathf.Max(bounds.extents.x, bounds.extents.z) + SpawnClearance;
+            foreach (Vector3 spawnPosition in spawnPositions)
             {
-                if (Mathf.Abs(spawn.y - bounds.min.y) > SpawnFloorTolerance)
+                if (Mathf.Abs(spawnPosition.y - bounds.min.y) > SpawnFloorTolerance)
                     continue;
-                var offset = new Vector2(spawn.x - bounds.center.x, spawn.z - bounds.center.z);
-                if (offset.sqrMagnitude < radius * radius)
+                var offset = new Vector2(spawnPosition.x - bounds.center.x, spawnPosition.z - bounds.center.z);
+                if (offset.sqrMagnitude < clearRadius * clearRadius)
                     return false;
             }
             return true;
         }
 
         /// <summary>
-        /// 렌더러들의 겉모습 상자를 합친다.
+        /// 여러 조각으로 된 사물도 하나의 겉모습으로 다루려고 렌더러 경계를 합친다.
         /// </summary>
         private static Bounds GetBounds(Renderer[] renderers)
         {

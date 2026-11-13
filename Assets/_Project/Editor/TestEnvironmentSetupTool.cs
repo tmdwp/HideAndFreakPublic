@@ -35,11 +35,7 @@ using UnityEngine.SceneManagement;
 
 namespace GuardVsMannequin.Editor
 {
-    /// <summary>
-    /// 테스트 환경(머티리얼, 설정/사물 데이터, 프리팹, 테스트 씬)을 메뉴 한 번으로 생성한다.
-    /// 다시 실행하면 프리팹과 씬을 덮어써서 항상 같은 결과를 만든다.
-    /// (게임 설정·문장·크레딧은 Resources 폴더의 텍스트 파일이라 이 도구가 건드리지 않는다)
-    /// </summary>
+    /// <summary>다시 실행해도 항상 같은 결과가 나오도록 테스트 환경을 메뉴 한 번으로 덮어써 만든다.</summary>
     public static class TestEnvironmentSetupTool
     {
         private const string RootFolder = "Assets/_Project";
@@ -59,11 +55,11 @@ namespace GuardVsMannequin.Editor
         internal const string RoomStatePrefabPath = PrefabFolder + "/RoomState.prefab";
         private const string DefaultPrefabObjectsPath = "Assets/DefaultPrefabObjects.asset";
 
-        /// <summary>게임 이름. (창 제목, 빌드 정보)</summary>
+        /// <summary>창 제목·빌드 정보가 같은 이름을 쓰도록 한곳에 둔다.</summary>
         internal const string ProductName = "Hide&Freak";
 
         /// <summary>
-        /// 전체 테스트 환경을 생성한다.
+        /// 새로 받은 프로젝트도 메뉴 한 번으로 플레이할 수 있게 머티리얼·프리팹·씬·빌드 설정을 의존 순서대로 모두 만든다.
         /// </summary>
         [MenuItem(EditorMenus.Root + "테스트 환경 생성")]
         public static void BuildAll()
@@ -77,7 +73,7 @@ namespace GuardVsMannequin.Editor
             Loc.Reload();
             GameSettingDefinitions.ClearCache();
 
-            // 캐릭터 외형(마네킹, 가드, 구울)과 총 모델을 먼저 만든다. (프리팹이 참조)
+            // 프리팹이 참조하므로 캐릭터 외형과 총 모델을 먼저 만든다.
             CharacterAssetBuilder.BuildAll();
 
             Dictionary<string, Material> materials = CreateMaterials();
@@ -90,7 +86,7 @@ namespace GuardVsMannequin.Editor
 
             NoiseLibrary noiseLibrary = CreateNoiseLibrary();
 
-            // 아바타 이동 구현(ECM2)은 별도 어셈블리가 등록한다. 없으면(이동 라이브러리 미설치) 아바타 프리팹을 만들 수 없다.
+            // 이동 구현이 등록되지 않으면 아바타 프리팹을 만들 수 없다.
             if (AvatarMovementRigs.Current == null)
             {
                 Debug.LogError("[TestSetup] 아바타 이동 구현이 없어 프리팹을 만들 수 없습니다. ECM2를 설치하면 GVM_ECM2 기호가 켜지고 이동 어셈블리가 컴파일됩니다.");
@@ -106,7 +102,7 @@ namespace GuardVsMannequin.Editor
             NetworkObject roomStatePrefab = CreateRoomStatePrefab();
             RegisterSpawnablePrefabs(prefabs.guard, prefabs.mannequin, prefabs.generator, roomStatePrefab);
 
-            // 테스트 맵 → 게임 시스템 씬 → 룸 씬 → 로비 씬(시작 씬) 순서로 만든다. 마지막에 로비 씬이 열린 상태로 끝난다.
+            // 마지막에 시작 씬인 로비 씬이 열리도록 이 순서로 만든다.
             CreateTestScene();
             GameSystemsSceneBuilder.Build();
             MenuSceneBuilder.BuildRoomScene(RoomScenePath, AssetDatabase.LoadAssetAtPath<NetworkObject>(RoomStatePrefabPath));
@@ -114,7 +110,7 @@ namespace GuardVsMannequin.Editor
                 AssetDatabase.LoadAssetAtPath<DefaultPrefabObjects>(DefaultPrefabObjectsPath));
 
             RegisterBuildScenes();
-            // 게임 이름(창 제목). 저장 위치(PlayerPrefs, 로그)도 이 이름을 따른다.
+            // 저장 위치(PlayerPrefs, 로그)도 따르는 게임 이름.
             PlayerSettings.productName = ProductName;
             KeepLinearFogShaderVariants();
             SteamBuildProcessor.EnsureRunInBackground();
@@ -123,10 +119,7 @@ namespace GuardVsMannequin.Editor
             Debug.Log("[TestSetup] 테스트 환경 생성 완료. 로비 씬에서 Play 하세요: " + LobbyScenePath);
         }
 
-        /// <summary>
-        /// 룸 상태 프리팹을 만든다. 전역(Global) 네트워크 오브젝트라 씬이 바뀌어도 유지된다.
-        /// (기본 게임 설정은 Resources/Data/default_game_settings.json에서 읽는다)
-        /// </summary>
+        /// <summary>씬이 바뀌어도 참가자·준비 상태가 유지되도록 룸 상태를 전역 네트워크 오브젝트로 만든다.</summary>
         private static NetworkObject CreateRoomStatePrefab()
         {
             var root = new GameObject("RoomState");
@@ -135,15 +128,12 @@ namespace GuardVsMannequin.Editor
             serialized.FindProperty("_isGlobal").boolValue = true;
             serialized.ApplyModifiedPropertiesWithoutUndo();
 
-            // 맵 목록은 실행 중에 등록소(Resources/Data/maps.json + 켜진 모드)에서 읽는다.
+            // 맵 목록은 실행 중에 등록소에서 읽는다.
             root.AddComponent<RoomState>();
             return SavePrefab(root, RoomStatePrefabPath);
         }
 
-        /// <summary>
-        /// 저장된 네트워크 프리팹(가드, 마네킹, 전원 장치)을 불러온다. 하나라도 없으면 false.
-        /// (맵 생성 도구가 "테스트 환경 생성"으로 만든 프리팹을 재사용할 때 사용)
-        /// </summary>
+        /// <summary>프리팹을 다시 만들면 FishNet 해시가 바뀌어 씬 참조가 끊기므로 이미 만든 프리팹을 불러와 재사용한다.</summary>
         internal static bool TryLoadScenePrefabs(out ScenePrefabs prefabs)
         {
             prefabs = new ScenePrefabs
@@ -155,9 +145,7 @@ namespace GuardVsMannequin.Editor
             return prefabs.guard != null && prefabs.mannequin != null && prefabs.generator != null;
         }
 
-        /// <summary>
-        /// 빌드 설정에 로비 → 룸 → 게임 시스템 → 맵 목록의 맵 순서로 씬을 등록한다. (없는 맵 씬은 건너뛴다)
-        /// </summary>
+        /// <summary>시작 씬과 맵 번호가 PC끼리 같도록 정해진 순서로 등록하고, 없는 씬은 빌드 실패를 막으려고 건너뛴다.</summary>
         internal static void RegisterBuildScenes()
         {
             var paths = new List<string> { LobbyScenePath, RoomScenePath };
@@ -174,7 +162,7 @@ namespace GuardVsMannequin.Editor
         #region 에셋
 
         /// <summary>
-        /// 필요한 폴더를 만든다.
+        /// 에셋 저장은 폴더가 없으면 실패하므로 새 프로젝트에서도 동작하도록 먼저 만든다.
         /// </summary>
         private static void EnsureFolders()
         {
@@ -184,7 +172,7 @@ namespace GuardVsMannequin.Editor
         }
 
         /// <summary>
-        /// 테스트용 단색 URP 머티리얼을 만든다.
+        /// 에셋 팩이 없는 환경에서도 역할·사물을 구별할 수 있도록 단색 URP 머티리얼을 만든다.
         /// </summary>
         private static Dictionary<string, Material> CreateMaterials()
         {
@@ -219,12 +207,12 @@ namespace GuardVsMannequin.Editor
             lampOn.globalIlluminationFlags = MaterialGlobalIlluminationFlags.None;
             EditorUtility.SetDirty(lampOn);
 
-            // 외곽선은 머티리얼 대신 PC_Renderer의 OutlineRendererFeature가 그린다. (Phase 7 메뉴로 설치)
+            // 외곽선은 머티리얼 대신 OutlineRendererFeature가 그린다.
             return result;
         }
 
         /// <summary>
-        /// 셰이더와 색 목록으로 머티리얼을 만들거나 갱신한다.
+        /// GUID가 바뀌면 프리팹·씬의 머티리얼 참조가 끊기므로 이미 있으면 다시 만들지 않고 색만 갱신한다.
         /// </summary>
         private static void CreateMaterialSet(Dictionary<string, Color> colors, Shader shader, Dictionary<string, Material> result)
         {
@@ -255,7 +243,7 @@ namespace GuardVsMannequin.Editor
         }
 
         /// <summary>
-        /// 소음 라이브러리를 만든다. 이미 있으면 사용자가 지정한 클립과 값은 유지하고 새 소음 종류만 추가한다.
+        /// 사용자가 넣은 소리 클립을 잃지 않도록 이미 있으면 기존 클립과 값은 유지하고 새 소음 종류만 추가한다.
         /// </summary>
         private static NoiseLibrary CreateNoiseLibrary()
         {
@@ -272,7 +260,7 @@ namespace GuardVsMannequin.Editor
         }
 
         /// <summary>
-        /// 스폰할 프리팹을 FishNet의 DefaultPrefabObjects에 등록한다.
+        /// FishNet은 등록된 프리팹만 네트워크로 스폰할 수 있어 DefaultPrefabObjects에 등록한다.
         /// </summary>
         private static void RegisterSpawnablePrefabs(params NetworkObject[] prefabs)
         {
@@ -292,10 +280,7 @@ namespace GuardVsMannequin.Editor
             EditorUtility.SetDirty(collection);
         }
 
-        /// <summary>
-        /// FishNet 내부의 DefaultPrefabObjects.SetAssetPathHashes(int)를 호출해 모든 프리팹의 해시를 다시 계산한다.
-        /// 공개 API가 없어 리플렉션을 사용하며, 실패하면 FishNet 메뉴를 안내한다.
-        /// </summary>
+        /// <summary>공개 API가 없어 리플렉션으로 FishNet 프리팹 해시를 다시 계산한다.</summary>
         private static void RefreshAssetPathHashes(DefaultPrefabObjects collection)
         {
             MethodInfo method = typeof(DefaultPrefabObjects).GetMethod("SetAssetPathHashes", BindingFlags.Instance | BindingFlags.NonPublic,
@@ -316,9 +301,7 @@ namespace GuardVsMannequin.Editor
 
         #region 프리팹
 
-        /// <summary>
-        /// 1인칭 가드 프리팹을 만든다.
-        /// </summary>
+        /// <summary>가드는 조준이 중요해 1인칭으로 만들고, 코드와 어긋나지 않게 컴포넌트 구성을 코드로 고정한다.</summary>
         private static NetworkObject CreateGuardPrefab(InputActionAsset inputActions, Dictionary<string, Material> materials, NoiseLibrary noiseLibrary)
         {
             GameObject root = CreateAvatarRoot("Guard", AvatarKind.Guard, inputActions, out Component character, out Behaviour[] ownerOnly);
@@ -335,7 +318,7 @@ namespace GuardVsMannequin.Editor
             ConfigureOwnership(root, playerCamera, ownerOnly, new[] { body, visor }, hideSkinForOwner: true);
             AddMoveSpeedController(root, PlayerRole.Guard);
 
-            // 외형: SWAT + 더미 애니메이션 (외형이 없으면 기본 도형)
+            // 외형이 없으면 기본 도형이 보인다.
             AddSkinView(root, PlayerRole.Guard, CharacterAssetBuilder.GuardSkinPath, root.transform, new[] { body, visor });
 
             // 총: 소유자에게는 1인칭 리볼버, 다른 플레이어에게는 손에 든 리볼버
@@ -358,9 +341,7 @@ namespace GuardVsMannequin.Editor
             return SavePrefab(root, GuardPrefabPath);
         }
 
-        /// <summary>
-        /// 카메라 피벗 아래에 손전등용 스포트라이트를 만든다. (기본 꺼짐)
-        /// </summary>
+        /// <summary>손전등이 시선 방향을 비추도록 카메라 피벗 아래에 꺼진 스포트라이트를 둔다.</summary>
         private static Light CreateFlashlight(Transform cameraPivot)
         {
             var flashlightObject = new GameObject("Flashlight");
@@ -379,15 +360,13 @@ namespace GuardVsMannequin.Editor
             return spot;
         }
 
-        /// <summary>
-        /// 3인칭 마네킹 프리팹을 만든다.
-        /// </summary>
+        /// <summary>마네킹은 변신한 자기 모습을 봐야 숨을 자리를 고를 수 있어 3인칭으로 만든다.</summary>
         private static NetworkObject CreateMannequinPrefab(InputActionAsset inputActions, Dictionary<string, Material> materials,
             NoiseLibrary noiseLibrary)
         {
             GameObject root = CreateAvatarRoot("Mannequin", AvatarKind.Mannequin, inputActions, out Component character, out Behaviour[] ownerOnly);
 
-            // 외형은 맵이 바꿀 수 있다. (MapInfo)
+            // 외형은 맵이 바꿀 수 있다.
             Transform visual = CreateMannequinVisual(root.transform, materials, out Renderer body, out Renderer face);
 
             Transform followTarget = new GameObject("FollowTarget").transform;
@@ -399,32 +378,31 @@ namespace GuardVsMannequin.Editor
             ConfigureOwnership(root, playerCamera, ownerOnly, new Renderer[0]);
             AddMoveSpeedController(root, PlayerRole.Mannequin);
 
-            // 변신: 조준 → 변신 상태 → 외형 적용(충돌체 크기는 ICharacterMotor로 바꿈), 상호작용
+            // 변신과 상호작용.
             AvatarMovementRigs.Current.AddAimProvider(root);
             root.AddComponent<MannequinTransformer>();
 
             PropDisguiseView disguiseView = root.AddComponent<PropDisguiseView>();
             SetArray(disguiseView, "bodyRenderers", new Object[] { body, face });
 
-            // 변신 중 총에 맞으면 진짜 사물처럼 날아감 (서버 대리 물체, 멈추면 넘어진 모습 유지)
+            // 변신 중 총에 맞으면 진짜 사물처럼 날아가게 한다.
             root.AddComponent<DisguiseKnockback>();
 
             root.AddComponent<MannequinInteractor>();
             root.AddComponent<InteractAnimationView>();
 
-            // 조준한 변신 가능 사물에 외곽선 표시 (본인 화면만, 그리기는 PC_Renderer의 OutlineRendererFeature)
+            // 조준한 변신 가능 사물을 본인 화면에만 외곽선으로 표시한다.
             root.AddComponent<PropHighlighter>();
 
             // 수류탄 효과: 외곽선 표시·감속 동기화, 가드 화면의 벽 너머 외곽선
             AddGrenadeTargetComponents(root);
 
-            // Phase 2: 소음(탐지/변신 중 주기 소음), 벽타기, 감정 표현
+            // 소음, 벽타기, 감정 표현.
             AddNoiseEmitter(root, noiseLibrary);
-            root.AddComponent<DisguiseNoiseEmitter>();
             AvatarMovementRigs.Current.AddMannequinAbilities(root);
             AddEmotes(root);
 
-            // Phase 3: 사냥 시간 모드(1인칭, 체력 배율, 속도), 근접 공격
+            // 사냥 시간 모드와 근접 공격.
             MannequinHuntingMode huntingMode = root.AddComponent<MannequinHuntingMode>();
             SetArray(huntingMode, "bodyRenderers", new Object[] { body, face });
 
@@ -433,14 +411,14 @@ namespace GuardVsMannequin.Editor
             SetField(huntVision, "visionLight", CreateHuntVisionLight(followTarget));
             root.AddComponent<MannequinAttackTool>();
 
-            // Phase 4: 시선 동기화와 관전 시점 (상하 시선을 적용할 피벗은 없음)
+            // 시선 동기화와 관전 시점.
             AddViewSync(root, null, followTarget, isThirdPerson: true);
 
             return SavePrefab(root, MannequinPrefabPath);
         }
 
         /// <summary>
-        /// 게임 설정의 이동 속도를 적용하는 컴포넌트를 역할과 함께 추가한다.
+        /// 역할마다 이동 속도 설정 항목이 달라서 어느 항목을 읽을지 알 수 있게 역할을 함께 지정한다.
         /// </summary>
         private static void AddMoveSpeedController(GameObject root, PlayerRole role)
         {
@@ -449,15 +427,15 @@ namespace GuardVsMannequin.Editor
             serialized.FindProperty("role").enumValueIndex = (int)role;
             serialized.ApplyModifiedPropertiesWithoutUndo();
 
-            // 소유자 권한 이동을 서버에서 검증한다. (스피드핵, 순간이동, 시작 준비 중 이동 방지)
+            // 스피드핵·순간이동을 막도록 소유자 권한 이동을 서버에서 검증한다.
             root.AddComponent<MovementValidator>();
         }
 
         /// <summary>
-        /// 시선 동기화(PlayerViewSync)와 관전 시점(SpectatorViewPoint)을 추가한다.
+        /// 다른 플레이어가 어디를 보는지 고개 방향으로 보여 주고, 죽은 사람이 이 아바타의 시야로 관전할 수 있도록 시선 동기화와 관전 시점을 붙인다.
         /// </summary>
         /// <param name="root">아바타 루트.</param>
-        /// <param name="pitchPivot">원격 피어에서 상하 시선을 적용할 피벗. (가드의 카메라 피벗, 없으면 null)</param>
+        /// <param name="pitchPivot">원격 피어에서 상하 시선을 적용할 피벗(없으면 null).</param>
         /// <param name="eyePoint">관전 카메라의 눈 위치.</param>
         /// <param name="isThirdPerson">평소 3인칭으로 보는 역할인지 여부.</param>
         private static void AddViewSync(GameObject root, Transform pitchPivot, Transform eyePoint, bool isThirdPerson)
@@ -472,9 +450,7 @@ namespace GuardVsMannequin.Editor
             serialized.ApplyModifiedPropertiesWithoutUndo();
         }
 
-        /// <summary>
-        /// 사냥 시간 마네킹의 개인 조명을 만든다. 그림자 없이 주변만 은은하게 비춘다. (기본 꺼짐)
-        /// </summary>
+        /// <summary>사냥 시간에 구울이 길을 찾도록 가드에게 위치를 알리지 않는 본인 전용 조명을 둔다.</summary>
         private static Light CreateHuntVisionLight(Transform followTarget)
         {
             var lightObject = new GameObject("HuntVisionLight");
@@ -490,9 +466,7 @@ namespace GuardVsMannequin.Editor
             return point;
         }
 
-        /// <summary>
-        /// 마네킹 외형(본체 + 얼굴 표시)을 감정 표현용 컨테이너 아래에 만든다.
-        /// </summary>
+        /// <summary>외형 에셋이 없어도 앞뒤를 알 수 있게 얼굴 표시가 있는 기본 도형 외형을 만든다.</summary>
         private static Transform CreateMannequinVisual(Transform parent, Dictionary<string, Material> materials, out Renderer body, out Renderer face)
         {
             Transform visual = new GameObject("Visual").transform;
@@ -501,14 +475,12 @@ namespace GuardVsMannequin.Editor
             body = CreateVisual(visual, PrimitiveType.Capsule, "Body", new Vector3(0f, 0.9f, 0f), new Vector3(0.8f, 0.9f, 0.8f), materials["Mannequin"]);
             face = CreateVisual(visual, PrimitiveType.Cube, "FaceMarker", new Vector3(0f, 1.5f, 0.3f), new Vector3(0.3f, 0.1f, 0.2f), materials["Visor"]);
 
-            // 기본 외형은 더미. 맵(MapInfo)이 마네킹 외형을 지정하면 실행 시 그것으로 바뀐다.
+            // 맵이 마네킹 외형을 지정하면 실행 시 그것으로 바뀐다.
             AddSkinView(parent.gameObject, PlayerRole.Mannequin, CharacterAssetBuilder.DummySkinPath, visual, new[] { body, face });
             return visual;
         }
 
-        /// <summary>
-        /// 캐릭터 외형 컴포넌트를 추가한다. 외형 에셋이 없으면 기본 도형이 그대로 보인다.
-        /// </summary>
+        /// <summary>맵마다 외형을 바꿀 수 있도록 외형 컴포넌트를 붙이고 기본 도형을 대체 외형으로 연결한다.</summary>
         private static void AddSkinView(GameObject root, PlayerRole role, string defaultSkinPath, Transform visualRoot, Renderer[] fallback)
         {
             CharacterSkinView skinView = root.AddComponent<CharacterSkinView>();
@@ -518,7 +490,7 @@ namespace GuardVsMannequin.Editor
 
             SetField(skinView, "defaultSkin", AssetDatabase.LoadAssetAtPath<CharacterSkin>(defaultSkinPath));
 
-            // 마네킹은 사냥 시간에 Ghoul로 바뀐다. (맵이 사냥 외형을 지정하면 그것을 우선)
+            // 맵이 사냥 외형을 지정하지 않으면 구울로 바뀐다.
             if (role == PlayerRole.Mannequin)
                 SetField(skinView, "huntSkin", AssetDatabase.LoadAssetAtPath<CharacterSkin>(CharacterAssetBuilder.GhoulSkinPath));
             SetField(skinView, "visualRoot", visualRoot);
@@ -529,9 +501,7 @@ namespace GuardVsMannequin.Editor
                 root.AddComponent<HitReactionAnimator>();
         }
 
-        /// <summary>
-        /// 가드 총 외형을 추가한다. 1인칭 총은 카메라 피벗 아래 오른쪽에 둔다.
-        /// </summary>
+        /// <summary>1인칭 총이 시야를 가리지 않도록 카메라 피벗 오른쪽에 두고, 다른 사람에게는 3인칭 총이 보이게 한다.</summary>
         private static GuardWeaponView AddWeaponView(GameObject root, Transform cameraPivot)
         {
             GameObject revolver = AssetDatabase.LoadAssetAtPath<GameObject>(CharacterAssetBuilder.WeaponViewPath);
@@ -554,9 +524,7 @@ namespace GuardVsMannequin.Editor
             return weaponView;
         }
 
-        /// <summary>
-        /// 감정 표현 뷰와 네트워크 컨트롤러를 추가한다. (외형 애니메이터에 감정 표현이 없으면 아무 동작도 하지 않는다)
-        /// </summary>
+        /// <summary>감정 표현을 모두가 보도록 네트워크 컨트롤러와 재생 뷰를 나눠 붙인다.</summary>
         private static void AddEmotes(GameObject root)
         {
             root.AddComponent<AnimatorEmoteView>();
@@ -564,7 +532,7 @@ namespace GuardVsMannequin.Editor
         }
 
         /// <summary>
-        /// 소음 재생 컴포넌트를 추가하고 라이브러리를 연결한다.
+        /// 발소리·변신 소리 같은 소음이 다른 플레이어에게도 들려야 숨바꼭질이 되므로 소음 재생 컴포넌트를 붙이고 라이브러리를 연결한다.
         /// </summary>
         private static void AddNoiseEmitter(GameObject root, NoiseLibrary noiseLibrary)
         {
@@ -573,7 +541,7 @@ namespace GuardVsMannequin.Editor
         }
 
         /// <summary>
-        /// 가드에 수류탄 도구와 연출을 붙인다.
+        /// 숨은 마네킹을 찾아낼 수단이 총만으로는 부족해 가드에 수류탄 도구와 연출을 붙인다.
         /// </summary>
         private static void AddGrenade(GameObject root)
         {
@@ -589,7 +557,7 @@ namespace GuardVsMannequin.Editor
         }
 
         /// <summary>
-        /// 마네킹에 수류탄 효과(상태 동기화, 상대 화면 외곽선)를 붙인다.
+        /// 수류탄에 맞은 사실이 모든 PC에 같게 보이도록 상태 동기화를 붙이고, 가드에게 위치가 드러나도록 외곽선 표시를 붙인다.
         /// </summary>
         private static void AddGrenadeTargetComponents(GameObject root)
         {
@@ -599,14 +567,10 @@ namespace GuardVsMannequin.Editor
                 root.AddComponent<RevealOutlineView>();
         }
 
-        /// <summary>
-        /// 모든 아바타에 공통인 네트워크/이동/입력/체력 컴포넌트를 가진 루트를 만든다.
-        /// 입력과 드라이버는 소유자에게만 켜지도록 비활성 상태로 둔다.
-        /// 캐릭터·이동 드라이버는 이동 구현(<see cref="AvatarMovementRigs"/>)이 붙인다. 드라이버가 캐릭터를 요구하므로 캐릭터를 먼저 붙인다.
-        /// </summary>
-        /// <param name="kind">아바타 종류. (이동 구현이 역할별 캐릭터를 고름)</param>
-        /// <param name="character">붙인 캐릭터 컴포넌트. (카메라 피벗 등 역할별 참조를 연결할 때 사용)</param>
-        /// <param name="ownerOnly">로컬 소유자에게만 켤 컴포넌트. (입력, 이동 드라이버, 달리기 — 모두 꺼진 채로 만든다)</param>
+        /// <summary>모든 아바타에 공통인 컴포넌트를 가진 루트를 만들고, 입력·드라이버는 소유자에게만 켜지도록 꺼 둔다.</summary>
+        /// <param name="kind">아바타 종류.</param>
+        /// <param name="character">역할별 참조를 연결할 때 쓰는 붙인 캐릭터 컴포넌트.</param>
+        /// <param name="ownerOnly">로컬 소유자에게만 켤 컴포넌트(꺼진 채로 만듦).</param>
         private static GameObject CreateAvatarRoot(string name, AvatarKind kind, InputActionAsset inputActions, out Component character,
             out Behaviour[] ownerOnly)
         {
@@ -615,7 +579,8 @@ namespace GuardVsMannequin.Editor
             character = rig.AddCharacter(root, kind);
 
             root.AddComponent<NetworkObject>();
-            root.AddComponent<NetworkTransform>();
+            // 아바타 루트 크기는 바뀌지 않아 크기까지 동기화하면 변경 검사와 전송만 늘어난다.
+            root.AddComponent<NetworkTransform>().SetSynchronizeScale(false);
             root.AddComponent<PlayerIdentity>();
             root.AddComponent<PlayerHealth>();
 
@@ -624,7 +589,7 @@ namespace GuardVsMannequin.Editor
 
             Behaviour driver = rig.AddMovementDriver(root);
 
-            // 달리기(Shift): 스태미나를 쓰며 빨리 달린다. 속도 배율은 MoveSpeedController가 적용한다.
+            // 달리기 속도 배율은 MoveSpeedController가 적용한다.
             SprintAbility sprint = root.AddComponent<SprintAbility>();
 
             ownerOnly = new Behaviour[] { inputReader, driver, sprint };
@@ -636,9 +601,7 @@ namespace GuardVsMannequin.Editor
             return root;
         }
 
-        /// <summary>
-        /// 소유권 설정 컴포넌트를 추가하고 참조를 연결한다. (캐릭터 이동 구현은 실행 중 ICharacterMotor로 찾는다)
-        /// </summary>
+        /// <summary>내 아바타에서만 카메라·입력이 켜지도록 소유권 설정 컴포넌트에 참조를 연결한다.</summary>
         private static void ConfigureOwnership(GameObject root, Camera playerCamera, Behaviour[] ownerOnly, Renderer[] hiddenForOwner,
             bool hideSkinForOwner = false)
         {
@@ -653,10 +616,7 @@ namespace GuardVsMannequin.Editor
             serialized.ApplyModifiedPropertiesWithoutUndo();
         }
 
-        /// <summary>
-        /// 사격 연출(총알·명중·총구 화염 이펙트)을 만든다. 이펙트가 없으면 선(LineRenderer)과 탄착 표시로 대신한다.
-        /// 연출은 총 외형의 총구에서 시작하고, 총 외형이 없으면 카메라 피벗 오른쪽 아래의 예비 총구를 쓴다.
-        /// </summary>
+        /// <summary>이펙트가 없어도 사격이 보이도록 선과 탄착 표시를 대체 연출로 둔다.</summary>
         private static ShotTracerView CreateTracer(Transform parent, Transform cameraPivot, Material material, GuardWeaponView weaponView)
         {
             var tracerObject = new GameObject("ShotTracer");
@@ -687,9 +647,7 @@ namespace GuardVsMannequin.Editor
             return view;
         }
 
-        /// <summary>
-        /// 전원 장치 프리팹을 만든다. (충돌체, 본체, 마네킹 전용 진행도 바)
-        /// </summary>
+        /// <summary>전원 장치는 판마다 위치가 바뀌어 서버가 스폰할 네트워크 프리팹으로 만든다.</summary>
         private static NetworkObject CreateGeneratorPrefab(Dictionary<string, Material> materials, NoiseLibrary noiseLibrary)
         {
             var root = new GameObject("Generator");
@@ -702,7 +660,7 @@ namespace GuardVsMannequin.Editor
             root.AddComponent<Generator>();
             AddNoiseEmitter(root, noiseLibrary);
 
-            // 가드 스폰 후보(NavMesh 무작위 지점)가 전원 장치 안에 생기지 않도록 NavMesh에 구멍을 낸다.
+            // 가드 스폰 후보가 전원 장치 안에 생기지 않도록 NavMesh에 구멍을 낸다.
             NavMeshObstacle obstacle = root.AddComponent<NavMeshObstacle>();
             obstacle.shape = NavMeshObstacleShape.Box;
             obstacle.center = box.center;
@@ -734,7 +692,7 @@ namespace GuardVsMannequin.Editor
         }
 
         /// <summary>
-        /// 충돌체가 없는 표시용 도형을 만든다.
+        /// 아바타 외형이 캐릭터 캡슐과 따로 충돌하면 이동이 걸리므로 표시용 도형에서는 충돌체를 지운다.
         /// </summary>
         internal static Renderer CreateVisual(Transform parent, PrimitiveType type, string name, Vector3 localPosition, Vector3 localScale, Material material)
         {
@@ -751,7 +709,7 @@ namespace GuardVsMannequin.Editor
         }
 
         /// <summary>
-        /// 소유자에게만 켜질 플레이어 카메라를 만든다. (기본 비활성)
+        /// 모든 아바타의 카메라가 켜지면 화면이 다른 사람 시점으로 바뀌므로 꺼 둔 채 만들고 소유자에게만 켠다.
         /// </summary>
         private static Camera CreatePlayerCamera(Transform parent, Vector3 localPosition)
         {
@@ -770,7 +728,7 @@ namespace GuardVsMannequin.Editor
         }
 
         /// <summary>
-        /// 씬의 임시 오브젝트를 프리팹으로 저장하고 삭제한다.
+        /// 프리팹은 씬에서 조립해야 저장할 수 있어 임시로 만든 뒤, 열린 씬이 더러워지지 않도록 저장 후 지운다.
         /// </summary>
         private static NetworkObject SavePrefab(GameObject root, string path)
         {
@@ -783,20 +741,13 @@ namespace GuardVsMannequin.Editor
 
         #region 씬
 
-        /// <summary>
-        /// 테스트 씬(지하 연구소 맵)을 새로 만들어 저장한다. 게임(빌드 설정·맵 목록)에는 넣지 않으며, 모드 SDK 시험용 원본으로 쓴다.
-        /// 맵 구성은 <see cref="UndergroundLabBuilder"/>가 맡는다. (메뉴 "맵 생성/지하 연구소"로 맵만 다시 만들 수 있다)
-        /// </summary>
+        /// <summary>모드 SDK 시험용 원본으로 쓰도록 게임에는 넣지 않는 테스트 씬을 만든다.</summary>
         private static void CreateTestScene()
         {
             UndergroundLabBuilder.BuildScene(ScenePath, capturePreview: false);
         }
 
-        /// <summary>
-        /// 씬의 NetworkObject에 FishNet 씬 ID를 강제로 생성한다. (씬 ID가 0이면 서버가 씬 오브젝트를 스폰하지 않는다)
-        /// FishNet 내부의 NetworkObject.CreateSceneId(Scene, bool, out int)를 호출한다.
-        /// 공개 API가 없어 리플렉션을 사용하며, 실패하면 FishNet 메뉴를 안내한다.
-        /// </summary>
+        /// <summary>씬 ID가 0이면 서버가 씬 오브젝트를 스폰하지 않으므로 리플렉션으로 FishNet 씬 ID를 생성한다.</summary>
         internal static void GenerateNetworkSceneIds(Scene scene)
         {
             MethodInfo method = typeof(NetworkObject).GetMethod("CreateSceneId", BindingFlags.Static | BindingFlags.NonPublic,
@@ -814,10 +765,7 @@ namespace GuardVsMannequin.Editor
             Debug.Log($"[TestSetup] 네트워크 씬 ID {(int)args[2]}개 생성: {scene.path}");
         }
 
-        /// <summary>
-        /// 아바타가 없을 때 쓰는 씬 카메라를 만든다.
-        /// 대기 중에는 맵을 내려다보고, 사망/미참가 상태에서는 생존자의 시야로 관전한다.
-        /// </summary>
+        /// <summary>아바타가 없으면 화면이 검게 나오므로 대기·관전에 쓸 씬 카메라를 만든다.</summary>
         internal static SpectatorController CreateSceneCamera()
         {
             var cameraObject = new GameObject("SceneCamera");
@@ -846,9 +794,7 @@ namespace GuardVsMannequin.Editor
             public MatchResult matchResult;
         }
 
-        /// <summary>
-        /// 게임 진행에 필요한 서버 시스템을 가진 씬 네트워크 오브젝트를 만든다.
-        /// </summary>
+        /// <summary>판 진행 상태가 모든 PC에 같도록 서버 시스템들을 씬 네트워크 오브젝트 하나에 모은다.</summary>
         internal static GameSystemsRefs CreateGameSystems(ScenePrefabs prefabs)
         {
             var systems = new GameObject("GameSystems");
@@ -863,7 +809,7 @@ namespace GuardVsMannequin.Editor
             MatchResult matchResult = systems.AddComponent<MatchResult>();
             MatchRules matchRules = systems.AddComponent<MatchRules>();
             MatchSessionBridge sessionBridge = systems.AddComponent<MatchSessionBridge>();
-            // 총에 맞은 변신 사물 물리 진행·동기화 (참조 없음, GameServices로 등록)
+            // 총에 맞은 변신 사물 물리 동기화.
             systems.AddComponent<PropPhysicsSync>();
             SetField(sessionBridge, "stateMachine", stateMachine);
 
@@ -893,13 +839,10 @@ namespace GuardVsMannequin.Editor
             };
         }
 
-        /// <summary>
-        /// 게임 HUD와 저체력 효과 볼륨을 만든다. (접속은 로비/룸 씬에서 처리하므로 게임 씬에는 NetworkManager가 없다)
-        /// 씬 네트워크 오브젝트는 클라이언트에서 스폰 전까지 비활성이므로 별도 오브젝트에 둔다.
-        /// </summary>
+        /// <summary>씬 네트워크 오브젝트는 스폰 전까지 꺼져 있으므로 HUD와 저체력 효과를 별도 오브젝트에 둔다.</summary>
         internal static void CreateUi(GameSystemsRefs systems, SpectatorController spectator)
         {
-            // uGUI HUD와 ESC 메뉴: 프리팹(Prefabs/UI/HudCanvas)을 쓰고, 없으면 기본 모양으로 만들어 저장한다.
+            // HUD 프리팹이 없으면 기본 모양으로 만들어 저장한다.
             EditorUiFactory.CreateEventSystem();
             GameObject prefab = UiPrefabLibrary.GetOrBuildRoot(UiPrefabLibrary.HudCanvasPath, BuildHudCanvas);
             GameHud gameHud = UiPrefabLibrary.Instantiate(prefab).GetComponent<GameHud>();
@@ -915,9 +858,7 @@ namespace GuardVsMannequin.Editor
             new GameObject("LowHealthVolume").AddComponent<LowHealthVignette>();
         }
 
-        /// <summary>
-        /// 게임 HUD 캔버스의 기본 모양(HUD + ESC 메뉴, 닫으면 커서를 다시 잠금)을 만든다.
-        /// </summary>
+        /// <summary>HUD 프리팹이 없을 때 쓸 기본 모양을 만들고, 메뉴를 닫으면 바로 조작하도록 커서를 다시 잠근다.</summary>
         private static GameObject BuildHudCanvas()
         {
             Canvas canvas = EditorUiFactory.CreateCanvas("HudCanvas");
@@ -928,7 +869,7 @@ namespace GuardVsMannequin.Editor
         }
 
         /// <summary>
-        /// 충돌체가 있는 정적 블록을 만든다.
+        /// 바닥·벽처럼 걸어 다니는 블록은 충돌체가 필요하고, 오클루전·NavMesh 굽기에 쓰이도록 정적으로 둔다.
         /// </summary>
         internal static GameObject CreateBlock(Transform parent, string name, Vector3 position, Vector3 scale, Material material)
         {
@@ -942,9 +883,7 @@ namespace GuardVsMannequin.Editor
             return block;
         }
 
-        /// <summary>
-        /// 역할이 지정된 스폰 지점을 만든다.
-        /// </summary>
+        /// <summary>맵 도구들이 같은 스폰 지점을 만들도록 생성을 한곳에 둔다.</summary>
         internal static void CreateSpawnPoint(Transform parent, PlayerRole role, Vector3 position, Quaternion rotation)
         {
             var pointObject = new GameObject($"SpawnPoint_{role}");
@@ -957,11 +896,7 @@ namespace GuardVsMannequin.Editor
             serialized.ApplyModifiedPropertiesWithoutUndo();
         }
 
-        /// <summary>
-        /// 빌드에 선형 안개 셰이더 변형이 포함되도록 Graphics 설정의 안개 스트리핑을 Custom(Linear 유지)으로 바꾼다.
-        /// 기본값(Automatic)은 씬에서 안개를 쓰지 않으면 빌드에서 안개 셰이더를 제거해,
-        /// 런타임에 켜는 사냥 시간 시야 안개가 빌드에서만 동작하지 않는다.
-        /// </summary>
+        /// <summary>사냥 시간 안개가 빌드에서도 동작하도록 선형 안개 셰이더 변형을 빌드에 남긴다.</summary>
         private static void KeepLinearFogShaderVariants()
         {
             Object graphicsSettings = AssetDatabase.LoadAllAssetsAtPath("ProjectSettings/GraphicsSettings.asset").FirstOrDefault();
@@ -978,7 +913,7 @@ namespace GuardVsMannequin.Editor
         }
 
         /// <summary>
-        /// 빌드 설정의 씬 순서를 정한다. (로비 → 룸 → 게임)
+        /// 빌드 인덱스 0이 시작 씬이 되므로 로비 → 룸 → 게임 순서가 지켜지도록 받은 순서 그대로 빌드 설정을 덮어쓴다.
         /// </summary>
         internal static void SetBuildScenes(params string[] orderedPaths)
         {
@@ -994,7 +929,7 @@ namespace GuardVsMannequin.Editor
         #region SerializedObject 헬퍼
 
         /// <summary>
-        /// private 직렬화 필드에 오브젝트 참조를 지정한다.
+        /// 인스펙터 연결을 코드로 하려면 private 직렬화 필드를 바꿔야 하는데 공개 setter를 만들면 캡슐화가 깨지므로 SerializedObject로 지정한다.
         /// </summary>
         internal static void SetField(Object target, string fieldName, Object value)
         {
@@ -1014,7 +949,7 @@ namespace GuardVsMannequin.Editor
         }
 
         /// <summary>
-        /// private 직렬화 배열 필드에 오브젝트 참조 목록을 지정한다.
+        /// 공개 setter 없이 private 직렬화 배열을 코드로 채우려고 SerializedObject로 크기를 맞춘 뒤 지정한다.
         /// </summary>
         internal static void SetArray(Object target, string fieldName, Object[] values)
         {
@@ -1027,7 +962,7 @@ namespace GuardVsMannequin.Editor
         }
 
         /// <summary>
-        /// PlayerSpawner의 역할별 아바타 프리팹 목록(rolePrefabs)을 채운다.
+        /// 역할을 추가해도 스포너 코드를 고치지 않도록 역할 → 프리팹 대응을 직렬화 목록(rolePrefabs)으로 채운다.
         /// </summary>
         internal static void SetRolePrefabs(PlayerSpawner spawner, params (PlayerRole role, NetworkObject prefab)[] entries)
         {

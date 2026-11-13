@@ -3,10 +3,7 @@ using UnityEngine.UI;
 
 namespace GuardVsMannequin.Localization
 {
-    /// <summary>
-    /// 고정 문구(제목, 버튼 이름 등)를 현재 언어로 표시한다. 언어가 바뀌면 바로 다시 표시한다.
-    /// 상황에 따라 바뀌는 문구는 각 화면 코드가 <see cref="Loc"/>로 직접 채운다.
-    /// </summary>
+    /// <summary>고정 문구가 언어를 바꾸면 바로 다시 표시되도록 현재 언어로 채운다.</summary>
     [RequireComponent(typeof(Text))]
     public class LocalizedText : MonoBehaviour
     {
@@ -15,11 +12,11 @@ namespace GuardVsMannequin.Localization
 
         private Text text;
 
-        /// <summary>표시할 문장의 키.</summary>
+        /// <summary>에디터 도구가 빠진 키를 검사할 수 있도록 노출한다.</summary>
         public string Key => key;
 
         /// <summary>
-        /// 켜질 때 현재 언어로 표시하고 언어 변경을 구독한다.
+        /// 꺼져 있는 동안 언어가 바뀌었을 수 있어서, 켜질 때마다 다시 표시한 뒤 언어 변경을 듣는다.
         /// </summary>
         private void OnEnable()
         {
@@ -29,7 +26,7 @@ namespace GuardVsMannequin.Localization
         }
 
         /// <summary>
-        /// 언어 변경 구독을 해제한다.
+        /// 꺼진 UI까지 갱신하면 낭비이고 파괴된 뒤 불리면 예외가 나므로 끊는다.
         /// </summary>
         private void OnDisable()
         {
@@ -37,7 +34,7 @@ namespace GuardVsMannequin.Localization
         }
 
         /// <summary>
-        /// 현재 언어의 문장으로 바꾼다.
+        /// 언어 변경 이벤트와 처음 표시가 같은 경로를 쓰도록 한곳에 둔다.
         /// </summary>
         private void Refresh()
         {

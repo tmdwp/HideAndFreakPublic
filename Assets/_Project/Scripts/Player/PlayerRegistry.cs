@@ -2,14 +2,11 @@ using System.Collections.Generic;
 using FishNet.Object;
 using FishNet.Object.Synchronizing;
 using GuardVsMannequin.Core;
+using GuardVsMannequin.Network;
 
 namespace GuardVsMannequin.Player
 {
-    /// <summary>
-    /// 스폰된(= 살아 있는) 플레이어 아바타를 추적하고, 역할별 생존 인원과 이번 판 마네킹 참가 인원을 동기화한다.
-    /// 사망 시 아바타가 제거되므로 "스폰 중"과 "생존"은 같은 의미다.
-    /// 판 중간 입장은 막혀 있으므로, 살아 있는 아바타가 하나도 없을 때 스폰되는 첫 아바타를 새 판의 시작으로 본다.
-    /// </summary>
+    /// <summary>승패를 판정하도록 살아 있는 아바타를 추적해 역할별 생존 인원과 참가 인원을 동기화한다.</summary>
     public class PlayerRegistry : NetworkBehaviour
     {
         private readonly SyncVar<int> aliveGuardCount = new();
@@ -17,58 +14,62 @@ namespace GuardVsMannequin.Player
         private readonly SyncVar<int> matchMannequinCount = new();
 
         private readonly HashSet<PlayerIdentity> alivePlayers = new();
+        private RoomMembership membership;
 
-        /// <summary>생존 중인 가드 수.</summary>
+        /// <summary>잠깐 끊긴 것만으로 판이 끝나지 않도록 돌아올 사람까지 센 가드 생존 수.</summary>
         public int AliveGuardCount => aliveGuardCount.Value;
 
-        /// <summary>생존 중인 마네킹 수.</summary>
+        /// <summary>잠깐 끊긴 것만으로 판이 끝나지 않도록 돌아올 사람까지 센 마네킹 생존 수.</summary>
         public int AliveMannequinCount => aliveMannequinCount.Value;
 
-        /// <summary>이번 판에 참가한 마네킹 수. (사망·접속 종료 포함)</summary>
+        /// <summary>목표 수를 인원에 맞추는 데 쓰므로 사망·접속 종료한 사람도 센다.</summary>
         public int MatchMannequinCount => matchMannequinCount.Value;
 
-        /// <summary>생존 중인 아바타 목록. (서버 전용)</summary>
+        /// <summary>서버 전용.</summary>
         public IReadOnlyCollection<PlayerIdentity> AlivePlayers => alivePlayers;
 
         /// <summary>
-        /// 서버에서 아바타 스폰/제거 이벤트를 구독한다.
+        /// 생존 인원은 서버만 계산하므로 서버에서만 스폰·제거와 유예 인원 변화를 듣는다.
         /// </summary>
         public override void OnStartServer()
         {
             base.OnStartServer();
             PlayerIdentity.ServerSpawned += OnAvatarSpawned;
             PlayerIdentity.ServerDespawned += OnAvatarDespawned;
+            membership = SessionServices.Session?.Membership;
+            if (membership != null)
+                membership.PendingChanged += Recount;
         }
 
         /// <summary>
-        /// 이벤트 구독을 해제하고 목록을 비운다.
+        /// 정적 이벤트라 해제하지 않으면 다음 씬에서도 불리므로 끊고, 지난 판 아바타 목록도 비운다.
         /// </summary>
         public override void OnStopServer()
         {
             base.OnStopServer();
             PlayerIdentity.ServerSpawned -= OnAvatarSpawned;
             PlayerIdentity.ServerDespawned -= OnAvatarDespawned;
+            if (membership != null)
+                membership.PendingChanged -= Recount;
+            membership = null;
             alivePlayers.Clear();
         }
 
-        /// <summary>
-        /// 스폰된 아바타를 등록하고 이번 판 참가 인원에 더한다.
-        /// </summary>
+        /// <summary>판 시작 신호가 따로 없어 살아 있는 아바타가 없을 때의 첫 스폰으로 새 판을 알아챈다.</summary>
         private void OnAvatarSpawned(PlayerIdentity identity)
         {
-            // 이전 판 아바타가 모두 제거된 뒤의 첫 스폰 = 새 판
-            if (alivePlayers.Count == 0)
+            if (alivePlayers.Count == 0 && !identity.IsRejoin)
                 matchMannequinCount.Value = 0;
 
             if (!alivePlayers.Add(identity))
                 return;
 
-            if (identity.Role == PlayerRole.Mannequin)
+            if (identity.Role == PlayerRole.Mannequin && !identity.IsRejoin)
                 matchMannequinCount.Value++;
             Recount();
         }
 
-        /// <summary>제거된 아바타를 해제한다.</summary>
+        /// <summary>목록에 없던 아바타면 다시 셀 필요가 없으므로, 실제로 뺐을 때만 다시 센다.</summary>
         private void OnAvatarDespawned(PlayerIdentity identity)
         {
             if (alivePlayers.Remove(identity))
@@ -76,22 +77,22 @@ namespace GuardVsMannequin.Player
         }
 
         /// <summary>
-        /// 역할별 생존 인원을 다시 계산해 동기화한다.
+        /// 증감으로 관리하면 유예 인원과 겹칠 때 어긋나기 쉬워서, 바뀔 때마다 처음부터 다시 센다.
         /// </summary>
         private void Recount()
         {
-            int guards = 0;
-            int mannequins = 0;
+            int guardCount = 0;
+            int mannequinCount = 0;
             foreach (PlayerIdentity identity in alivePlayers)
             {
                 if (identity.Role == PlayerRole.Guard)
-                    guards++;
+                    guardCount++;
                 else if (identity.Role == PlayerRole.Mannequin)
-                    mannequins++;
+                    mannequinCount++;
             }
 
-            aliveGuardCount.Value = guards;
-            aliveMannequinCount.Value = mannequins;
+            aliveGuardCount.Value = guardCount + (membership?.CountPendingAlive(PlayerRole.Guard) ?? 0);
+            aliveMannequinCount.Value = mannequinCount + (membership?.CountPendingAlive(PlayerRole.Mannequin) ?? 0);
         }
     }
 }

@@ -4,31 +4,23 @@ using UnityEngine;
 
 namespace GuardVsMannequin.Core
 {
-    /// <summary>
-    /// 사람이 편집하는 텍스트 데이터 파일(문장, 크레딧, 게임 설정)을 읽는다.
-    /// 우선순위: ① 빌드 폴더의 외부 파일(StreamingAssets/GameData) → ② 게임에 내장된 원본(Resources) → ③ 호출자의 코드 기본값.
-    /// 파일이 없거나, 인코딩이 깨졌거나, 호출자의 해석에 실패하면 다음 순서로 넘어간다.
-    /// 원본은 Assets/_Project/Resources 아래에 두고, 빌드 시 에디터 스크립트가 외부 폴더로 복사한다.
-    /// </summary>
+    /// <summary>빌드 후에도 문장·설정을 고칠 수 있도록 외부 파일 → 내장 원본 → 코드 기본값 순으로 읽는다.</summary>
     public static class DataFiles
     {
-        /// <summary>외부 데이터 폴더 이름. (StreamingAssets 아래)</summary>
+        /// <summary>StreamingAssets 아래에 두어야 빌드 후에도 파일로 남아 편집할 수 있다.</summary>
         public const string ExternalFolderName = "GameData";
 
         /// <summary>빌드 후에도 편집할 수 있게 복사하는 Resources 하위 폴더.</summary>
         public static readonly string[] EditableFolders = { "Localization", "Credits", "Data" };
 
-        /// <summary>텍스트를 해석해 결과를 만드는 함수. 해석할 수 없으면 false.</summary>
+        /// <summary>파일마다 형식이 달라 해석은 호출자가 맡는다.</summary>
         public delegate bool TextParser<T>(string text, out T result);
 
-        /// <summary>외부 데이터 폴더의 전체 경로.</summary>
         public static string ExternalRoot => Path.Combine(Application.streamingAssetsPath, ExternalFolderName);
 
-        /// <summary>
-        /// 외부 파일 → 내장 파일 순서로 읽고 해석한다. 둘 다 실패하면 false. (호출자가 코드 기본값을 쓴다)
-        /// </summary>
-        /// <param name="resourcePath">Resources 기준 경로(확장자 제외). 예: "Data/default_game_settings"</param>
-        /// <param name="extension">외부 파일 확장자. 예: ".json"</param>
+        /// <summary>고친 파일이 깨져도 게임이 멈추지 않도록 외부 → 내장 순으로 시도하고 둘 다 실패하면 false를 돌려준다.</summary>
+        /// <param name="resourcePath">Resources 기준 경로(확장자 제외).</param>
+        /// <param name="extension">외부 파일 확장자(예: ".json").</param>
         /// <param name="parser">텍스트 해석 함수.</param>
         /// <param name="result">해석 결과.</param>
         public static bool TryLoad<T>(string resourcePath, string extension, TextParser<T> parser, out T result)
@@ -52,17 +44,13 @@ namespace GuardVsMannequin.Core
             return false;
         }
 
-        /// <summary>
-        /// 외부 파일 경로를 만든다.
-        /// </summary>
+        /// <summary>빌드 시 복사하는 에디터 스크립트와 같은 경로를 쓰도록 공개한다.</summary>
         public static string GetExternalPath(string resourcePath, string extension)
         {
             return Path.Combine(ExternalRoot, resourcePath.Replace('/', Path.DirectorySeparatorChar) + extension);
         }
 
-        /// <summary>
-        /// 외부 파일을 UTF-8로 읽는다. 없거나 읽을 수 없거나 UTF-8이 아니면(깨진 글자 포함) false.
-        /// </summary>
+        /// <summary>잘못된 인코딩이나 파일 잠금으로 게임이 멈추지 않도록 깨진 글자가 있거나 읽기에 실패하면 경고만 남기고 넘긴다.</summary>
         private static bool TryReadExternal(string path, out string text)
         {
             text = null;
@@ -79,7 +67,7 @@ namespace GuardVsMannequin.Core
                 return false;
             }
 
-            // 엑셀 등에서 UTF-8이 아닌 형식(ANSI)으로 저장하면 한글이 대체 문자(U+FFFD)로 바뀐다.
+            // ANSI로 저장된 파일은 한글이 대체 문자(U+FFFD)로 바뀌므로 이것으로 깨짐을 알아낸다.
             if (text.IndexOf('�') >= 0)
             {
                 Debug.LogWarning($"[DataFiles] UTF-8로 저장되지 않은 파일이라 사용하지 않습니다: {path}");
@@ -89,7 +77,7 @@ namespace GuardVsMannequin.Core
         }
 
         /// <summary>
-        /// 게임에 내장된 원본(Resources)을 읽는다.
+        /// 외부 파일이 없거나 깨졌을 때 기댈 곳이 필요해 빌드에 포함된 원본을 읽는다.
         /// </summary>
         private static bool TryReadBuiltIn(string resourcePath, out string text)
         {
@@ -99,7 +87,7 @@ namespace GuardVsMannequin.Core
         }
 
         /// <summary>
-        /// 빈 파일이나 해석 중 예외도 실패로 처리한다.
+        /// 손상된 파일 하나로 게임 전체가 멈추지 않도록 빈 파일이나 형식 예외도 실패로 바꿔 다음 순서로 넘긴다.
         /// </summary>
         private static bool TryParse<T>(TextParser<T> parser, string text, out T result)
         {

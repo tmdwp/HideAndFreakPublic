@@ -2,31 +2,27 @@ using UnityEngine;
 
 namespace GuardVsMannequin.Player
 {
-    /// <summary>
-    /// 도구 쿨타임. 소유자 화면(즉시 반응·HUD 표시)과 서버(검증)가 각자 시간을 잰다.
-    /// 서버는 네트워크 지연으로 요청이 조금 일찍 도착할 수 있어 <see cref="Tolerance"/>만큼 봐준다.
-    /// 짧은 쿨타임(예: 손전등 0.2초)은 허용 오차가 쿨타임을 거의 없애지 않도록 쿨타임의 절반까지만 봐준다.
-    /// </summary>
+    /// <summary>즉시 반응과 서버 검증이 각자 시간을 재되, 지연으로 일찍 도착한 요청은 허용 오차로 받는다.</summary>
     public sealed class ToolCooldown
     {
-        /// <summary>서버 검증 허용 오차(초). (쿨타임의 절반을 넘지 않음)</summary>
+        /// <summary>쿨타임 절반을 넘지 않는 허용 오차(초).</summary>
         public const float Tolerance = 0.15f;
 
         private float localEnd;
         private float localDuration;
         private float serverReadyTime;
 
-        /// <summary>소유자 화면의 남은 쿨타임(초).</summary>
+        /// <summary>단위는 초.</summary>
         public float LocalRemaining => Mathf.Max(0f, localEnd - Time.time);
 
-        /// <summary>소유자 화면의 쿨타임 진행도. 시작 직후 0, 끝나면 1. (HUD 게이지용)</summary>
+        /// <summary>HUD가 쿨타임 길이를 몰라도 그리도록 0~1로 주는 진행도.</summary>
         public float LocalProgress => localDuration > 0f ? Mathf.Clamp01(1f - LocalRemaining / localDuration) : 1f;
 
-        /// <summary>서버에서 다시 사용할 수 있는지 여부. (허용 오차 포함)</summary>
+        /// <summary>지연을 고려한 허용 오차가 이미 반영돼 있다.</summary>
         public bool IsServerReady => Time.time >= serverReadyTime;
 
         /// <summary>
-        /// 소유자 화면의 쿨타임을 시작한다.
+        /// 서버 응답을 기다리지 않고 바로 HUD에 쿨타임이 보이도록 소유자 화면에서 먼저 시작한다.
         /// </summary>
         public void StartLocal(float duration)
         {
@@ -35,16 +31,14 @@ namespace GuardVsMannequin.Player
         }
 
         /// <summary>
-        /// 서버의 쿨타임을 시작한다. (사용 가능 여부와 관계없이)
+        /// 장전처럼 사용 여부와 관계없이 쿨타임을 걸어야 하는 경우가 있어서 검사 없이 시작한다.
         /// </summary>
         public void StartServer(float duration)
         {
             serverReadyTime = Time.time + duration - Mathf.Min(Tolerance, duration * 0.5f);
         }
 
-        /// <summary>
-        /// 서버에서 사용할 수 있으면 쿨타임을 시작하고 true, 아직 쿨타임이면 false.
-        /// </summary>
+        /// <summary>검사와 시작 사이에 다른 요청이 끼어들지 않도록 한 번에 처리한다.</summary>
         public bool TryStartServer(float duration)
         {
             if (!IsServerReady)

@@ -1,9 +1,6 @@
 namespace GuardVsMannequin.UI
 {
-    /// <summary>
-    /// 로비 화면(패널) 종류. 화면을 추가하면 여기에 값을 더하고, <see cref="LobbyView"/>의 화면 목록에 패널과 부모 화면을 등록한다.
-    /// (프리팹에 번호로 저장되므로 새 값은 끝에만 추가한다)
-    /// </summary>
+    /// <summary>프리팹에 번호로 저장되므로 새 값은 끝에 더하는 로비 화면 종류.</summary>
     public enum LobbyScreen
     {
         Main,
@@ -17,18 +14,16 @@ namespace GuardVsMannequin.UI
         Browse
     }
 
-    /// <summary>
-    /// 로비 화면 이동. 각 메뉴 코드(메인/방 만들기/참가)는 이 인터페이스로만 화면을 바꾼다.
-    /// </summary>
+    /// <summary>메뉴 코드가 화면 구성을 몰라도 되도록 화면 이동을 인터페이스로 둔다.</summary>
     public interface ILobbyNavigator
     {
-        /// <summary>화면 하나만 보이게 한다.</summary>
+        /// <summary>패널이 겹쳐 보이지 않도록 화면 하나만 보이게 한다.</summary>
         void Show(LobbyScreen screen);
 
-        /// <summary>이전(부모) 화면으로 돌아간다.</summary>
+        /// <summary>버튼마다 돌아갈 곳을 따로 정하지 않도록, 화면 목록에 등록된 부모 화면으로 돌아간다.</summary>
         void Back();
 
-        /// <summary>화면 목록에 그 화면이 있는지 여부. (예전 프리팹에는 새 화면이 없을 수 있음)</summary>
+        /// <summary>예전 프리팹에는 새 화면이 없을 수 있어, 메뉴가 다른 동작으로 대신할 수 있게 확인한다.</summary>
         bool HasScreen(LobbyScreen screen);
     }
 
@@ -37,10 +32,10 @@ namespace GuardVsMannequin.UI
     /// </summary>
     public interface ILobbyOverlays
     {
-        /// <summary>설정 화면을 연다.</summary>
+        /// <summary>메뉴가 설정 패널을 직접 참조하지 않도록 로비 화면에 열기를 맡긴다.</summary>
         void OpenSettings();
 
-        /// <summary>크레딧 화면을 연다.</summary>
+        /// <summary>메뉴가 크레딧 패널을 직접 참조하지 않도록 로비 화면에 열기를 맡긴다.</summary>
         void OpenCredits();
     }
 }

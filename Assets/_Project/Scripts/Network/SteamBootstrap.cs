@@ -3,20 +3,16 @@ using UnityEngine;
 
 namespace GuardVsMannequin.Network
 {
-    /// <summary>
-    /// Steam API를 초기화하고 콜백을 처리한다. 게임 전체에서 한 번만 초기화된다.
-    /// Steam이 실행 중이 아니면 초기화에 실패하며, 이때는 직접 접속(Tugboat)만 사용할 수 있다.
-    /// (Steam 초기화는 이 컴포넌트 하나만 맡는다. 다른 초기화 스크립트를 씬에 함께 두지 않는다)
-    /// </summary>
+    /// <summary>Steam이 없어도 직접 접속은 되도록 Steam API를 한 번만 초기화하고 콜백을 처리한다.</summary>
     public class SteamBootstrap : MonoBehaviour
     {
         private static SteamBootstrap instance;
 
-        /// <summary>Steam API가 초기화되어 사용할 수 있는지 여부.</summary>
+        /// <summary>Steam 기능을 쓰는 곳이 초기화 실패 시 직접 접속으로 물러날 수 있도록 노출한다.</summary>
         public static bool IsInitialized { get; private set; }
 
         /// <summary>
-        /// 첫 인스턴스만 Steam을 초기화한다. (로비 씬을 다시 불러올 때 생기는 중복은 무시)
+        /// 로비 씬을 다시 불러오면 인스턴스가 또 생기는데, Steam을 두 번 초기화하면 오류가 나므로 첫 인스턴스만 초기화한다.
         /// </summary>
         private void Awake()
         {
@@ -27,9 +23,7 @@ namespace GuardVsMannequin.Network
             Initialize();
         }
 
-        /// <summary>
-        /// 매 프레임 Steam 콜백을 처리한다.
-        /// </summary>
+        /// <summary>Steam 콜백은 직접 돌려야 오므로 매 프레임 처리한다.</summary>
         private void Update()
         {
             if (instance == this && IsInitialized)
@@ -37,7 +31,7 @@ namespace GuardVsMannequin.Network
         }
 
         /// <summary>
-        /// 게임 종료 시 Steam API를 정리한다.
+        /// 정리하지 않으면 Steam이 게임을 계속 실행 중으로 보이므로 종료할 때 API를 닫는다.
         /// </summary>
         private void OnApplicationQuit()
         {
@@ -49,7 +43,7 @@ namespace GuardVsMannequin.Network
         }
 
         /// <summary>
-        /// 이 인스턴스가 사라지면 다음 인스턴스가 초기화할 수 있게 한다.
+        /// 파괴된 인스턴스가 남아 있으면 다음 인스턴스가 콜백을 돌리지 못하므로 비운다.
         /// </summary>
         private void OnDestroy()
         {
@@ -57,9 +51,7 @@ namespace GuardVsMannequin.Network
                 instance = null;
         }
 
-        /// <summary>
-        /// Steamworks.NET 권장 절차대로 Steam API를 초기화한다.
-        /// </summary>
+        /// <summary>잘못된 DLL로 원인 모를 충돌이 나지 않도록 권장 절차대로 검사한 뒤 초기화하고, 실패해도 게임은 계속 돌게 한다.</summary>
         private static void Initialize()
         {
             if (IsInitialized)

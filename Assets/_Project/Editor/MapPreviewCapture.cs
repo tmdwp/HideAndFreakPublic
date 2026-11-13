@@ -5,10 +5,7 @@ using UnityEngine.Rendering;
 
 namespace GuardVsMannequin.Editor
 {
-    /// <summary>
-    /// 맵을 임시 카메라로 찍어 PNG로 저장한다. (맵 빌더가 만든 결과를 Unity를 열지 않고 확인하기 위함)
-    /// 저장 위치는 프로젝트의 Temp 폴더라 버전 관리에 들어가지 않는다. 카메라는 찍은 뒤 바로 지운다.
-    /// </summary>
+    /// <summary>맵 빌더 결과를 Unity를 열지 않고 확인하도록 맵을 임시 카메라로 찍어 PNG로 저장한다.</summary>
     internal static class MapPreviewCapture
     {
         private const int Width = 1600;
@@ -21,6 +18,7 @@ namespace GuardVsMannequin.Editor
             public readonly Vector3 position;
             public readonly Vector3 target;
 
+            /// <summary>맵 빌더마다 찍을 장면이 달라서 호출한 쪽이 장면 목록을 넘길 수 있게 값으로 묶는다.</summary>
             public Shot(string name, Vector3 position, Vector3 target)
             {
                 this.name = name;
@@ -29,14 +27,12 @@ namespace GuardVsMannequin.Editor
             }
         }
 
-        /// <summary>
-        /// 위에서 내려다본 배치도(천장 숨김, 밝은 환경광)와 눈높이 장면들을 찍어 folder에 저장한다. 저장한 파일 경로를 돌려준다.
-        /// </summary>
-        /// <param name="hideFromTop">배치도를 찍는 동안 숨길 렌더러. (천장 등)</param>
+        /// <summary>배치는 위에서, 분위기는 눈높이에서 봐야 알 수 있어 두 종류를 함께 찍는다.</summary>
+        /// <param name="hideFromTop">배치도를 찍는 동안 숨길 렌더러(천장 등).</param>
         public static List<string> Capture(string folder, Bounds area, IReadOnlyList<Renderer> hideFromTop, IReadOnlyList<Shot> shots)
         {
             Directory.CreateDirectory(folder);
-            var saved = new List<string>();
+            var savedPaths = new List<string>();
             var cameraObject = new GameObject("PreviewCamera (임시)");
             try
             {
@@ -46,34 +42,32 @@ namespace GuardVsMannequin.Editor
                 camera.clearFlags = CameraClearFlags.SolidColor;
                 camera.backgroundColor = Color.black;
 
-                saved.Add(CaptureTopDown(camera, folder, area, hideFromTop));
+                savedPaths.Add(CaptureTopDown(camera, folder, area, hideFromTop));
                 camera.orthographic = false;
                 camera.fieldOfView = 75f;
                 foreach (Shot shot in shots)
                 {
                     camera.transform.SetPositionAndRotation(shot.position, Quaternion.LookRotation(shot.target - shot.position));
-                    saved.Add(Render(camera, Path.Combine(folder, shot.name + ".png")));
+                    savedPaths.Add(Render(camera, Path.Combine(folder, shot.name + ".png")));
                 }
             }
             finally
             {
                 Object.DestroyImmediate(cameraObject);
             }
-            return saved;
+            return savedPaths;
         }
 
-        /// <summary>
-        /// 천장을 숨기고 환경광을 밝힌 채 위에서 정사영으로 찍는다. 끝나면 원래대로 돌린다.
-        /// </summary>
-        private static string CaptureTopDown(Camera camera, string folder, Bounds area, IReadOnlyList<Renderer> hidden)
+        /// <summary>천장과 어둠 때문에 배치가 안 보이므로 천장을 숨기고 환경광을 밝힌 채 정사영으로 찍는다.</summary>
+        private static string CaptureTopDown(Camera camera, string folder, Bounds area, IReadOnlyList<Renderer> hiddenRenderers)
         {
-            AmbientMode ambientMode = RenderSettings.ambientMode;
-            Color ambientLight = RenderSettings.ambientLight;
+            AmbientMode savedAmbientMode = RenderSettings.ambientMode;
+            Color savedAmbientLight = RenderSettings.ambientLight;
             var wasEnabled = new List<bool>();
-            foreach (Renderer target in hidden)
+            foreach (Renderer hiddenRenderer in hiddenRenderers)
             {
-                wasEnabled.Add(target.enabled);
-                target.enabled = false;
+                wasEnabled.Add(hiddenRenderer.enabled);
+                hiddenRenderer.enabled = false;
             }
             RenderSettings.ambientMode = AmbientMode.Flat;
             RenderSettings.ambientLight = new Color(0.75f, 0.75f, 0.75f);
@@ -87,36 +81,34 @@ namespace GuardVsMannequin.Editor
             }
             finally
             {
-                RenderSettings.ambientMode = ambientMode;
-                RenderSettings.ambientLight = ambientLight;
-                for (int i = 0; i < hidden.Count; i++)
-                    hidden[i].enabled = wasEnabled[i];
+                RenderSettings.ambientMode = savedAmbientMode;
+                RenderSettings.ambientLight = savedAmbientLight;
+                for (int i = 0; i < hiddenRenderers.Count; i++)
+                    hiddenRenderers[i].enabled = wasEnabled[i];
             }
         }
 
-        /// <summary>
-        /// 카메라 한 장을 렌더 텍스처에 그려 PNG로 저장한다.
-        /// </summary>
+        /// <summary>URP RenderGraph에서는 camera.Render()가 동작하지 않을 수 있어 렌더 요청을 먼저 쓴다.</summary>
         private static string Render(Camera camera, string path)
         {
-            var target = new RenderTexture(Width, Height, 24, RenderTextureFormat.ARGB32, RenderTextureReadWrite.sRGB);
-            RenderTexture previous = RenderTexture.active;
+            var renderTarget = new RenderTexture(Width, Height, 24, RenderTextureFormat.ARGB32, RenderTextureReadWrite.sRGB);
+            RenderTexture previousActive = RenderTexture.active;
             var image = new Texture2D(Width, Height, TextureFormat.RGB24, false);
             try
             {
-                var request = new RenderPipeline.StandardRequest { destination = target };
-                if (RenderPipeline.SupportsRenderRequest(camera, request))
+                var renderRequest = new RenderPipeline.StandardRequest { destination = renderTarget };
+                if (RenderPipeline.SupportsRenderRequest(camera, renderRequest))
                 {
-                    RenderPipeline.SubmitRenderRequest(camera, request);
+                    RenderPipeline.SubmitRenderRequest(camera, renderRequest);
                 }
                 else
                 {
-                    camera.targetTexture = target;
+                    camera.targetTexture = renderTarget;
                     camera.Render();
                     camera.targetTexture = null;
                 }
 
-                RenderTexture.active = target;
+                RenderTexture.active = renderTarget;
                 image.ReadPixels(new Rect(0, 0, Width, Height), 0, 0);
                 image.Apply();
                 File.WriteAllBytes(path, image.EncodeToPNG());
@@ -124,10 +116,10 @@ namespace GuardVsMannequin.Editor
             }
             finally
             {
-                RenderTexture.active = previous;
+                RenderTexture.active = previousActive;
                 Object.DestroyImmediate(image);
-                target.Release();
-                Object.DestroyImmediate(target);
+                renderTarget.Release();
+                Object.DestroyImmediate(renderTarget);
             }
         }
     }

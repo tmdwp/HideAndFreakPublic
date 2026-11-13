@@ -4,16 +4,7 @@ using UnityEngine;
 
 namespace GuardVsMannequin.Player.Mannequin
 {
-    /// <summary>
-    /// 변신 중인 마네킹이 벽과 천장을 타고 이동하게 한다.
-    /// 캐릭터를 회전시키지 않고 그대로 둔 채, ECM2 Flying 모드(중력 없음)로 면을 따라 움직인다.
-    /// - 바닥 → 벽: 걷다가 이동 방향 앞에 벽이 있으면 붙는다.
-    /// - 벽 → 천장: 벽에서 위로 이동하다 머리 위에 천장이 닿으면 천장으로 옮긴다.
-    /// - 천장 → 벽: 천장에서 이동 방향 앞에 벽이 있으면 벽으로 옮긴다.
-    /// - 벽 → 바닥: 벽에서 아래로 이동하다 발밑에 바닥이 닿으면 걷기로 돌아간다.
-    /// - 붙어 있던 면이 사라지거나(가장자리) 변신을 해제하면 떨어진다.
-    /// ECM2 시뮬레이션이 도는 소유자에서만 동작하며, 위치는 NetworkTransform으로 동기화된다.
-    /// </summary>
+    /// <summary>변신한 마네킹이 숨을 곳을 넓히도록 캐릭터를 돌리지 않고 Flying 모드로 벽과 천장을 따라 움직이게 한다.</summary>
     [RequireComponent(typeof(Character), typeof(MannequinTransformer))]
     public class WallClimbAbility : MonoBehaviour, IMovementPlaneProvider
     {
@@ -42,14 +33,13 @@ namespace GuardVsMannequin.Player.Mannequin
         private Surface surface = Surface.None;
         private Vector3 surfaceNormal = Vector3.up;
 
-        /// <summary>벽이나 천장에 붙어 있는지 여부.</summary>
         public bool IsClimbing => surface != Surface.None;
 
-        /// <summary>붙어 있으면 그 면의 법선, 아니면 월드 위쪽.</summary>
+        /// <summary>이동 입력과 카메라 제한이 지금 붙은 면을 기준으로 계산되도록, 붙어 있으면 그 면의 법선을 준다.</summary>
         public Vector3 MovementPlaneNormal => IsClimbing ? surfaceNormal : -character.GetGravityDirection();
 
         /// <summary>
-        /// 같은 오브젝트의 구성 요소를 캐시한다.
+        /// 매 시뮬레이션마다 GetComponent를 부르지 않도록 미리 찾아 둔다.
         /// </summary>
         private void Awake()
         {
@@ -57,9 +47,7 @@ namespace GuardVsMannequin.Player.Mannequin
             transformer = GetComponent<MannequinTransformer>();
         }
 
-        /// <summary>
-        /// 캐릭터 시뮬레이션 직전 이벤트와 변신 이벤트를 구독한다.
-        /// </summary>
+        /// <summary>같은 단계에 반영되도록 ECM2 이동 계산 직전에 방향을 면에 맞춘다.</summary>
         private void OnEnable()
         {
             character.BeforeSimulationUpdated += OnBeforeSimulationUpdated;
@@ -67,7 +55,7 @@ namespace GuardVsMannequin.Player.Mannequin
         }
 
         /// <summary>
-        /// 이벤트 구독을 해제한다.
+        /// 꺼진 뒤 이벤트가 이 객체를 부르지 않도록 끊는다.
         /// </summary>
         private void OnDisable()
         {
@@ -76,16 +64,16 @@ namespace GuardVsMannequin.Player.Mannequin
         }
 
         /// <summary>
-        /// 변신이 해제되면 즉시 떨어진다.
+        /// 사람 모습으로 벽에 붙어 있으면 안 되므로 변신이 풀리는 즉시 떨어뜨린다.
         /// </summary>
-        private void OnDisguiseChanged(int propId)
+        private void OnDisguiseChanged(int propIndex)
         {
-            if (propId == TransformableProp.None && IsClimbing)
+            if (propIndex == TransformableProp.None && IsClimbing)
                 StopClimbing();
         }
 
         /// <summary>
-        /// 매 시뮬레이션 전에 면 전환을 판단하고, 붙어 있으면 이동 방향을 면에 맞춘다.
+        /// 면이 바뀌는 판단은 지금 이동 방향이 필요해서 매 시뮬레이션 전에 하고, 붙어 있으면 이동 방향을 면에 맞춘다.
         /// </summary>
         private void OnBeforeSimulationUpdated(float deltaTime)
         {
@@ -96,29 +84,29 @@ namespace GuardVsMannequin.Player.Mannequin
                 return;
             }
 
-            Vector3 move = character.GetMovementDirection();
+            Vector3 moveDirection = character.GetMovementDirection();
             switch (surface)
             {
                 case Surface.None:
-                    if (character.IsWalking() && TryFindWallAhead(move, out Vector3 wallNormal))
+                    if (character.IsWalking() && TryFindWallAhead(moveDirection, out Vector3 wallNormal))
                         StartClimbing(Surface.Wall, wallNormal);
                     break;
                 case Surface.Wall:
-                    UpdateOnWall(move);
+                    UpdateOnWall(moveDirection);
                     break;
                 case Surface.Ceiling:
-                    UpdateOnCeiling(move);
+                    UpdateOnCeiling(moveDirection);
                     break;
             }
 
             if (IsClimbing)
-                ApplySurfaceMovement(move);
+                ApplySurfaceMovement(moveDirection);
         }
 
         /// <summary>
-        /// 벽에 붙은 상태에서 면 유지, 천장/바닥/다른 벽으로의 전환을 처리한다.
+        /// 벽 가장자리를 넘어가면 허공에 붙어 있게 되므로 매번 벽이 아직 있는지 확인하고, 이동 방향에 따라 천장·바닥·옆 벽으로 옮긴다.
         /// </summary>
-        private void UpdateOnWall(Vector3 move)
+        private void UpdateOnWall(Vector3 moveDirection)
         {
             if (!ProbeFromCenter(-surfaceNormal, character.radius, out RaycastHit wallHit) || !IsWall(wallHit.normal))
             {
@@ -127,17 +115,17 @@ namespace GuardVsMannequin.Player.Mannequin
             }
             surfaceNormal = wallHit.normal;
 
-            float vertical = Vector3.Dot(move, Vector3.up);
-            if (vertical > 0.1f && ProbeFromCenter(Vector3.up, character.height * 0.5f, out RaycastHit ceilingHit) && IsCeiling(ceilingHit.normal))
+            float verticalInput = Vector3.Dot(moveDirection, Vector3.up);
+            if (verticalInput > 0.1f && ProbeFromCenter(Vector3.up, character.height * 0.5f, out RaycastHit ceilingHit) && IsCeiling(ceilingHit.normal))
             {
                 surface = Surface.Ceiling;
                 surfaceNormal = ceilingHit.normal;
             }
-            else if (vertical < -0.1f && ProbeFromCenter(Vector3.down, character.height * 0.5f, out RaycastHit floorHit) && IsFloor(floorHit.normal))
+            else if (verticalInput < -0.1f && ProbeFromCenter(Vector3.down, character.height * 0.5f, out RaycastHit floorHit) && IsFloor(floorHit.normal))
             {
                 StopClimbing();
             }
-            else if (TryFindWallAhead(move, out Vector3 cornerNormal) && Vector3.Angle(cornerNormal, surfaceNormal) > 30f)
+            else if (TryFindWallAhead(moveDirection, out Vector3 cornerNormal) && Vector3.Angle(cornerNormal, surfaceNormal) > 30f)
             {
                 // 안쪽 모서리: 옆 벽으로 옮겨 탄다.
                 surfaceNormal = cornerNormal;
@@ -145,9 +133,9 @@ namespace GuardVsMannequin.Player.Mannequin
         }
 
         /// <summary>
-        /// 천장에 붙은 상태에서 면 유지와 벽으로의 전환을 처리한다.
+        /// 천장 가장자리를 넘어가면 허공에 붙어 있게 되므로 매번 천장이 아직 있는지 확인하고, 앞에 벽이 있으면 벽으로 옮긴다.
         /// </summary>
-        private void UpdateOnCeiling(Vector3 move)
+        private void UpdateOnCeiling(Vector3 moveDirection)
         {
             if (!ProbeFromCenter(Vector3.up, character.height * 0.5f, out RaycastHit ceilingHit) || !IsCeiling(ceilingHit.normal))
             {
@@ -156,26 +144,21 @@ namespace GuardVsMannequin.Player.Mannequin
             }
             surfaceNormal = ceilingHit.normal;
 
-            if (TryFindWallAhead(move, out Vector3 wallNormal))
+            if (TryFindWallAhead(moveDirection, out Vector3 wallNormal))
             {
                 surface = Surface.Wall;
                 surfaceNormal = wallNormal;
             }
         }
 
-        /// <summary>
-        /// 이동 입력을 면 위로 투영하고, 면 쪽으로 살짝 밀어붙인다.
-        /// 입력 원본을 투영한 뒤 더하므로 여러 번 호출되어도 값이 누적되지 않는다.
-        /// </summary>
-        private void ApplySurfaceMovement(Vector3 move)
+        /// <summary>면에서 떨어져 나가지 않도록 입력을 면 위로 투영한 뒤 면 쪽으로 살짝 밀어붙인다.</summary>
+        private void ApplySurfaceMovement(Vector3 moveDirection)
         {
-            Vector3 onSurface = Vector3.ProjectOnPlane(move, surfaceNormal);
+            Vector3 onSurface = Vector3.ProjectOnPlane(moveDirection, surfaceNormal);
             character.SetMovementDirection(onSurface - surfaceNormal * stickStrength);
         }
 
-        /// <summary>
-        /// 면에 붙는다. 변신 중에는 DisguiseRotationAbility가 회전을 막으므로 캐릭터 방향은 그대로 유지된다.
-        /// </summary>
+        /// <summary>붙어 있는 동안 떨어지지 않도록 중력 없는 Flying 모드로 바꾼다.</summary>
         private void StartClimbing(Surface newSurface, Vector3 normal)
         {
             surface = newSurface;
@@ -183,9 +166,7 @@ namespace GuardVsMannequin.Player.Mannequin
             character.SetMovementMode(Character.MovementMode.Flying);
         }
 
-        /// <summary>
-        /// 면에서 떨어진다. 중력이 다시 적용되고 바닥에 닿으면 걷기로 돌아간다.
-        /// </summary>
+        /// <summary>중력이 다시 걸리도록 떨어지기로 돌아간다.</summary>
         private void StopClimbing()
         {
             surface = Surface.None;
@@ -193,20 +174,18 @@ namespace GuardVsMannequin.Player.Mannequin
             character.SetMovementMode(Character.MovementMode.Falling);
         }
 
-        /// <summary>
-        /// 수평 이동 방향 앞에 벽이 있는지 찾는다.
-        /// </summary>
-        private bool TryFindWallAhead(Vector3 move, out Vector3 normal)
+        /// <summary>옆 벽에 스치는 것까지 걸리지 않도록 이동 방향 앞만 몸보다 조금 작은 구로 쓸어 본다.</summary>
+        private bool TryFindWallAhead(Vector3 moveDirection, out Vector3 normal)
         {
             normal = Vector3.zero;
-            Vector3 direction = Vector3.ProjectOnPlane(move, Vector3.up);
-            if (direction.sqrMagnitude < 0.01f)
+            Vector3 flatDirection = Vector3.ProjectOnPlane(moveDirection, Vector3.up);
+            if (flatDirection.sqrMagnitude < 0.01f)
                 return false;
-            direction.Normalize();
+            flatDirection.Normalize();
 
             float radius = character.radius;
             Vector3 center = GetCenter();
-            if (!Physics.SphereCast(center, radius * 0.9f, direction, out RaycastHit hit, radius * 0.1f + surfaceCheckDistance,
+            if (!Physics.SphereCast(center, radius * 0.9f, flatDirection, out RaycastHit hit, radius * 0.1f + surfaceCheckDistance,
                     Physics.DefaultRaycastLayers, QueryTriggerInteraction.Ignore))
                 return false;
 
@@ -218,27 +197,30 @@ namespace GuardVsMannequin.Player.Mannequin
         }
 
         /// <summary>
-        /// 캐릭터 중심에서 한 방향으로 면이 가까이 있는지 검사한다.
+        /// 아직 면에 닿아 있는지 확인하려고 몸 표면 바로 바깥까지 광선을 쏜다.
         /// </summary>
-        /// <param name="direction">검사 방향.</param>
-        /// <param name="extent">중심에서 캐릭터 표면까지의 거리. (옆: 반지름, 위/아래: 높이의 절반)</param>
-        /// <param name="hit">찾은 면.</param>
+        /// <param name="extent">중심에서 캐릭터 표면까지의 거리.</param>
         private bool ProbeFromCenter(Vector3 direction, float extent, out RaycastHit hit)
         {
-            bool found = Physics.Raycast(GetCenter(), direction, out hit, extent + contactTolerance,
+            bool isFound = Physics.Raycast(GetCenter(), direction, out hit, extent + contactTolerance,
                 Physics.DefaultRaycastLayers, QueryTriggerInteraction.Ignore);
-            return found && IsClimbable(hit);
+            return isFound && IsClimbable(hit);
         }
 
-        /// <summary>캐릭터 캡슐의 중심 위치.</summary>
+        /// <summary>발 위치에서 쏘면 바닥에 먼저 걸리므로 몸 중심에서 검사한다.</summary>
         private Vector3 GetCenter() => character.GetPosition() + Vector3.up * (character.height * 0.5f);
 
         /// <summary>다른 캐릭터나 움직이는 물체, 자기 자신에는 붙지 않는다.</summary>
         private bool IsClimbable(RaycastHit hit) =>
             (hit.collider.attachedRigidbody == null || PropPhysicsRules.IsRestingProp(hit.collider.attachedRigidbody)) && !hit.transform.IsChildOf(transform);
 
+        /// <summary>경사진 면도 벽으로 다룰 수 있도록 법선이 수평에 가까운 범위를 벽으로 본다.</summary>
         private bool IsWall(Vector3 normal) => Mathf.Abs(normal.y) < wallNormalMaxY;
+
+        /// <summary>법선이 충분히 아래를 향하면 천장으로 본다.</summary>
         private bool IsCeiling(Vector3 normal) => normal.y <= -wallNormalMaxY;
+
+        /// <summary>법선이 충분히 위를 향하면 바닥으로 본다.</summary>
         private bool IsFloor(Vector3 normal) => normal.y >= wallNormalMaxY;
     }
 }

@@ -2,31 +2,28 @@ using System.Text;
 
 namespace GuardVsMannequin.Core
 {
-    /// <summary>
-    /// 다른 플레이어가 보낸 문자열을 화면에 보여 주기 전에 정리한다.
-    /// (이름에 &lt;size=200&gt; 같은 리치 텍스트 태그를 넣어 다른 사람의 화면을 깨뜨리는 것을 막는다)
-    /// </summary>
+    /// <summary>리치 텍스트 태그로 다른 사람 화면을 깨뜨리지 못하도록 받은 문자열을 정리한다.</summary>
     public static class DisplayTextSanitizer
     {
-        /// <summary>플레이어 이름의 최대 길이(글자 수).</summary>
+        /// <summary>긴 이름이 HUD·목록 칸을 넘치지 않게 하는 글자 수 상한.</summary>
         public const int MaxPlayerNameLength = 24;
 
         /// <summary>
-        /// 꺾쇠와 제어 문자를 지우고 앞뒤 공백을 없앤 뒤 최대 길이로 자른다.
+        /// 꺾쇠만 지우면 태그가 성립하지 않아 리치 텍스트를 막을 수 있고, 제어 문자는 줄바꿈으로 화면을 밀어낼 수 있어 함께 지운다.
         /// </summary>
-        /// <param name="text">정리할 문자열. null이어도 된다.</param>
-        /// <param name="maxLength">최대 길이(글자 수).</param>
+        /// <param name="text">null이어도 된다.</param>
+        /// <param name="maxLength">글자 수 상한.</param>
         public static string Clean(string text, int maxLength)
         {
             if (string.IsNullOrWhiteSpace(text))
                 return string.Empty;
 
             var builder = new StringBuilder(text.Length);
-            foreach (char c in text)
+            foreach (char character in text)
             {
-                if (c == '<' || c == '>' || char.IsControl(c))
+                if (character == '<' || character == '>' || char.IsControl(character))
                     continue;
-                builder.Append(c);
+                builder.Append(character);
             }
 
             string cleaned = builder.ToString().Trim();

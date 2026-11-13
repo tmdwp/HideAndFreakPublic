@@ -3,17 +3,10 @@ using System.Text;
 
 namespace GuardVsMannequin.Core
 {
-    /// <summary>
-    /// 사람이 엑셀이나 텍스트 편집기로 관리하는 CSV 데이터 파일을 읽는다.
-    /// - 쉼표가 들어간 값은 큰따옴표로 감싼다. 값 안의 큰따옴표는 "" 로 쓴다.
-    /// - 값 안의 줄바꿈은 \n 으로 쓴다. (읽을 때 실제 줄바꿈으로 바뀜)
-    /// - #으로 시작하는 줄과 빈 줄은 무시한다. (메모용)
-    /// </summary>
+    /// <summary>사람이 엑셀·텍스트 편집기로 고치는 CSV를 읽도록 큰따옴표 묶음, \n 줄바꿈, # 메모 줄을 처리한다.</summary>
     public static class CsvParser
     {
-        /// <summary>
-        /// CSV 텍스트를 행 목록으로 나눈다. 첫 행(머리글)도 포함한다.
-        /// </summary>
+        /// <summary>열 이름으로 찾는 쪽이 있어 머리글 행도 돌려주고, OS마다 다른 줄바꿈을 같게 맞춘다.</summary>
         public static List<string[]> Parse(string text)
         {
             var rows = new List<string[]>();
@@ -35,54 +28,54 @@ namespace GuardVsMannequin.Core
         }
 
         /// <summary>
-        /// 한 줄을 값 목록으로 나눈다. 큰따옴표로 감싼 값 안의 쉼표는 구분자로 보지 않는다.
+        /// 문장에 쉼표가 자주 들어가 Split으로는 나눌 수 없으므로, 큰따옴표 안인지 추적하며 한 글자씩 나눈다.
         /// </summary>
         private static string[] ParseLine(string line)
         {
             var values = new List<string>();
-            var current = new StringBuilder();
-            bool inQuotes = false;
+            var currentValue = new StringBuilder();
+            bool isInQuotes = false;
 
             for (int i = 0; i < line.Length; i++)
             {
-                char c = line[i];
-                if (inQuotes)
+                char character = line[i];
+                if (isInQuotes)
                 {
-                    if (c == '"' && i + 1 < line.Length && line[i + 1] == '"')
+                    if (character == '"' && i + 1 < line.Length && line[i + 1] == '"')
                     {
-                        current.Append('"');
+                        currentValue.Append('"');
                         i++;
                     }
-                    else if (c == '"')
+                    else if (character == '"')
                     {
-                        inQuotes = false;
+                        isInQuotes = false;
                     }
                     else
                     {
-                        current.Append(c);
+                        currentValue.Append(character);
                     }
                 }
-                else if (c == '"')
+                else if (character == '"')
                 {
-                    inQuotes = true;
+                    isInQuotes = true;
                 }
-                else if (c == ',')
+                else if (character == ',')
                 {
-                    values.Add(Unescape(current.ToString()));
-                    current.Clear();
+                    values.Add(Unescape(currentValue.ToString()));
+                    currentValue.Clear();
                 }
                 else
                 {
-                    current.Append(c);
+                    currentValue.Append(character);
                 }
             }
 
-            values.Add(Unescape(current.ToString()));
+            values.Add(Unescape(currentValue.ToString()));
             return values.ToArray();
         }
 
         /// <summary>
-        /// 값 앞뒤 공백을 지우고 \n 을 실제 줄바꿈으로 바꾼다.
+        /// 엑셀에서 정렬용으로 넣은 공백이 값에 섞이지 않도록 지우고, 한 줄에 쓸 수 없는 줄바꿈을 \n 표기에서 되돌린다.
         /// </summary>
         private static string Unescape(string value)
         {

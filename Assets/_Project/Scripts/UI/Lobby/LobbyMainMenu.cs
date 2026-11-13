@@ -14,9 +14,7 @@ namespace GuardVsMannequin.UI
         [SerializeField] private Button creditsButton;
         [SerializeField] private Button quitButton;
 
-        /// <summary>
-        /// 버튼 동작을 연결한다. 화면 이동과 패널 열기는 같은 캔버스의 <see cref="ILobbyNavigator"/>, <see cref="ILobbyOverlays"/>에 맡긴다.
-        /// </summary>
+        /// <summary>메뉴가 화면 구성을 몰라도 되도록 화면 이동과 패널 열기를 인터페이스에 맡긴다.</summary>
         private void Start()
         {
             ILobbyNavigator navigator = UiLookup.FindInParent<ILobbyNavigator>(this);
@@ -29,7 +27,7 @@ namespace GuardVsMannequin.UI
         }
 
         /// <summary>
-        /// 게임을 종료한다. (에디터에서는 플레이 모드를 끝낸다)
+        /// 에디터에서는 Application.Quit이 아무 일도 하지 않아 종료 버튼을 시험할 수 없으므로 플레이 모드를 끝낸다.
         /// </summary>
         private static void Quit()
         {

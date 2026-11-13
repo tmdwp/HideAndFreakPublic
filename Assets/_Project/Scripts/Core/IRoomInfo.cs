@@ -1,40 +1,36 @@
 namespace GuardVsMannequin.Core
 {
-    /// <summary>
-    /// 게임 씬이 룸에서 필요로 하는 정보. (룸 구현에 직접 의존하지 않도록 분리, DIP)
-    /// </summary>
+    /// <summary>게임 씬이 룸 구현에 의존하지 않도록 필요한 룸 정보만 인터페이스로 둔다.</summary>
     public interface IRoomInfo
     {
-        /// <summary>호스트가 룸에서 정한 게임 설정.</summary>
+        /// <summary>호스트가 룸에서 정한 값으로 판을 시작해야 해서 게임 씬에 넘긴다.</summary>
         GameSettings Settings { get; }
 
-        /// <summary>게임 씬에서 판이 진행 중인지 여부. (진행 중에는 새 참가를 받지 않음)</summary>
+        /// <summary>판 도중에 들어온 사람이 상태가 꼬이지 않도록 새 참가를 막는 데 쓴다.</summary>
         bool IsInGame { get; }
 
-        /// <summary>이번 판의 변신 사물 배치 시드. 모든 PC가 이 값으로 같은 배치를 만든다. 0이면 섞지 않는다.</summary>
+        /// <summary>배치를 보내지 않고 모든 PC가 같은 배치를 만드는 시드(0이면 섞지 않음).</summary>
         int PropLayoutSeed { get; }
 
-        /// <summary>테스트 방인지 여부. (서버에서만 정확함: 1인 시작, 승패 판정 없음, 테스트 메뉴)</summary>
+        /// <summary>1인 시작·승패 생략·테스트 메뉴를 켜는 테스트 방 여부(서버에서만 정확).</summary>
         bool IsTestRoom { get; }
 
         /// <summary>
-        /// 클라이언트의 표시 이름을 반환한다. 모르면 "Player N".
+        /// 이름을 아직 받지 못한 클라이언트도 화면에 표시할 수 있도록 "Player N"으로 대신한다.
         /// </summary>
         string GetDisplayName(int clientId);
     }
 
-    /// <summary>
-    /// 룸 ↔ 게임 씬 전환 흐름. (서버 전용)
-    /// </summary>
+    /// <summary>서버 전용 룸 ↔ 게임 씬 전환 흐름.</summary>
     public interface ISceneFlow
     {
         /// <summary>
-        /// 모든 플레이어를 룸 씬으로 돌려보낸다.
+        /// 판이 끝나면 다음 판 설정을 다시 고를 수 있도록 모두를 룸 씬으로 돌려보낸다.
         /// </summary>
         void ReturnToRoom();
 
         /// <summary>
-        /// 클라이언트가 최근에 "아직 씬을 불러오는 중"이라고 알렸는지 여부. (느리지만 살아 있는 플레이어를 기다리기 위함)
+        /// 로딩이 느린 플레이어를 접속 끊김으로 오인해 내보내지 않도록, 최근에 로딩 중이라고 알렸는지 확인한다.
         /// </summary>
         bool IsClientLoading(int clientId);
     }

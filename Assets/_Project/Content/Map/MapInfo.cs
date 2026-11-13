@@ -5,14 +5,7 @@ using UnityEngine;
 
 namespace GuardVsMannequin.Map
 {
-    /// <summary>
-    /// 맵 단위 정보.
-    /// - 천장 높이가 가드 히트스캔 사거리보다 낮은지 검증한다. (천장에 붙은 마네킹도 맞출 수 있어야 하기 때문)
-    /// - 맵별 캐릭터 외형: 비워 두면 프리팹의 기본 외형을 쓴다.
-    /// - 사냥 시간 마네킹 외형: 비워 두면 프리팹의 기본 사냥 외형(Ghoul)을 쓴다. (모드 맵이 자기 괴물 외형을 지정할 때 사용)
-    /// - 변신 사물: 맵에 놓인 TransformableProp을 그대로 복사하므로 따로 지정할 것이 없다.
-    /// 씬에 하나만 둔다.
-    /// </summary>
+    /// <summary>맵별 외형과 천장 높이 검증처럼 맵마다 다른 정보를 씬에 하나 두고 제공한다.</summary>
     public class MapInfo : MonoBehaviour
     {
         [SerializeField] private string mapName = "Test";
@@ -32,7 +25,7 @@ namespace GuardVsMannequin.Map
         [Tooltip("대기·결과 화면에서 씬 카메라가 맵을 내려다볼 위치와 방향. 비우면 카메라의 기본 위치.")]
         [SerializeField] private Transform overviewPoint;
 
-        /// <summary>현재 씬의 맵 정보. 없으면 null.</summary>
+        /// <summary>씬마다 하나뿐이라 찾지 않고 바로 쓰도록 두며, 맵이 없으면 null이다.</summary>
         public static MapInfo Current { get; private set; }
 
         public string MapName => mapName;
@@ -41,11 +34,11 @@ namespace GuardVsMannequin.Map
         public CharacterSkin GuardSkin => guardSkin;
         public CharacterSkin MannequinHuntSkin => mannequinHuntSkin;
 
-        /// <summary>씬 카메라의 대기 화면 위치. 없으면 null.</summary>
+        /// <summary>지정하지 않으면 카메라 기본 위치를 쓰도록 null일 수 있다.</summary>
         public Transform OverviewPoint => overviewPoint;
 
         /// <summary>
-        /// 역할이 이 맵에서 쓸 외형. 지정하지 않았거나 외형이 없는 역할이면 null. (호출한 쪽이 기본 외형을 쓴다)
+        /// 맵마다 외형을 바꿀 수 있게 하되 대부분의 맵은 기본 외형을 쓰므로, 지정하지 않았으면 null을 돌려 호출한 쪽이 기본 외형을 쓰게 한다.
         /// </summary>
         public CharacterSkin GetSkin(PlayerRole role)
         {
@@ -57,18 +50,13 @@ namespace GuardVsMannequin.Map
             };
         }
 
-        /// <summary>
-        /// 역할이 이 맵의 사냥 시간에 쓸 외형. 지정하지 않았거나 사냥 외형이 없는 역할이면 null. (호출한 쪽이 기본 사냥 외형을 쓴다)
-        /// </summary>
+        /// <summary>모드 맵이 자기 괴물 외형을 쓸 수 있도록 사냥 외형을 돌려주며, 마네킹이 아니면 null이다.</summary>
         public CharacterSkin GetHuntSkin(PlayerRole role)
         {
             return role == PlayerRole.Mannequin ? mannequinHuntSkin : null;
         }
 
-        /// <summary>
-        /// 현재 맵으로 등록하고 천장 높이를 검증한다.
-        /// (아바타보다 먼저 로드되는 씬 오브젝트이므로, 아바타가 생성될 때는 이미 등록되어 있다)
-        /// </summary>
+        /// <summary>아바타가 외형을 고르기 전에 등록돼야 하므로 Awake에서 등록하고, 모드 맵도 천장 높이를 검사한다.</summary>
         private void Awake()
         {
             Current = this;
@@ -76,7 +64,7 @@ namespace GuardVsMannequin.Map
         }
 
         /// <summary>
-        /// 씬이 내려가면 등록을 해제한다.
+        /// 다음 씬이 먼저 등록했을 수 있어, 아직 자신을 가리킬 때만 비운다.
         /// </summary>
         private void OnDestroy()
         {
@@ -85,7 +73,7 @@ namespace GuardVsMannequin.Map
         }
 
         /// <summary>
-        /// 에디터에서 값이 바뀔 때 천장 높이를 검증한다.
+        /// 맵을 만드는 중에 바로 알 수 있도록 인스펙터 값이 바뀔 때도 확인한다.
         /// </summary>
         private void OnValidate()
         {
@@ -93,7 +81,7 @@ namespace GuardVsMannequin.Map
         }
 
         /// <summary>
-        /// 천장 높이가 사거리 이상이면 에러를 남긴다.
+        /// 천장이 사거리보다 높으면 천장에 붙은 마네킹을 맞출 수 없어 판이 깨지므로 에러로 알린다.
         /// </summary>
         private void Validate()
         {

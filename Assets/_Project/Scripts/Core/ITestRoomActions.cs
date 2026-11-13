@@ -1,37 +1,28 @@
 namespace GuardVsMannequin.Core
 {
-    /// <summary>
-    /// 테스트 방에서 호스트가 게임 중에 쓰는 조작. (호스트는 서버이므로 직접 호출한다)
-    /// 테스트 방 게임 씬에서만 <see cref="GameServices.TestRoom"/>에 등록된다.
-    /// </summary>
+    /// <summary>테스트 방 게임 씬에서만 등록되는 호스트 조작.</summary>
     public interface ITestRoomActions
     {
-        /// <summary>지금 판의 상태.</summary>
         GameState CurrentState { get; }
 
-        /// <summary>지금 판의 설정.</summary>
         GameSettings Settings { get; }
 
-        /// <summary>역할·사냥 시간 전환을 쓸 수 있는 단계인지 여부. (탐색 단계 또는 사냥 시간)</summary>
+        /// <summary>아바타가 없는 단계에서 전환하면 스폰 흐름이 꼬이므로, 탐색 단계나 사냥 시간에만 허용한다.</summary>
         bool CanSwitch { get; }
 
-        /// <summary>
-        /// 내 아바타를 가드 ↔ 마네킹으로 바꾼다. 지금 자리에서 다시 스폰한다. (아바타가 없으면 가드로 스폰)
-        /// </summary>
+        /// <summary>혼자 두 역할을 확인하도록 지금 자리에서 가드 ↔ 마네킹으로 다시 스폰한다.</summary>
         void SwapLocalRole();
 
-        /// <summary>
-        /// 마네킹 ↔ 구울: 사냥 시간을 켜고 끈다. 끌 때는 마네킹을 같은 자리에 다시 스폰해 원래 모습으로 되돌린다.
-        /// </summary>
+        /// <summary>목표를 채우지 않고도 구울을 확인하도록 사냥 시간을 켜고 끈다.</summary>
         void ToggleHunt();
 
         /// <summary>
-        /// 진행 중인 판의 설정을 바꾼다.
+        /// 판을 다시 시작하지 않고 수치를 바로 바꿔 보기 위해 쓴다.
         /// </summary>
         void ApplySettings(GameSettings settings);
 
         /// <summary>
-        /// 판을 끝내고 모두 룸으로 돌아간다. (테스트 방은 승패가 나지 않으므로 맵을 바꿀 때 사용)
+        /// 테스트 방은 승패가 나지 않으므로, 맵을 바꾸려면 직접 룸으로 돌아가야 한다.
         /// </summary>
         void ReturnToRoom();
     }

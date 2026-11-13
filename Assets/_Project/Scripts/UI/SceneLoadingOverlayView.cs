@@ -3,10 +3,7 @@ using UnityEngine.UI;
 
 namespace GuardVsMannequin.UI
 {
-    /// <summary>
-    /// 로딩 화면의 모양. 검은 배경과 문구 두 줄(제목, 상세)을 코드로 만든다. (씬이나 프리팹에 의존하지 않기 위함)
-    /// 언제 보일지, 무슨 문구를 쓸지는 <see cref="SceneLoadingOverlay"/>가 정한다.
-    /// </summary>
+    /// <summary>씬이나 프리팹에 의존하지 않도록 로딩 화면 모양을 코드로 만든다.</summary>
     public sealed class SceneLoadingOverlayView
     {
         private const int SortingOrder = 30000;
@@ -15,9 +12,7 @@ namespace GuardVsMannequin.UI
         private readonly Text titleText;
         private readonly Text detailText;
 
-        /// <summary>
-        /// 부모 아래에 화면을 만들고 숨겨 둔다.
-        /// </summary>
+        /// <summary>다른 UI 위에 덮이도록 정렬 순서를 크게 두고, 시작할 때 화면이 덮이지 않게 숨긴 채 만든다.</summary>
         public SceneLoadingOverlayView(Transform parent)
         {
             root = new GameObject("Canvas", typeof(RectTransform));
@@ -49,7 +44,7 @@ namespace GuardVsMannequin.UI
         }
 
         /// <summary>
-        /// 화면을 보이거나 숨긴다.
+        /// 언제 보일지는 바깥에서 정하므로 켜고 끄기만 맡는다.
         /// </summary>
         public void SetVisible(bool visible)
         {
@@ -57,7 +52,7 @@ namespace GuardVsMannequin.UI
         }
 
         /// <summary>
-        /// 제목과 상세 문구를 바꾼다.
+        /// 문구 내용은 바깥에서 정하므로 받은 그대로 표시만 한다.
         /// </summary>
         public void SetTexts(string title, string detail)
         {
@@ -65,9 +60,7 @@ namespace GuardVsMannequin.UI
             detailText.text = detail;
         }
 
-        /// <summary>
-        /// 가운데 정렬된 문구를 화면 비율 영역에 만든다.
-        /// </summary>
+        /// <summary>해상도가 바뀌어도 위치가 유지되도록 화면 비율 영역에 문구를 둔다.</summary>
         private Text CreateText(string objectName, Font font, int fontSize, Vector2 anchorMin, Vector2 anchorMax)
         {
             var text = CreateChild<Text>(objectName);
@@ -81,7 +74,7 @@ namespace GuardVsMannequin.UI
         }
 
         /// <summary>
-        /// 캔버스 아래에 UI 컴포넌트가 붙은 자식을 만든다.
+        /// UI 요소는 RectTransform이 있어야 앵커가 동작하므로 처음부터 RectTransform으로 만든다.
         /// </summary>
         private T CreateChild<T>(string objectName) where T : Graphic
         {
@@ -91,7 +84,7 @@ namespace GuardVsMannequin.UI
         }
 
         /// <summary>
-        /// 앵커 영역을 꽉 채우도록 RectTransform을 맞춘다.
+        /// 여백이 남으면 해상도마다 크기가 달라지므로 앵커 영역을 꽉 채우게 한다.
         /// </summary>
         private static void Stretch(RectTransform rect, Vector2 anchorMin, Vector2 anchorMax)
         {

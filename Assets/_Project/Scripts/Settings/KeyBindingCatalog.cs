@@ -3,9 +3,7 @@ using UnityEngine.InputSystem;
 
 namespace GuardVsMannequin.Settings
 {
-    /// <summary>
-    /// 설정 화면에서 바꿀 수 있는 키 목록. 입력 에셋의 액션 이름과 바인딩(복합 입력의 부분 이름)을 가리킨다.
-    /// </summary>
+    /// <summary>설정 화면에서 바꿀 수 있는 키 목록.</summary>
     public static class KeyBindingCatalog
     {
         /// <summary>
@@ -15,13 +13,13 @@ namespace GuardVsMannequin.Settings
         {
             public readonly string actionName;
 
-            /// <summary>복합 입력(WASD, Q/E)의 부분 이름. 단일 바인딩이면 null.</summary>
+            /// <summary>한 액션에 여러 키가 묶인 경우 그중 하나를 가리키는 부분 이름(단일이면 null).</summary>
             public readonly string partName;
 
-            /// <summary>표시 이름 문구의 key. (strings.csv)</summary>
+            /// <summary>strings.csv의 key.</summary>
             public readonly string labelKey;
 
-            /// <summary>항목을 만든다.</summary>
+            /// <summary>목록을 표 형태로 한눈에 볼 수 있도록 세 값을 한 줄에 넣어 만든다.</summary>
             public Entry(string actionName, string partName, string labelKey)
             {
                 this.actionName = actionName;
@@ -30,7 +28,7 @@ namespace GuardVsMannequin.Settings
             }
         }
 
-        /// <summary>표시 순서대로의 키 목록.</summary>
+        /// <summary>설정 화면에 이 순서대로 보인다.</summary>
         public static readonly IReadOnlyList<Entry> All = new[]
         {
             new Entry("Move", "up", "key.moveUp"),
@@ -55,16 +53,13 @@ namespace GuardVsMannequin.Settings
             new Entry("Jump", null, "key.jump")
         };
 
-        /// <summary>
-        /// 액션 이름과 부분 이름이 같은 항목을 찾는다. (설정 화면의 키 설정 줄을 항목과 짝지을 때)
-        /// </summary>
-        /// <param name="partName">복합 입력의 부분 이름. 단일 바인딩이면 null 또는 빈 문자열.</param>
+        /// <summary>프리팹에는 액션·부분 이름만 저장되므로 그 값으로 목록 항목을 찾는다.</summary>
         public static bool TryFind(string actionName, string partName, out Entry entry)
         {
-            string part = string.IsNullOrEmpty(partName) ? null : partName;
+            string normalizedPart = string.IsNullOrEmpty(partName) ? null : partName;
             foreach (Entry candidate in All)
             {
-                if (candidate.actionName == actionName && candidate.partName == part)
+                if (candidate.actionName == actionName && candidate.partName == normalizedPart)
                 {
                     entry = candidate;
                     return true;
@@ -74,9 +69,7 @@ namespace GuardVsMannequin.Settings
             return false;
         }
 
-        /// <summary>
-        /// 액션에서 항목이 가리키는 바인딩의 인덱스를 찾는다. 없으면 -1.
-        /// </summary>
+        /// <summary>재바인딩 API가 인덱스를 요구하므로 항목이 가리키는 바인딩 위치를 찾는다.</summary>
         public static int FindBindingIndex(InputAction action, string partName)
         {
             for (int i = 0; i < action.bindings.Count; i++)

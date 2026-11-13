@@ -3,10 +3,7 @@ using UnityEngine;
 
 namespace GuardVsMannequin.Map
 {
-    /// <summary>
-    /// 맵의 조명 기구 하나. Light 컴포넌트와 발광 머티리얼을 함께 켜고 끈다.
-    /// 조명 기구는 변신 대상이 아니다. (TransformableProp을 붙이지 않음)
-    /// </summary>
+    /// <summary>사냥 시간에 조명을 끌 때 빛과 발광 머티리얼이 함께 꺼지도록 묶는다.</summary>
     public class MapLight : MonoBehaviour
     {
         [Tooltip("켜고 끌 조명. 비어 있으면 자식에서 찾는다.")]
@@ -17,14 +14,13 @@ namespace GuardVsMannequin.Map
         [SerializeField] private Material onMaterial;
         [SerializeField] private Material offMaterial;
 
-        /// <summary>현재 켜져 있는지 여부.</summary>
         public bool IsOn { get; private set; } = true;
 
-        /// <summary>이 조명 기구가 켜고 끄는 조명. (사냥 시간 깜빡임 대상)</summary>
+        /// <summary>사냥 시간 깜빡임이 개별 조명을 다뤄야 해서 공개한다.</summary>
         public IReadOnlyList<Light> Lights => lights;
 
         /// <summary>
-        /// 조명 목록이 비어 있으면 자식에서 수집한다.
+        /// 맵 제작자가 목록을 채우지 않아도 동작하도록, 비어 있으면 자식에서 모은다.
         /// </summary>
         private void Awake()
         {
@@ -32,9 +28,7 @@ namespace GuardVsMannequin.Map
                 lights = GetComponentsInChildren<Light>(true);
         }
 
-        /// <summary>
-        /// 조명과 전구 외형을 켜거나 끈다.
-        /// </summary>
+        /// <summary>빛만 꺼지고 전구가 빛나 보이면 어색하므로 전구 머티리얼도 함께 바꾼다.</summary>
         public void SetOn(bool on)
         {
             IsOn = on;

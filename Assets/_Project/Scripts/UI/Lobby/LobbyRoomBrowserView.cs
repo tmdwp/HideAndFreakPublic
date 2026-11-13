@@ -7,10 +7,7 @@ using UnityEngine.UI;
 
 namespace GuardVsMannequin.UI
 {
-    /// <summary>
-    /// 공개방 찾기 화면. 목록·새로고침·빠른 참가·표시 필터를 맡고, 검색은 <see cref="IRoomBrowser"/>에 맡긴다.
-    /// 방 이름과 맵 이름은 로비 주인이 적은 값이라 리치 텍스트를 끄고 보여 준다.
-    /// </summary>
+    /// <summary>검색은 인터페이스에 맡기고 공개방 목록·새로고침·빠른 참가·필터만 맡는 화면.</summary>
     public class LobbyRoomBrowserView : MonoBehaviour
     {
         [SerializeField] private Button openButton;
@@ -25,11 +22,9 @@ namespace GuardVsMannequin.UI
         private readonly List<GameObject> rows = new();
         private ILobbyNavigator navigator;
         private IRoomBrowser browser;
-        private bool quickJoinPending;
+        private bool isQuickJoinPending;
 
-        /// <summary>
-        /// 버튼과 필터를 연결한다.
-        /// </summary>
+        /// <summary>필터는 받은 목록을 다시 거르기만 하면 되므로 검색 없이 줄만 다시 만든다.</summary>
         private void Start()
         {
             navigator = UiLookup.FindInParent<ILobbyNavigator>(this);
@@ -43,7 +38,7 @@ namespace GuardVsMannequin.UI
         }
 
         /// <summary>
-        /// 구독을 해제한다. (세션 서비스와 검색기는 로비 씬을 다시 불러와도 남는다)
+        /// 세션 서비스와 검색기는 로비 씬을 다시 불러와도 남으므로, 끊지 않으면 파괴된 화면을 부른다.
         /// </summary>
         private void OnDestroy()
         {
@@ -55,7 +50,7 @@ namespace GuardVsMannequin.UI
         }
 
         /// <summary>
-        /// Steam 연결과 진행 중인 작업 여부에 따라 버튼을 켜고 끈다.
+        /// Steam 상태와 검색 진행 여부는 알림 없이 바뀌므로 매 프레임 확인해, 실패하거나 겹칠 버튼을 미리 막는다.
         /// </summary>
         private void Update()
         {
@@ -65,22 +60,20 @@ namespace GuardVsMannequin.UI
 
             openButton.interactable = session.CanOpenSteamMenu();
             refreshButton.interactable = session.CanConnectSteam() && (browser == null || !browser.IsRefreshing);
-            quickJoinButton.interactable = session.CanConnectSteam() && !quickJoinPending;
+            quickJoinButton.interactable = session.CanConnectSteam() && !isQuickJoinPending;
         }
 
-        /// <summary>
-        /// 화면을 열고 목록을 새로 찾는다.
-        /// </summary>
+        /// <summary>이전 목록은 낡았을 수 있어 열 때마다 새로 찾는다.</summary>
         private void OpenScreen()
         {
             navigator?.Show(LobbyScreen.Browse);
-            quickJoinPending = false;
+            isQuickJoinPending = false;
             if (!StartRefresh())
                 Rebuild();
         }
 
         /// <summary>
-        /// 검색을 시작한다. 새 검색을 시작했으면 true.
+        /// 호출하는 쪽이 결과를 기다릴지 지금 목록을 쓸지 정할 수 있도록 새 검색을 시작했는지 돌려준다.
         /// </summary>
         private bool StartRefresh()
         {
@@ -93,7 +86,7 @@ namespace GuardVsMannequin.UI
         }
 
         /// <summary>
-        /// 검색기를 가져와 구독한다. Steam이 없으면 안내만 한다.
+        /// Steam이 늦게 켜질 수 있어 시작할 때가 아니라 처음 쓸 때 검색기를 가져온다.
         /// </summary>
         private void ConnectBrowser()
         {
@@ -110,23 +103,21 @@ namespace GuardVsMannequin.UI
             browser.Failed += OnFailed;
         }
 
-        /// <summary>
-        /// 빠른 참가: 목록을 새로 찾은 뒤 고른다. 방금 찾았으면 지금 목록에서 고른다.
-        /// </summary>
+        /// <summary>낡은 목록에서 고르면 찬 방에 들어가려 할 수 있어 새로 찾은 뒤 고른다.</summary>
         private void QuickJoin()
         {
             if (StartRefresh())
-                quickJoinPending = true;
+                isQuickJoinPending = true;
             else
                 JoinBestRoom();
         }
 
         /// <summary>
-        /// 들어갈 수 있는 방 중 1순위에 참가한다. 없으면 안내한다.
+        /// 고르는 기준은 테스트할 수 있도록 <see cref="RoomListingRules"/>에 두고, 여기서는 결과만 처리한다.
         /// </summary>
         private void JoinBestRoom()
         {
-            quickJoinPending = false;
+            isQuickJoinPending = false;
             if (browser != null && RoomListingRules.TryPickQuickJoin(browser.Rooms, out RoomListing room))
                 Join(room);
             else
@@ -134,7 +125,7 @@ namespace GuardVsMannequin.UI
         }
 
         /// <summary>
-        /// 방에 참가한다. 암호 방이면 세션 서비스가 암호 입력 화면을 띄운다.
+        /// 암호 방이면 세션 서비스가 암호 입력 화면을 띄우므로 여기서는 빈 암호로 요청만 한다.
         /// </summary>
         private static void Join(RoomListing room)
         {
@@ -142,26 +133,26 @@ namespace GuardVsMannequin.UI
         }
 
         /// <summary>
-        /// 검색이 끝나면 목록을 만들고, 빠른 참가를 기다리는 중이면 이어서 참가한다.
+        /// 빠른 참가는 검색 결과를 기다리고 있으므로 목록이 오면 이어서 참가한다.
         /// </summary>
         private void OnListUpdated()
         {
             Rebuild();
-            if (quickJoinPending)
+            if (isQuickJoinPending)
                 JoinBestRoom();
         }
 
         /// <summary>
-        /// 검색 실패를 안내한다.
+        /// 실패한 뒤 다음 목록이 왔을 때 몰래 참가하지 않도록 빠른 참가 대기를 취소한다.
         /// </summary>
         private void OnFailed(string noticeKey)
         {
-            quickJoinPending = false;
+            isQuickJoinPending = false;
             statusText.text = Loc.Get(noticeKey);
         }
 
         /// <summary>
-        /// 필터를 적용해 줄을 다시 만든다.
+        /// 방 수가 적고 자주 바뀌지 않아 줄을 재사용하지 않고 통째로 다시 만든다.
         /// </summary>
         private void Rebuild()
         {
@@ -172,14 +163,14 @@ namespace GuardVsMannequin.UI
             if (browser == null)
                 return;
 
-            List<RoomListing> shown = RoomListingRules.Filter(browser.Rooms, hidePasswordToggle.isOn, hideMissingMapToggle.isOn);
-            foreach (RoomListing room in shown)
+            List<RoomListing> shownRooms = RoomListingRules.Filter(browser.Rooms, hidePasswordToggle.isOn, hideMissingMapToggle.isOn);
+            foreach (RoomListing room in shownRooms)
                 AddRow(room);
-            statusText.text = shown.Count > 0 ? Loc.Format("lobby.browse.count", shown.Count) : Loc.Get("lobby.browse.empty");
+            statusText.text = shownRooms.Count > 0 ? Loc.Format("lobby.browse.count", shownRooms.Count) : Loc.Get("lobby.browse.empty");
         }
 
         /// <summary>
-        /// 줄 하나를 더한다.
+        /// 방 이름은 다른 사람이 적은 값이라 태그로 화면을 깨뜨리지 못하도록 리치 텍스트를 끈다.
         /// </summary>
         private void AddRow(RoomListing room)
         {
@@ -192,17 +183,15 @@ namespace GuardVsMannequin.UI
             rows.Add(row.gameObject);
         }
 
-        /// <summary>
-        /// 방 한 줄의 문구: 이름 | 맵 | 인원 | 핑, 그 뒤에 암호·모드 표시.
-        /// </summary>
+        /// <summary>들어가기 전에 판단하도록 이름·맵·인원·핑과 암호 표시를 한 줄에 보여 준다.</summary>
         private static string Describe(RoomListing room)
         {
-            string name = room.name.Length > 0 ? room.name : Loc.Get("lobby.browse.unnamed");
-            string map = ModService.Instance.FindMapName(room.mapId) ?? Loc.Get(room.mapId.Length > 0 ? "lobby.browse.modMap" : "lobby.browse.unknownMap");
+            string roomName = room.name.Length > 0 ? room.name : Loc.Get("lobby.browse.unnamed");
+            string mapName = ModService.Instance.FindMapName(room.mapId) ?? Loc.Get(room.mapId.Length > 0 ? "lobby.browse.modMap" : "lobby.browse.unknownMap");
             string ping = room.pingMs >= 0 ? $"{room.pingMs}ms" : "-";
-            string password = room.hasPassword ? "  " + Loc.Get("lobby.browse.tag.password") : string.Empty;
-            string missing = room.hasMap ? string.Empty : "  " + Loc.Get("lobby.browse.tag.missingMap");
-            return $"{name}   |   {map}   |   {room.playerCount}/{room.maxPlayers}   |   {ping}{password}{missing}";
+            string passwordTag = room.hasPassword ? "  " + Loc.Get("lobby.browse.tag.password") : string.Empty;
+            string missingMapTag = room.hasMap ? string.Empty : "  " + Loc.Get("lobby.browse.tag.missingMap");
+            return $"{roomName}   |   {mapName}   |   {room.playerCount}/{room.maxPlayers}   |   {ping}{passwordTag}{missingMapTag}";
         }
     }
 }

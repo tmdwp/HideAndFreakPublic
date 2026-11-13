@@ -6,14 +6,7 @@ using UnityEngine;
 
 namespace GuardVsMannequin.Network
 {
-    /// <summary>
-    /// Multipass 트랜스포트로 서버/클라이언트 연결을 시작하고 끝낸다.
-    /// - 서버: Tugboat(직접 접속)는 항상, Steam(FishySteamworks)은 Steam 방일 때만 연다.
-    /// - 호스트의 로컬 클라이언트: 항상 Tugboat로 자기 자신(localhost)에 접속한다.
-    /// - 참가자: Steam 방이면 FishySteamworks(호스트 SteamID), 직접 접속이면 Tugboat(IP 주소).
-    /// Steam 방에서는 Tugboat를 루프백에만 열어, 방 코드 없이 IP로 직접 들어오는 경로를 막는다.
-    /// FishySteamworks는 Assembly-CSharp에 있어 타입 이름으로 찾는다.
-    /// </summary>
+    /// <summary>Steam 방과 직접 접속을 함께 받도록 Multipass 트랜스포트로 연결을 시작하고 끝낸다.</summary>
     public class TransportConnector : MonoBehaviour
     {
         private const string SteamTransportTypeName = "FishySteamworks";
@@ -29,13 +22,11 @@ namespace GuardVsMannequin.Network
         private string defaultIpv4BindAddress;
         private string defaultIpv6BindAddress;
 
-        /// <summary>서버가 실행 중인지 여부.</summary>
         public bool IsServerRunning => networkManager.IsServerStarted;
 
-        /// <summary>클라이언트가 실행 중인지 여부.</summary>
         public bool IsClientRunning => networkManager.IsClientStarted;
 
-        /// <summary>Steam 트랜스포트를 사용할 수 있는지 여부.</summary>
+        /// <summary>로비가 Steam 방 버튼을 보여 줄지 정하려고 쓴다.</summary>
         public bool HasSteamTransport
         {
             get
@@ -45,18 +36,16 @@ namespace GuardVsMannequin.Network
             }
         }
 
-        /// <summary>연결에 사용하는 NetworkManager.</summary>
         public NetworkManager NetworkManager => networkManager;
 
-        /// <summary>Steam 트랜스포트 존재 여부를 확인하기 전에 트랜스포트를 찾아 둔다.</summary>
+        /// <summary>로비가 Steam 방 버튼을 그리기 전에 트랜스포트 유무를 알 수 있도록 미리 찾아 둔다.</summary>
         private void Start()
         {
             EnsureTransports();
         }
 
         /// <summary>
-        /// Multipass 안의 Tugboat와 FishySteamworks를 한 번만 찾는다.
-        /// NetworkManager의 하위 매니저는 NetworkManager.Awake에서 준비되므로 Awake에서 찾지 않는다.
+        /// NetworkManager의 하위 매니저는 NetworkManager.Awake에서 준비되므로 Awake에서 찾지 않고 처음 필요할 때 한 번만 찾는다.
         /// </summary>
         private void EnsureTransports()
         {
@@ -74,6 +63,7 @@ namespace GuardVsMannequin.Network
             {
                 if (transport is Tugboat)
                     tugboat = transport;
+                // FishySteamworks는 다른 어셈블리에 있어 타입을 직접 참조할 수 없으므로 이름으로 찾는다.
                 else if (transport.GetType().Name == SteamTransportTypeName)
                     steamTransport = transport;
             }
@@ -91,21 +81,21 @@ namespace GuardVsMannequin.Network
         }
 
         /// <summary>
-        /// 서버를 시작한다. Steam 방이면 Steam 트랜스포트도 함께 열고, Tugboat는 호스트 전용(루프백)으로 연다.
+        /// 호스트 자신은 항상 Tugboat로 접속하므로 Tugboat는 늘 열고, Steam 방이면 방 코드 없이 IP로 들어오지 못하게 Tugboat를 루프백에만 연다.
         /// </summary>
         /// <returns>서버 시작 요청에 성공했는지 여부.</returns>
         public bool StartServer(bool withSteam)
         {
             EnsureTransports();
             ApplyTugboatBinding(loopbackOnly: withSteam);
-            bool started = multipass.StartConnection(true, tugboat.Index);
+            bool isStarted = multipass.StartConnection(true, tugboat.Index);
             if (withSteam && steamTransport != null)
-                started &= multipass.StartConnection(true, steamTransport.Index);
-            return started;
+                isStarted &= multipass.StartConnection(true, steamTransport.Index);
+            return isStarted;
         }
 
         /// <summary>
-        /// Tugboat 서버의 바인드 주소를 정한다. 루프백 전용이면 같은 PC(호스트 자신)만 접속할 수 있다.
+        /// Steam 방에서 IP 직접 접속을 막으려고 루프백 전용 바인딩을 쓰고, 직접 방에서는 인스펙터 설정으로 되돌린다.
         /// </summary>
         private void ApplyTugboatBinding(bool loopbackOnly)
         {
@@ -114,16 +104,14 @@ namespace GuardVsMannequin.Network
         }
 
         /// <summary>
-        /// 호스트의 로컬 클라이언트를 자기 서버에 접속시킨다.
+        /// 호스트도 클라이언트로 참여해야 게임 화면이 그려지므로 자기 서버에 접속시킨다.
         /// </summary>
         public bool StartLocalClient()
         {
             return StartDirectClient(LocalAddress);
         }
 
-        /// <summary>
-        /// IP 주소로 Tugboat 클라이언트를 시작한다.
-        /// </summary>
+        /// <summary>개발·LAN에서 Steam 없이 접속하도록 IP로 Tugboat 클라이언트를 연다.</summary>
         public bool StartDirectClient(string address)
         {
             EnsureTransports();
@@ -133,7 +121,7 @@ namespace GuardVsMannequin.Network
         }
 
         /// <summary>
-        /// 호스트 SteamID로 Steam 클라이언트를 시작한다.
+        /// Steam 방은 IP 대신 호스트 SteamID로 접속해 NAT를 넘는다.
         /// </summary>
         public bool StartSteamClient(ulong hostSteamId)
         {
@@ -147,7 +135,7 @@ namespace GuardVsMannequin.Network
         }
 
         /// <summary>
-        /// 클라이언트와 모든 서버 연결을 끝낸다.
+        /// 다음 방을 열 때 이전 연결이 남아 충돌하지 않도록 클라이언트와 모든 서버 트랜스포트를 닫는다.
         /// </summary>
         public void StopAll()
         {

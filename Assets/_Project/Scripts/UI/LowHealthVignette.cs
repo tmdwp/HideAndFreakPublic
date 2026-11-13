@@ -5,11 +5,7 @@ using UnityEngine.Rendering.Universal;
 
 namespace GuardVsMannequin.UI
 {
-    /// <summary>
-    /// 로컬 플레이어의 잔여 체력이 낮을수록 화면 가장자리부터 점점 어두워지게 한다.
-    /// 전역 URP Volume(비네트 + 노출 감소)을 런타임에 만들어 제어한다. (본인 화면에만 적용)
-    /// 카메라의 Post Processing이 켜져 있어야 보인다.
-    /// </summary>
+    /// <summary>위험을 바로 느끼도록 체력이 낮을수록 본인 화면 가장자리를 어둡게 한다.</summary>
     public class LowHealthVignette : MonoBehaviour
     {
         [Tooltip("체력이 거의 없을 때의 비네트 세기(0~1).")]
@@ -27,9 +23,7 @@ namespace GuardVsMannequin.UI
         private ColorAdjustments colorAdjustments;
         private float currentDamage;
 
-        /// <summary>
-        /// 비네트와 색 보정 오버라이드를 가진 전역 볼륨을 만든다.
-        /// </summary>
+        /// <summary>씬마다 볼륨을 배치하지 않도록 실행 중에 만들고 다른 볼륨보다 우선순위를 높인다.</summary>
         private void Awake()
         {
             profile = ScriptableObject.CreateInstance<VolumeProfile>();
@@ -49,7 +43,7 @@ namespace GuardVsMannequin.UI
         }
 
         /// <summary>
-        /// 런타임에 만든 프로필을 해제한다.
+        /// 런타임에 만든 프로필은 자동으로 해제되지 않으므로 직접 지운다.
         /// </summary>
         private void OnDestroy()
         {
@@ -57,9 +51,7 @@ namespace GuardVsMannequin.UI
                 Destroy(profile);
         }
 
-        /// <summary>
-        /// 로컬 플레이어의 체력 비율로 효과 세기를 갱신한다. 아바타가 없으면 효과를 끈다.
-        /// </summary>
+        /// <summary>맞는 순간 화면이 뚝 바뀌지 않도록 목표 세기를 천천히 따라가고, 아바타가 없으면 끈다.</summary>
         private void Update()
         {
             float targetDamage = 0f;

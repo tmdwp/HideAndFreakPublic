@@ -3,19 +3,14 @@ using UnityEngine;
 
 namespace GuardVsMannequin.Audio
 {
-    /// <summary>
-    /// 사운드 에셋이 준비되기 전까지 사용할 임시 합성음을 만든다.
-    /// 종류별로 한 번만 생성해 캐시한다.
-    /// </summary>
+    /// <summary>사운드 에셋이 준비되기 전까지 쓸 임시 합성음을 만든다.</summary>
     public static class ProceduralNoiseClips
     {
         private const int SampleRate = 44100;
 
         private static readonly Dictionary<NoiseType, AudioClip> cache = new();
 
-        /// <summary>
-        /// 소음 종류에 맞는 합성음을 반환한다.
-        /// </summary>
+        /// <summary>합성이 무거우므로 종류마다 한 번만 만들어 캐시하고 파괴됐으면 다시 만든다.</summary>
         public static AudioClip Get(NoiseType type)
         {
             if (cache.TryGetValue(type, out AudioClip clip) && clip != null)
@@ -24,7 +19,6 @@ namespace GuardVsMannequin.Audio
             clip = type switch
             {
                 NoiseType.GunShot => Create("GunShot", 0.3f, GunShot),
-                NoiseType.DisguiseCreak => Create("DisguiseCreak", 0.3f, ShortCreak),
                 NoiseType.GeneratorDestroyed => Create("GeneratorDestroyed", 1.0f, Boom),
                 NoiseType.PowerDown => Create("PowerDown", 1.8f, PowerDown),
                 NoiseType.MannequinAttack => Create("MannequinAttack", 0.25f, Swipe),
@@ -41,9 +35,7 @@ namespace GuardVsMannequin.Audio
             return clip;
         }
 
-        /// <summary>
-        /// 시간(초)과 길이(초)를 받아 샘플 값을 돌려주는 함수로 모노 클립을 만든다.
-        /// </summary>
+        /// <summary>소리마다 파형 식만 바꿔 끼워 모노 클립을 만들고, 찢어지는 소리가 나지 않게 -1~1로 자른다.</summary>
         private static AudioClip Create(string name, float length, System.Func<float, float, float> sampler)
         {
             int count = Mathf.CeilToInt(length * SampleRate);
@@ -66,14 +58,6 @@ namespace GuardVsMannequin.Audio
         private static float Ping(float t, float length)
         {
             return Mathf.Sin(2f * Mathf.PI * 1200f * t) * Mathf.Exp(-t * 8f) * 0.6f;
-        }
-
-        /// <summary>변신 소음: 짧은 삐걱임.</summary>
-        private static float ShortCreak(float t, float length)
-        {
-            float frequency = 320f - t * 400f;
-            float saw = 2f * (t * frequency - Mathf.Floor(t * frequency + 0.5f));
-            return saw * Mathf.Sin(Mathf.PI * t / length) * 0.4f;
         }
 
         /// <summary>전원 차단: "쿵" 하는 저음과 함께 낮아지며 사라지는 험 노이즈.</summary>
@@ -105,11 +89,11 @@ namespace GuardVsMannequin.Audio
             return (noise * 0.8f * Mathf.Exp(-t * 9f)) + (thump * 0.6f * Mathf.Exp(-t * 5f));
         }
 
-        /// <summary>구울 숨소리: 들이쉬고 내쉬는 거친 잡음 위에 낮게 떨리는 으르렁. (반복해도 이음매가 없도록 처음·끝이 0)</summary>
+        /// <summary>반복해도 이음매가 없도록 처음·끝이 0인 구울 숨소리.</summary>
         private static float GhoulBreath(float t, float length)
         {
             float phase = t / length;
-            // 앞 40%는 들숨(작게), 뒤 60%는 날숨(크게)
+            // 들숨은 작게, 날숨은 크게.
             float envelope = phase < 0.4f ? Mathf.Sin(Mathf.PI * phase / 0.4f) * 0.45f : Mathf.Sin(Mathf.PI * (phase - 0.4f) / 0.6f);
             float rasp = (Random.value * 2f - 1f) * 0.5f;
             float growlFrequency = 62f + Mathf.Sin(2f * Mathf.PI * 3f * t) * 6f;
@@ -143,7 +127,7 @@ namespace GuardVsMannequin.Audio
             return (sum * 0.22f * tremolo + noise) * envelope;
         }
 
-        /// <summary>심장 소리: "쿵-쿵" 두 번의 낮은 박동. (반복 재생, 빠르기는 재생 속도로 조절)</summary>
+        /// <summary>재생 속도로 빠르기를 조절하는 두 번 박동 심장 소리.</summary>
         private static float Heartbeat(float t, float length)
         {
             float first = Mathf.Sin(2f * Mathf.PI * 52f * t) * Mathf.Exp(-t * 22f);

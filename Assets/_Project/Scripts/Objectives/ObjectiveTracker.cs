@@ -4,25 +4,21 @@ using GuardVsMannequin.Core;
 
 namespace GuardVsMannequin.Objectives
 {
-    /// <summary>
-    /// 이번 판에서 파괴된 전원 장치 수를 세고 동기화한다.
-    /// 목표 횟수는 게임 설정(objectiveCount)을 따른다.
-    /// </summary>
+    /// <summary>모든 PC가 같은 목표 진행을 보도록 이번 판에 파괴된 전원 장치 수를 세고 동기화한다.</summary>
     public class ObjectiveTracker : NetworkBehaviour
     {
         private readonly SyncVar<int> destroyedCount = new();
 
-        /// <summary>현재 달성 횟수.</summary>
         public int DestroyedCount => destroyedCount.Value;
 
-        /// <summary>목표 수행 횟수.</summary>
+        /// <summary>테스트 방에서 설정을 바꾸면 바로 반영되도록 매번 설정에서 읽는다.</summary>
         public int RequiredCount => GameServices.State?.Settings.objectiveCount ?? 0;
 
-        /// <summary>목표가 1회 이상이고 모두 달성했는지 여부.</summary>
+        /// <summary>목표가 0회인 판은 시간으로 사냥에 들어가므로 완료로 치지 않는다.</summary>
         public bool IsComplete => RequiredCount > 0 && DestroyedCount >= RequiredCount;
 
         /// <summary>
-        /// 새 판을 위해 달성 횟수를 초기화한다.
+        /// 지난 판 수가 이어지면 바로 목표가 달성되므로 새 판 시작 때 비운다.
         /// </summary>
         [Server]
         public void ResetCount()
@@ -31,7 +27,7 @@ namespace GuardVsMannequin.Objectives
         }
 
         /// <summary>
-        /// 전원 장치의 파괴 이벤트를 구독한다.
+        /// 전원 장치는 판마다 새로 스폰되므로, 스폰한 쪽이 넘겨줄 때마다 파괴를 듣는다.
         /// </summary>
         [Server]
         public void Track(Generator generator)
@@ -40,7 +36,7 @@ namespace GuardVsMannequin.Objectives
         }
 
         /// <summary>
-        /// 파괴 시 달성 횟수를 올리고 구독을 해제한다.
+        /// 한 장치가 두 번 세지지 않도록 세면서 구독을 끊는다.
         /// </summary>
         private void OnGeneratorDestroyed(Generator generator)
         {

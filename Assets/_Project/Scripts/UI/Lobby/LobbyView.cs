@@ -7,14 +7,7 @@ using UnityEngine.UI;
 
 namespace GuardVsMannequin.UI
 {
-    /// <summary>
-    /// 로비(메인 메뉴) 화면 관리. 화면(패널)을 하나씩 보여주며 이동하고, 공통 상태 문구와 뒤로 가기(버튼·ESC)를 처리한다.
-    /// 화면과 "뒤로 가면 어디로 가는지"(부모 화면)는 인스펙터의 화면 목록으로 정한다. 화면을 추가해도 이 코드는 바꾸지 않는다.
-    /// 기본 구성: 메인 ─ 방 만들기 ─ 스팀 방 만들기(암호) / 직접 방 만들기
-    ///               ─ 참가     ─ 스팀 방 입장(방 코드, 암호) / IP로 참가(주소)
-    ///               ─ 설정, 크레딧, 종료
-    /// 각 화면의 버튼 동작은 메뉴 코드가 맡는다: <see cref="LobbyMainMenu"/>, <see cref="LobbyCreateMenu"/>, <see cref="LobbyJoinMenu"/>.
-    /// </summary>
+    /// <summary>화면을 추가해도 코드를 고치지 않도록 인스펙터 목록으로 로비 화면 이동과 뒤로 가기를 처리한다.</summary>
     public class LobbyView : MonoBehaviour, ILobbyNavigator, ILobbyOverlays
     {
         /// <summary>화면 하나: 종류, 패널, 뒤로 가면 돌아갈 화면.</summary>
@@ -47,13 +40,11 @@ namespace GuardVsMannequin.UI
 
         private LobbyScreen currentScreen;
 
-        /// <summary>
-        /// 뒤로 버튼을 연결하고 시작 화면을 보여준다.
-        /// </summary>
+        /// <summary>뒤로 가는 곳이 달라도 동작은 같아 모두 Back에 연결하고, 켜진 채 저장된 패널은 시작할 때 정리한다.</summary>
         private void Start()
         {
-            foreach (Button back in backButtons)
-                back.onClick.AddListener(Back);
+            foreach (Button backButton in backButtons)
+                backButton.onClick.AddListener(Back);
 
             settingsPanel.gameObject.SetActive(false);
             creditsPanel.gameObject.SetActive(false);
@@ -61,21 +52,19 @@ namespace GuardVsMannequin.UI
                 Show(screens[0].screen);
         }
 
-        /// <summary>
-        /// 상태 문구를 갱신하고, ESC로 이전 화면으로 돌아간다.
-        /// </summary>
+        /// <summary>세션 상태는 알림 없이 바뀌므로 매 프레임 문구를 갱신하고, 로비에는 아바타 입력이 없어 ESC를 직접 읽는다.</summary>
         private void Update()
         {
             RefreshStatus();
 
             // 설정·크레딧이 열려 있으면 그쪽이 ESC를 처리한다.
-            bool overlayOpen = settingsPanel.IsOpen || creditsPanel.gameObject.activeSelf;
-            if (!overlayOpen && Keyboard.current != null && Keyboard.current.escapeKey.wasPressedThisFrame)
+            bool isOverlayOpen = settingsPanel.IsOpen || creditsPanel.gameObject.activeSelf;
+            if (!isOverlayOpen && Keyboard.current != null && Keyboard.current.escapeKey.wasPressedThisFrame)
                 Back();
         }
 
         /// <summary>
-        /// Steam 연결 상태와 세션 안내 문구를 표시한다.
+        /// 세션 서비스가 없으면 Steam 상태를 알 수 없으므로, 그때는 서비스가 없다는 안내만 보인다.
         /// </summary>
         private void RefreshStatus()
         {
@@ -90,7 +79,9 @@ namespace GuardVsMannequin.UI
             noticeText.text = session.Notice;
         }
 
-        /// <inheritdoc />
+        /// <summary>
+        /// 인스펙터 목록에 빠진 화면을 열면 모든 패널이 꺼져 빈 화면이 되므로, 그때는 경고만 남기고 지금 화면을 유지한다.
+        /// </summary>
         public void Show(LobbyScreen screen)
         {
             if (FindEntry(screen) == null)
@@ -107,7 +98,9 @@ namespace GuardVsMannequin.UI
             }
         }
 
-        /// <inheritdoc />
+        /// <summary>
+        /// 시작 화면은 부모를 자기 자신으로 두어 더 돌아가지 않게 한다.
+        /// </summary>
         public void Back()
         {
             ScreenEntry entry = FindEntry(currentScreen);
@@ -115,27 +108,33 @@ namespace GuardVsMannequin.UI
                 Show(entry.parent);
         }
 
-        /// <inheritdoc />
+        /// <summary>
+        /// 목록에 있어도 패널을 연결하지 않았으면 열 수 없으므로 패널까지 확인한다.
+        /// </summary>
         public bool HasScreen(LobbyScreen screen)
         {
             ScreenEntry entry = FindEntry(screen);
             return entry != null && entry.panel != null;
         }
 
-        /// <inheritdoc />
+        /// <summary>
+        /// 메뉴가 패널 참조를 몰라도 되도록 로비 화면이 대신 연다.
+        /// </summary>
         public void OpenSettings()
         {
             settingsPanel.Open();
         }
 
-        /// <inheritdoc />
+        /// <summary>
+        /// 메뉴가 패널 참조를 몰라도 되도록 로비 화면이 대신 연다.
+        /// </summary>
         public void OpenCredits()
         {
             creditsPanel.Open();
         }
 
         /// <summary>
-        /// 화면 종류의 목록 항목을 찾는다. 없으면 null.
+        /// 인스펙터 목록에 빠진 화면이 있을 수 있어, 호출하는 쪽이 확인할 수 있게 없으면 null을 돌려준다.
         /// </summary>
         private ScreenEntry FindEntry(LobbyScreen screen)
         {

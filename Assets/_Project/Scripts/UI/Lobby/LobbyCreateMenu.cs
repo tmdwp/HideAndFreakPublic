@@ -4,10 +4,7 @@ using UnityEngine.UI;
 
 namespace GuardVsMannequin.UI
 {
-    /// <summary>
-    /// 방 만들기 화면(스팀 방 만들기 / 직접 방 만들기), 스팀 방 만들기 화면(암호 입력),
-    /// 직접 방 만들기 화면(일반 방 / 테스트 방)의 버튼.
-    /// </summary>
+    /// <summary>방 만들기 관련 화면들의 버튼을 맡는다.</summary>
     public class LobbyCreateMenu : MonoBehaviour
     {
         [Header("방 만들기 화면")]
@@ -29,9 +26,7 @@ namespace GuardVsMannequin.UI
 
         private ILobbyNavigator navigator;
 
-        /// <summary>
-        /// 버튼 동작을 연결한다. 방 생성은 세션 서비스에 맡긴다.
-        /// </summary>
+        /// <summary>메뉴가 접속 방법을 몰라도 되도록 방 생성은 세션 서비스에 맡기고, 예전 프리팹에 없는 버튼은 있을 때만 연결한다.</summary>
         private void Start()
         {
             navigator = UiLookup.FindInParent<ILobbyNavigator>(this);
@@ -49,7 +44,7 @@ namespace GuardVsMannequin.UI
         }
 
         /// <summary>
-        /// 화면에서 고른 값으로 Steam 방을 만든다.
+        /// 예전 프리팹에는 공개방 토글·방 이름 칸이 없으므로, 그때는 이전 동작(공개방, 기본 이름)이 되도록 기본값을 채운다.
         /// </summary>
         private void HostSteamRoom()
         {
@@ -62,7 +57,7 @@ namespace GuardVsMannequin.UI
         }
 
         /// <summary>
-        /// Steam 연결과 진행 중인 작업 여부에 따라 버튼을 켜고 끈다.
+        /// Steam 상태와 접속 진행 여부는 알림 없이 바뀌므로 매 프레임 확인해, 실패하거나 겹칠 버튼을 미리 막는다.
         /// </summary>
         private void Update()
         {
@@ -81,7 +76,7 @@ namespace GuardVsMannequin.UI
         }
 
         /// <summary>
-        /// 직접 방 만들기 화면(일반 방 / 테스트 방)을 연다. 화면이 없는 예전 프리팹이면 바로 일반 방을 만든다.
+        /// 예전 프리팹에는 직접 방 만들기 화면이 없어 버튼이 아무 일도 하지 않게 되므로, 그때는 바로 일반 방을 만든다.
         /// </summary>
         private void OnDirectCreatePressed()
         {

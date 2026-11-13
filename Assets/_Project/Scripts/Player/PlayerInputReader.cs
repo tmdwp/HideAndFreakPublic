@@ -6,11 +6,7 @@ using UnityEngine.InputSystem;
 
 namespace GuardVsMannequin.Player
 {
-    /// <summary>
-    /// Input System 액션을 <see cref="IPlayerInput"/>으로 변환한다.
-    /// 로컬 소유자 아바타에서만 활성화되며, 설정 화면에서 바꾼 키 바인딩을 적용한다.
-    /// 커서가 풀려 있으면(ESC 메뉴, 결과 화면) 게임 입력을 막는다.
-    /// </summary>
+    /// <summary>로컬 소유자 아바타에서 설정한 키 바인딩으로 Input System 액션을 읽는다.</summary>
     public class PlayerInputReader : MonoBehaviour, IPlayerInput
     {
         private const string PlayerMapName = "Player";
@@ -48,7 +44,7 @@ namespace GuardVsMannequin.Player
         public event Action<int> SpectateCycled;
 
         /// <summary>
-        /// 에셋을 복제해 저장된 키 바인딩을 적용하고 액션을 찾는다. 복제본을 쓰면 다른 아바타와 상태가 섞이지 않는다.
+        /// 원본 에셋을 그대로 쓰면 다른 아바타와 상태가 섞이고 바인딩 변경이 에셋에 남으므로, 복제본에 저장된 키를 적용해 쓴다.
         /// </summary>
         private void Awake()
         {
@@ -72,7 +68,7 @@ namespace GuardVsMannequin.Player
         }
 
         /// <summary>
-        /// 액션을 활성화하고 버튼·설정 변경 이벤트를 구독한다. 게임을 시작하면 커서를 잠근다.
+        /// 소유자 아바타에서만 켜지므로, 켜지는 순간이 곧 내 게임이 시작되는 순간이라 커서도 함께 잠근다.
         /// </summary>
         private void OnEnable()
         {
@@ -83,8 +79,8 @@ namespace GuardVsMannequin.Player
             reloadAction.performed += OnReloadPerformed;
             spectatePreviousAction.performed += OnSpectatePreviousPerformed;
             spectateNextAction.performed += OnSpectateNextPerformed;
-            foreach (InputAction emote in emoteActions)
-                emote.performed += OnEmotePerformed;
+            foreach (InputAction emoteAction in emoteActions)
+                emoteAction.performed += OnEmotePerformed;
             OptionsStore.BindingsChanged += OnBindingsChanged;
 
             runtimeActions.Enable();
@@ -92,7 +88,7 @@ namespace GuardVsMannequin.Player
         }
 
         /// <summary>
-        /// 액션을 비활성화하고 이벤트 구독을 해제한다.
+        /// 사라진 아바타가 입력에 계속 반응하지 않도록 액션을 끄고 구독을 모두 푼다.
         /// </summary>
         private void OnDisable()
         {
@@ -105,18 +101,18 @@ namespace GuardVsMannequin.Player
             reloadAction.performed -= OnReloadPerformed;
             spectatePreviousAction.performed -= OnSpectatePreviousPerformed;
             spectateNextAction.performed -= OnSpectateNextPerformed;
-            foreach (InputAction emote in emoteActions)
-                emote.performed -= OnEmotePerformed;
+            foreach (InputAction emoteAction in emoteActions)
+                emoteAction.performed -= OnEmotePerformed;
             OptionsStore.BindingsChanged -= OnBindingsChanged;
 
             // 다시 스폰으로 새 로컬 아바타가 이미 생겼으면 그 아바타의 커서 잠금을 풀지 않는다.
-            PlayerIdentity current = LocalPlayerEvents.Current;
-            if (current == null || current.gameObject == gameObject)
+            PlayerIdentity currentPlayer = LocalPlayerEvents.Current;
+            if (currentPlayer == null || currentPlayer.gameObject == gameObject)
                 GameCursor.SetLocked(false);
         }
 
         /// <summary>
-        /// 복제한 입력 에셋을 해제한다.
+        /// Instantiate로 만든 에셋은 씬과 함께 지워지지 않으므로 직접 해제한다.
         /// </summary>
         private void OnDestroy()
         {
@@ -125,28 +121,28 @@ namespace GuardVsMannequin.Player
         }
 
         /// <summary>
-        /// 게임 중 설정 화면에서 키를 바꾸면 바로 적용한다.
+        /// 게임 중 설정 화면에서 키를 바꿨을 때 다시 스폰하지 않아도 바로 적용되게 한다.
         /// </summary>
         private void OnBindingsChanged()
         {
             OptionsStore.ApplyBindings(runtimeActions);
         }
 
-        /// <summary>좌클릭 누름을 전달한다.</summary>
+        /// <summary>메뉴를 누르려던 클릭이 게임 입력으로 새지 않도록 커서가 잠겼을 때만 전달한다.</summary>
         private void OnPrimaryPerformed(InputAction.CallbackContext context)
         {
             if (GameCursor.IsLocked)
                 PrimaryPressed?.Invoke();
         }
 
-        /// <summary>좌클릭 뗌을 전달한다. 잠금 상태와 관계없이 전달해 상호작용이 끊기지 않게 한다.</summary>
+        /// <summary>누른 채 메뉴를 열면 상호작용이 끝나지 않고 남으므로, 뗌은 잠금과 관계없이 전달한다.</summary>
         private void OnPrimaryCanceled(InputAction.CallbackContext context)
         {
             PrimaryReleased?.Invoke();
         }
 
         /// <summary>
-        /// 우클릭을 전달한다.
+        /// 메뉴를 누르려던 클릭이 게임 입력으로 새지 않도록 커서가 잠겼을 때만 전달한다.
         /// </summary>
         private void OnSecondaryPerformed(InputAction.CallbackContext context)
         {
@@ -154,34 +150,34 @@ namespace GuardVsMannequin.Player
                 SecondaryPressed?.Invoke();
         }
 
-        /// <summary>손전등 키를 전달한다.</summary>
+        /// <summary>메뉴에서 친 키가 게임 입력으로 새지 않도록 커서가 잠겼을 때만 전달한다.</summary>
         private void OnFlashlightPerformed(InputAction.CallbackContext context)
         {
             if (GameCursor.IsLocked)
                 FlashlightPressed?.Invoke();
         }
 
-        /// <summary>장전 키를 전달한다.</summary>
+        /// <summary>메뉴에서 친 키가 게임 입력으로 새지 않도록 커서가 잠겼을 때만 전달한다.</summary>
         private void OnReloadPerformed(InputAction.CallbackContext context)
         {
             if (GameCursor.IsLocked)
                 ReloadPressed?.Invoke();
         }
 
-        /// <summary>이전 관전 대상 키를 전달한다.</summary>
+        /// <summary>관전 중에는 커서를 쓰지 않아도 대상을 넘길 수 있어야 해서 잠금과 관계없이 전달한다.</summary>
         private void OnSpectatePreviousPerformed(InputAction.CallbackContext context)
         {
             SpectateCycled?.Invoke(-1);
         }
 
-        /// <summary>다음 관전 대상 키를 전달한다.</summary>
+        /// <summary>관전 중에는 커서를 쓰지 않아도 대상을 넘길 수 있어야 해서 잠금과 관계없이 전달한다.</summary>
         private void OnSpectateNextPerformed(InputAction.CallbackContext context)
         {
             SpectateCycled?.Invoke(1);
         }
 
         /// <summary>
-        /// 눌린 감정 표현 액션의 번호(1~6)를 찾아 전달한다.
+        /// 여섯 액션이 한 콜백을 같이 쓰므로, 어느 액션인지로 번호(1~6)를 알아낸다.
         /// </summary>
         private void OnEmotePerformed(InputAction.CallbackContext context)
         {

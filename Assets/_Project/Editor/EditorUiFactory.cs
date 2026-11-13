@@ -8,9 +8,7 @@ using UnityEngine.UI;
 
 namespace GuardVsMannequin.Editor
 {
-    /// <summary>
-    /// 에디터에서 uGUI 요소를 코드로 만드는 도우미. 만든 UI는 씬에 저장되어 인스펙터에서 그대로 편집할 수 있다.
-    /// </summary>
+    /// <summary>만든 UI를 인스펙터에서 그대로 편집할 수 있도록 에디터에서 uGUI 요소를 코드로 만든다.</summary>
     public static class EditorUiFactory
     {
         public static readonly Color PanelColor = new Color(0.08f, 0.09f, 0.11f, 0.92f);
@@ -21,12 +19,10 @@ namespace GuardVsMannequin.Editor
 
         private static Font defaultFont;
 
-        /// <summary>기본 UI 폰트. 프로젝트 폰트(Resources/Fonts)가 없으면 Unity 기본 폰트. (실행 시 OsFontApplier가 기본 폰트를 UI 폰트로 교체)</summary>
+        /// <summary>프로젝트 폰트가 없어도 UI를 만들 수 있게 Unity 기본 폰트로 대신한다.</summary>
         private static Font DefaultFont => defaultFont != null ? defaultFont : defaultFont = UiFont.LoadProjectFont() ?? Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
 
-        /// <summary>
-        /// 1920x1080 기준으로 크기가 맞춰지는 화면 캔버스를 만든다.
-        /// </summary>
+        /// <summary>모든 화면이 같은 기준으로 배치되도록 1920x1080 기준 캔버스를 만든다.</summary>
         public static Canvas CreateCanvas(string name)
         {
             var canvasObject = new GameObject(name, typeof(RectTransform));
@@ -43,7 +39,7 @@ namespace GuardVsMannequin.Editor
         }
 
         /// <summary>
-        /// Input System용 입력 모듈을 가진 EventSystem을 만든다.
+        /// 이 프로젝트는 새 Input System만 켜 두어 기본 입력 모듈로는 UI가 클릭되지 않으므로 Input System용 모듈을 붙인다.
         /// </summary>
         public static void CreateEventSystem()
         {
@@ -52,7 +48,7 @@ namespace GuardVsMannequin.Editor
         }
 
         /// <summary>
-        /// 앵커 범위를 가진 배경 패널을 만든다.
+        /// 해상도가 바뀌어도 화면 비율 영역을 유지하도록 픽셀 대신 앵커 범위로 패널을 놓는다.
         /// </summary>
         public static RectTransform CreatePanel(Transform parent, string name, Vector2 anchorMin, Vector2 anchorMax, Color color)
         {
@@ -67,9 +63,7 @@ namespace GuardVsMannequin.Editor
             return rect;
         }
 
-        /// <summary>
-        /// 자식을 세로로 쌓는 레이아웃을 붙인다.
-        /// </summary>
+        /// <summary>항목을 추가해도 위치를 손으로 맞추지 않도록 세로 레이아웃을 붙인다.</summary>
         public static VerticalLayoutGroup AddVerticalLayout(RectTransform rect, float spacing, int padding)
         {
             VerticalLayoutGroup layout = rect.gameObject.AddComponent<VerticalLayoutGroup>();
@@ -82,9 +76,7 @@ namespace GuardVsMannequin.Editor
             return layout;
         }
 
-        /// <summary>
-        /// 자식을 가로로 나열하는 줄을 만든다.
-        /// </summary>
+        /// <summary>가로로 놓는 UI가 많아 높이를 고정한 가로 레이아웃 줄을 만든다.</summary>
         public static RectTransform CreateRow(Transform parent, string name, float height, float spacing)
         {
             RectTransform rect = CreateRect(parent, name);
@@ -98,11 +90,7 @@ namespace GuardVsMannequin.Editor
             return rect;
         }
 
-        /// <summary>
-        /// 텍스트를 만든다.
-        /// content가 strings.csv의 key이면 LocalizedText를 붙여 실행 중 현재 언어로 표시한다.
-        /// (코드가 상황에 따라 바꾸는 텍스트에는 key를 넘기지 않는다)
-        /// </summary>
+        /// <summary>고정 문구마다 번역 컴포넌트를 손으로 붙이지 않도록 content가 key이면 LocalizedText를 붙인다.</summary>
         public static Text CreateText(Transform parent, string name, string content, int fontSize, TextAnchor alignment, Color color)
         {
             RectTransform rect = CreateRect(parent, name);
@@ -112,10 +100,10 @@ namespace GuardVsMannequin.Editor
             if (Loc.HasKey(content))
             {
                 text.text = Loc.Get(content);
-                LocalizedText localized = rect.gameObject.AddComponent<LocalizedText>();
-                var serialized = new SerializedObject(localized);
-                serialized.FindProperty("key").stringValue = content;
-                serialized.ApplyModifiedPropertiesWithoutUndo();
+                LocalizedText localizedText = rect.gameObject.AddComponent<LocalizedText>();
+                var serializedLocalizedText = new SerializedObject(localizedText);
+                serializedLocalizedText.FindProperty("key").stringValue = content;
+                serializedLocalizedText.ApplyModifiedPropertiesWithoutUndo();
             }
             text.fontSize = fontSize;
             text.alignment = alignment;
@@ -125,9 +113,7 @@ namespace GuardVsMannequin.Editor
             return text;
         }
 
-        /// <summary>
-        /// 라벨이 있는 버튼을 만든다.
-        /// </summary>
+        /// <summary>모든 버튼이 같은 반응을 보이도록 색 설정을 한곳에서 맞춘다.</summary>
         public static Button CreateButton(Transform parent, string name, string label, Color color, out Text labelText)
         {
             RectTransform rect = CreateRect(parent, name);
@@ -146,16 +132,14 @@ namespace GuardVsMannequin.Editor
         }
 
         /// <summary>
-        /// 라벨 참조가 필요 없는 버튼을 만든다.
+        /// 문구가 바뀌지 않는 버튼이 대부분이라 out 매개변수 없이 부를 수 있게 둔다.
         /// </summary>
         public static Button CreateButton(Transform parent, string name, string label, Color color)
         {
             return CreateButton(parent, name, label, color, out _);
         }
 
-        /// <summary>
-        /// 안내 문구가 있는 한 줄 입력칸을 만든다.
-        /// </summary>
+        /// <summary>다른 사람이 보낸 문자열이 태그로 화면을 깨뜨리지 않도록 입력 글자의 리치 텍스트를 끈다.</summary>
         public static InputField CreateInputField(Transform parent, string name, string placeholder)
         {
             RectTransform rect = CreateRect(parent, name);
@@ -178,7 +162,7 @@ namespace GuardVsMannequin.Editor
         }
 
         /// <summary>
-        /// 가로 슬라이더(배경, 채움, 손잡이)를 만든다.
+        /// Unity 기본 슬라이더는 스프라이트에 의존해 프로젝트 테마와 맞지 않으므로 단색 이미지로 배경·채움·손잡이를 직접 만든다.
         /// </summary>
         public static Slider CreateSlider(Transform parent, string name)
         {
@@ -216,9 +200,7 @@ namespace GuardVsMannequin.Editor
             return slider;
         }
 
-        /// <summary>
-        /// 세로로 스크롤되는 목록을 만든다. 항목은 반환된 Content 아래에 추가한다.
-        /// </summary>
+        /// <summary>개수가 정해지지 않은 항목을 담도록 내용 크기에 맞춰 늘어나는 세로 스크롤 목록을 만든다.</summary>
         public static RectTransform CreateScrollList(Transform parent, string name, float spacing)
         {
             RectTransform root = CreateRect(parent, name);
@@ -247,13 +229,11 @@ namespace GuardVsMannequin.Editor
             return content;
         }
 
-        /// <summary>
-        /// 누르면 스크롤 목록이 펼쳐지는 선택 상자를 만든다. (항목이 많으면 목록 안에서 스크롤)
-        /// </summary>
+        /// <summary>항목이 많은 선택에 ◀ ▶ 버튼은 불편하므로 스크롤되는 펼침 목록을 만든다.</summary>
         /// <param name="parent">부모.</param>
         /// <param name="name">오브젝트 이름.</param>
         /// <param name="fontSize">글자 크기.</param>
-        /// <param name="listHeight">펼쳐진 목록의 높이. 넘치는 항목은 스크롤한다.</param>
+        /// <param name="listHeight">펼쳐진 목록의 높이.</param>
         public static Dropdown CreateDropdown(Transform parent, string name, int fontSize, float listHeight)
         {
             const float itemHeight = 40f;
@@ -352,35 +332,32 @@ namespace GuardVsMannequin.Editor
             return dropdown;
         }
 
-        /// <summary>
-        /// 내용이 길면 스크롤되는 텍스트 영역을 만든다. 반환한 Text에 내용을 넣는다.
-        /// 영역의 레이아웃 높이는 호출한 쪽에서 정한다(스크롤 루트 = 반환값.transform.parent.parent.parent).
-        /// </summary>
+        /// <summary>길이를 미리 알 수 없는 글이 잘리지 않도록 스크롤 목록 안에 텍스트 하나를 둔다.</summary>
         public static Text CreateScrollText(Transform parent, string name, string content, int fontSize, TextAnchor alignment, Color color)
         {
-            RectTransform list = CreateScrollList(parent, name, 0f);
-            Text text = CreateText(list, "Text", content, fontSize, alignment, color);
-            return text;
+            RectTransform listContent = CreateScrollList(parent, name, 0f);
+            Text scrollText = CreateText(listContent, "Text", content, fontSize, alignment, color);
+            return scrollText;
         }
 
         /// <summary>
-        /// 스크롤 목록/텍스트의 루트(ScrollRect)가 부모 레이아웃에서 남는 높이를 차지하게 한다.
+        /// 고정 높이로 두면 화면 비율에 따라 아래가 비거나 넘치므로 스크롤 루트(ScrollRect)가 부모 레이아웃에서 남는 높이를 차지하게 한다.
         /// </summary>
         /// <param name="scrollContent">CreateScrollList의 반환값(Content) 또는 CreateScrollText가 만든 Text의 부모.</param>
         /// <param name="minHeight">최소 높이.</param>
         public static void FillRemainingHeight(Transform scrollContent, float minHeight)
         {
-            Transform root = scrollContent.parent.parent;
-            LayoutElement element = GetLayoutElement(root);
-            element.flexibleHeight = 1f;
-            element.minHeight = minHeight;
+            Transform scrollRoot = scrollContent.parent.parent;
+            LayoutElement layoutElement = GetLayoutElement(scrollRoot);
+            layoutElement.flexibleHeight = 1f;
+            layoutElement.minHeight = minHeight;
         }
 
         /// <summary>
-        /// Layout Group 없이 고정 위치·크기로 배치한다. 에디터에서 끌어서 옮기거나 크기를 바꾸기 쉽다.
+        /// Layout Group 아래에서는 에디터에서 끌어 옮길 수 없으므로, 손으로 다듬을 UI는 고정 위치·크기로 배치한다.
         /// </summary>
         /// <param name="target">배치할 UI.</param>
-        /// <param name="anchor">부모 안의 기준점 (0~1, 예: 가운데 (0.5, 0.5), 위 가운데 (0.5, 1))</param>
+        /// <param name="anchor">부모 안의 기준점(0~1).</param>
         /// <param name="position">기준점에서의 위치(픽셀, 1920×1080 기준).</param>
         /// <param name="size">크기(픽셀).</param>
         public static void Place(Component target, Vector2 anchor, Vector2 position, Vector2 size)
@@ -393,9 +370,7 @@ namespace GuardVsMannequin.Editor
             rect.sizeDelta = size;
         }
 
-        /// <summary>
-        /// 체크박스(왼쪽 네모 + 문구) 토글을 만든다. 위치는 호출한 쪽이 <see cref="Place"/>로 정한다.
-        /// </summary>
+        /// <summary>기본 토글은 스프라이트에 의존해 테마와 맞지 않으므로 단색 네모와 문구로 만든다.</summary>
         /// <param name="labelKey">문구 key.</param>
         /// <param name="isOn">처음 켜져 있는지 여부.</param>
         public static Toggle CreateToggle(Transform parent, string name, string labelKey, bool isOn)
@@ -435,27 +410,27 @@ namespace GuardVsMannequin.Editor
         }
 
         /// <summary>
-        /// 레이아웃 안에서의 높이를 고정한다.
+        /// 레이아웃 그룹은 RectTransform 크기를 무시하므로, 높이를 고정하려면 LayoutElement의 최소·선호 높이를 같이 정해야 한다.
         /// </summary>
         public static void SetHeight(Component target, float height)
         {
-            LayoutElement element = GetLayoutElement(target);
-            element.minHeight = height;
-            element.preferredHeight = height;
+            LayoutElement layoutElement = GetLayoutElement(target);
+            layoutElement.minHeight = height;
+            layoutElement.preferredHeight = height;
         }
 
         /// <summary>
-        /// 레이아웃 안에서의 너비를 고정한다.
+        /// 레이아웃 그룹은 RectTransform 크기를 무시하므로, 너비를 고정하려면 LayoutElement의 최소·선호 너비를 같이 정해야 한다.
         /// </summary>
         public static void SetWidth(Component target, float width)
         {
-            LayoutElement element = GetLayoutElement(target);
-            element.minWidth = width;
-            element.preferredWidth = width;
+            LayoutElement layoutElement = GetLayoutElement(target);
+            layoutElement.minWidth = width;
+            layoutElement.preferredWidth = width;
         }
 
         /// <summary>
-        /// 레이아웃 안에서 남는 너비를 차지하게 한다.
+        /// 줄 안에서 값 칸처럼 길이가 바뀌는 항목이 남는 너비를 차지해 버튼이 오른쪽 끝에 붙게 한다.
         /// </summary>
         public static void SetFlexibleWidth(Component target)
         {
@@ -463,7 +438,7 @@ namespace GuardVsMannequin.Editor
         }
 
         /// <summary>
-        /// 부모 크기에 꽉 차게 한다.
+        /// 배경·라벨처럼 부모를 덮어야 하는 요소가 많아 한 줄로 쓰려고 둔다.
         /// </summary>
         public static void Stretch(RectTransform rect)
         {
@@ -471,7 +446,7 @@ namespace GuardVsMannequin.Editor
         }
 
         /// <summary>
-        /// 부모 크기에서 좌우 여백을 두고 꽉 차게 한다.
+        /// 입력칸 글자가 테두리에 붙지 않도록 좌우 여백을 두고 부모를 덮는다.
         /// </summary>
         public static void StretchWithPadding(RectTransform rect, float horizontalPadding)
         {
@@ -481,23 +456,21 @@ namespace GuardVsMannequin.Editor
             rect.offsetMax = new Vector2(-horizontalPadding, 0f);
         }
 
-        /// <summary>
-        /// RectTransform을 가진 빈 오브젝트를 만든다.
-        /// </summary>
+        /// <summary>앵커가 동작하도록 처음부터 RectTransform으로 만든다.</summary>
         public static RectTransform CreateRect(Transform parent, string name)
         {
-            var gameObject = new GameObject(name, typeof(RectTransform));
-            gameObject.transform.SetParent(parent, false);
-            return (RectTransform)gameObject.transform;
+            var rectObject = new GameObject(name, typeof(RectTransform));
+            rectObject.transform.SetParent(parent, false);
+            return (RectTransform)rectObject.transform;
         }
 
         /// <summary>
-        /// LayoutElement를 가져오거나 추가한다.
+        /// 같은 요소에 높이·너비를 따로 정할 때 LayoutElement가 두 개 붙지 않도록 있으면 재사용한다.
         /// </summary>
         private static LayoutElement GetLayoutElement(Component target)
         {
-            LayoutElement element = target.GetComponent<LayoutElement>();
-            return element != null ? element : target.gameObject.AddComponent<LayoutElement>();
+            LayoutElement layoutElement = target.GetComponent<LayoutElement>();
+            return layoutElement != null ? layoutElement : target.gameObject.AddComponent<LayoutElement>();
         }
     }
 }

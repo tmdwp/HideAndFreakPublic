@@ -4,11 +4,7 @@ using UnityEngine;
 
 namespace GuardVsMannequin.Player.Guard
 {
-    /// <summary>
-    /// 1인칭 가드 캐릭터.
-    /// 좌우 시점은 몸체를 회전시키고, 상하 시점은 카메라 피벗만 회전시킨다.
-    /// 테스트 방에서는 3인칭(카메라를 피벗 뒤쪽으로)으로 바꿀 수 있다.
-    /// </summary>
+    /// <summary>조준이 중요한 가드를 위해 좌우는 몸, 상하는 카메라 피벗만 돌리는 1인칭 캐릭터.</summary>
     public class GuardCharacter : PlayerCharacter, ILookControllable, IPerspectiveCamera
     {
         [Space(15f)]
@@ -31,12 +27,10 @@ namespace GuardVsMannequin.Player.Guard
         private Vector3 firstPersonCameraPosition;
         private Quaternion firstPersonCameraRotation;
 
-        /// <summary>1인칭 시점인지 여부. (기본 1인칭)</summary>
+        /// <summary>기본은 1인칭이다.</summary>
         public bool IsFirstPerson => !isThirdPerson;
 
-        /// <summary>
-        /// 회전은 시점 입력으로만 처리한다. (이동 속도는 MoveSpeedController가 게임 설정으로 적용)
-        /// </summary>
+        /// <summary>1인칭은 시점 입력으로만 몸을 돌려야 하므로 ECM2의 자동 회전을 끈다.</summary>
         protected override void Awake()
         {
             base.Awake();
@@ -44,7 +38,7 @@ namespace GuardVsMannequin.Player.Guard
         }
 
         /// <summary>
-        /// 좌우 입력은 몸체 Yaw, 상하 입력은 카메라 Pitch에 반영한다.
+        /// 위아래를 볼 때 몸이 기울지 않도록 좌우는 몸체 Yaw, 상하는 카메라 Pitch에만 반영한다.
         /// </summary>
         public void AddLookInput(Vector2 lookDelta)
         {
@@ -59,7 +53,7 @@ namespace GuardVsMannequin.Player.Guard
         }
 
         /// <summary>
-        /// 모아 둔 좌우 입력이 물리 단계에서 몸에 반영되면 카메라용 대기 입력도 비운다.
+        /// 몸에 반영된 입력을 카메라가 한 번 더 더하면 두 배로 돌아가므로 대기 입력도 함께 비운다.
         /// </summary>
         protected override void ConsumeRotationInput()
         {
@@ -67,10 +61,7 @@ namespace GuardVsMannequin.Player.Guard
             pendingYaw.Consume();
         }
 
-        /// <summary>
-        /// 카메라 피벗에 현재 Pitch를 적용한다.
-        /// 시점을 직접 조작하는 소유자는 좌우도 매 프레임 최신 입력으로 돌린다. (몸은 물리 주기로 따라온다)
-        /// </summary>
+        /// <summary>몸은 물리 주기로만 돌아 화면이 끊겨 보이므로 소유자는 카메라 좌우를 매 프레임 최신 입력으로 돌린다.</summary>
         private void LateUpdate()
         {
             if (cameraPivot == null)
@@ -86,7 +77,7 @@ namespace GuardVsMannequin.Player.Guard
         }
 
         /// <summary>
-        /// 1인칭/3인칭 카메라로 바꾼다. 1인칭으로 돌아오면 카메라를 원래 자리(피벗 기준)로 되돌린다.
+        /// 3인칭에서 옮긴 카메라가 1인칭으로 돌아올 때 원래 눈 위치로 오도록, 바꾸기 전 자리를 기억했다가 되돌린다.
         /// </summary>
         public void SetFirstPerson(bool firstPerson)
         {
@@ -106,11 +97,11 @@ namespace GuardVsMannequin.Player.Guard
         }
 
         /// <summary>
-        /// 카메라를 피벗 뒤쪽에 두고 피벗과 같은 방향을 보게 한다. 벽에 가려지면 앞으로 당긴다.
+        /// 카메라가 벽 너머로 들어가 맵 밖이 보이지 않도록, 피벗 뒤쪽에 두되 벽에 가려지면 앞으로 당긴다.
         /// </summary>
         private void PlaceThirdPersonCamera()
         {
-            Vector3 pivot = cameraPivot.position;
+            Vector3 pivotPosition = cameraPivot.position;
             Quaternion viewRotation = cameraPivot.rotation;
             Vector3 offset = viewRotation * thirdPersonOffset;
             float distance = offset.magnitude;
@@ -118,16 +109,16 @@ namespace GuardVsMannequin.Player.Guard
                 return;
 
             Vector3 direction = offset / distance;
-            if (Physics.SphereCast(pivot, cameraCollisionRadius, direction, out RaycastHit hit, distance,
+            if (Physics.SphereCast(pivotPosition, cameraCollisionRadius, direction, out RaycastHit hit, distance,
                     cameraCollisionMask, QueryTriggerInteraction.Ignore) && !hit.transform.IsChildOf(transform))
             {
                 distance = hit.distance;
             }
-            cameraTransform.SetPositionAndRotation(pivot + direction * distance, viewRotation);
+            cameraTransform.SetPositionAndRotation(pivotPosition + direction * distance, viewRotation);
         }
 
         /// <summary>
-        /// 컴포넌트 추가 시 1인칭에 맞게 회전 모드를 초기화한다.
+        /// 인스펙터에서 컴포넌트를 처음 붙이거나 초기화할 때도 1인칭에 맞는 회전 모드가 되도록 맞춘다.
         /// </summary>
         protected override void Reset()
         {

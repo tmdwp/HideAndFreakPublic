@@ -2,10 +2,7 @@ using UnityEngine;
 
 namespace GuardVsMannequin.Player
 {
-    /// <summary>
-    /// 캐릭터 외형 하나(모델 + 애니메이터). 마네킹은 맵마다 다른 외형을 쓸 수 있다(<see cref="Map.MapInfo"/>).
-    /// 모델 프리팹은 "캐릭터·무기 에셋 생성" 도구가 발 위치를 원점에 맞추고 스크립트·충돌체를 제거해 만든다.
-    /// </summary>
+    /// <summary>맵마다 외형을 바꿀 수 있도록 모델과 애니메이터를 묶은 외형 하나다.</summary>
     [CreateAssetMenu(menuName = "GameSettingTools/Character Skin", fileName = "Skin_")]
     public class CharacterSkin : ScriptableObject
     {
@@ -44,9 +41,7 @@ namespace GuardVsMannequin.Player
         public WeaponGrip weaponGrip = new WeaponGrip();
     }
 
-    /// <summary>
-    /// 3인칭 총을 손에 들리는 위치와 조준 IK 손 위치. (게임의 GuardWeaponView가 매 프레임 읽는다)
-    /// </summary>
+    /// <summary>3인칭 총을 손에 들리는 위치와 조준 IK 손 위치.</summary>
     [System.Serializable]
     public class WeaponGrip
     {
@@ -81,5 +76,15 @@ namespace GuardVsMannequin.Player
 
         [Tooltip("왼팔꿈치가 향할 위치. 회전 중심 기준, 몸 방향 좌표.")]
         public Vector3 leftElbowHint = new Vector3(-0.3f, -0.4f, 0.15f);
+
+        [Header("손과 총 연결 (양손 총)")]
+        [Tooltip("켜면 두 손의 방향도 총에 고정한다. 총을 처음 잡고 잠시 뒤의 손 방향을 총 기준으로 기억해 계속 유지한다. (끄면 손 방향은 애니메이션 그대로)")]
+        public bool lockHandRotation = true;
+
+        [Tooltip("기억한 오른손 방향에 더할 보정(도). 총 기준.")]
+        public Vector3 rightHandRotationOffset = Vector3.zero;
+
+        [Tooltip("기억한 왼손 방향에 더할 보정(도). 총 기준.")]
+        public Vector3 leftHandRotationOffset = Vector3.zero;
     }
 }

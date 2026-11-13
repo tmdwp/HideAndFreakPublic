@@ -3,26 +3,20 @@ using UnityEngine;
 
 namespace GuardVsMannequin.Player
 {
-    /// <summary>
-    /// 스킨드 메시에서 팔다리 뼈에 붙은 삼각형만 남긴 복제 메시를 만든다. (1인칭에서 몸통·머리를 빼고 보여주기 위함)
-    /// 꼭짓점의 뼈 가중치 중 팔다리 뼈 몫이 절반 이상이면 팔다리 꼭짓점으로 보고, 세 꼭짓점이 모두 팔다리인 삼각형만 남긴다.
-    /// 원본 메시는 바꾸지 않는다. 메시를 실행 중에 읽으려면 모델 가져오기 설정의 Read/Write가 켜져 있어야 한다.
-    /// </summary>
+    /// <summary>1인칭에서 팔다리만 보이도록 스킨드 메시에서 팔다리 뼈 삼각형만 남긴 복제 메시를 만든다.</summary>
     public static class LimbMeshFilter
     {
-        // 팔다리의 시작 뼈. 그 아래 뼈(손가락, 발가락, 비틀림 뼈 등)도 모두 팔다리로 본다.
+        // 아래 뼈까지 모두 팔다리로 보는 팔다리 시작 뼈.
         private static readonly HumanBodyBones[] LimbRoots =
         {
             HumanBodyBones.LeftUpperArm, HumanBodyBones.RightUpperArm,
             HumanBodyBones.LeftUpperLeg, HumanBodyBones.RightUpperLeg
         };
 
+        // 어깨·골반 경계 꼭짓점이 몸통 쪽으로 더 끌려 있으면 몸통으로 보도록 절반을 기준으로 둔다.
         private const float LimbWeightThreshold = 0.5f;
 
-        /// <summary>
-        /// 애니메이터의 팔다리 뼈(시작 뼈와 그 아래 모든 뼈)를 모은다.
-        /// 뼈는 <see cref="SkinBones"/>로 찾는다(Generic 리그는 이름으로). 못 찾으면 빈 집합.
-        /// </summary>
+        /// <summary>리그마다 손가락 뼈 이름이 달라 시작 뼈만 찾고 그 아래는 모두 팔다리로 묶는다.</summary>
         public static HashSet<Transform> CollectLimbBones(Animator animator)
         {
             var limbBones = new HashSet<Transform>();
@@ -31,57 +25,54 @@ namespace GuardVsMannequin.Player
 
             foreach (HumanBodyBones rootId in LimbRoots)
             {
-                Transform root = SkinBones.Find(animator, rootId);
-                if (root == null)
+                Transform rootBone = SkinBones.Find(animator, rootId);
+                if (rootBone == null)
                     continue;
-                foreach (Transform bone in root.GetComponentsInChildren<Transform>(true))
+                foreach (Transform bone in rootBone.GetComponentsInChildren<Transform>(true))
                     limbBones.Add(bone);
             }
             return limbBones;
         }
 
-        /// <summary>
-        /// 팔다리 삼각형만 남긴 복제 메시를 만든다. 메시를 읽을 수 없거나 남는 삼각형이 없으면 null.
-        /// </summary>
+        /// <summary>원본 메시를 고치면 다른 아바타에도 반영되므로 복제본에서 삼각형만 걸러 낸다.</summary>
         public static Mesh CreateLimbOnlyMesh(SkinnedMeshRenderer source, HashSet<Transform> limbBones)
         {
-            Mesh mesh = source.sharedMesh;
-            if (mesh == null || !mesh.isReadable || limbBones.Count == 0)
+            Mesh sourceMesh = source.sharedMesh;
+            if (sourceMesh == null || !sourceMesh.isReadable || limbBones.Count == 0)
                 return null;
 
-            bool[] isLimbVertex = ClassifyVertices(mesh, source, limbBones);
-            Mesh limbMesh = Object.Instantiate(mesh);
-            limbMesh.name = mesh.name + " (1P Limbs)";
+            bool[] isLimbVertex = ClassifyVertices(sourceMesh, source, limbBones);
+            Mesh limbMesh = Object.Instantiate(sourceMesh);
+            limbMesh.name = sourceMesh.name + " (1P Limbs)";
 
-            int keptTriangles = 0;
-            var kept = new List<int>();
-            for (int subMesh = 0; subMesh < mesh.subMeshCount; subMesh++)
+            int keptTriangleCount = 0;
+            var keptIndices = new List<int>();
+            for (int subMesh = 0; subMesh < sourceMesh.subMeshCount; subMesh++)
             {
-                kept.Clear();
-                int[] triangles = mesh.GetTriangles(subMesh);
+                keptIndices.Clear();
+                int[] triangles = sourceMesh.GetTriangles(subMesh);
                 for (int i = 0; i + 2 < triangles.Length; i += 3)
                 {
-                    int a = triangles[i], b = triangles[i + 1], c = triangles[i + 2];
-                    if (!isLimbVertex[a] || !isLimbVertex[b] || !isLimbVertex[c])
+                    int vertexA = triangles[i], vertexB = triangles[i + 1], vertexC = triangles[i + 2];
+                    // 한 꼭짓점이라도 몸통이면 그 삼각형이 몸통 쪽으로 늘어져 화면을 가리므로 뺀다.
+                    if (!isLimbVertex[vertexA] || !isLimbVertex[vertexB] || !isLimbVertex[vertexC])
                         continue;
-                    kept.Add(a);
-                    kept.Add(b);
-                    kept.Add(c);
+                    keptIndices.Add(vertexA);
+                    keptIndices.Add(vertexB);
+                    keptIndices.Add(vertexC);
                 }
-                limbMesh.SetTriangles(kept, subMesh);
-                keptTriangles += kept.Count / 3;
+                limbMesh.SetTriangles(keptIndices, subMesh);
+                keptTriangleCount += keptIndices.Count / 3;
             }
 
-            if (keptTriangles > 0)
+            if (keptTriangleCount > 0)
                 return limbMesh;
 
             Object.Destroy(limbMesh);
             return null;
         }
 
-        /// <summary>
-        /// 꼭짓점마다 팔다리 꼭짓점인지 정한다. 가중치가 없는 메시는 뿌리 뼈가 팔다리인지로 전체를 정한다.
-        /// </summary>
+        /// <summary>삼각형을 거르려면 꼭짓점마다 팔다리인지 먼저 알아야 한다.</summary>
         private static bool[] ClassifyVertices(Mesh mesh, SkinnedMeshRenderer source, HashSet<Transform> limbBones)
         {
             var result = new bool[mesh.vertexCount];
@@ -90,26 +81,26 @@ namespace GuardVsMannequin.Player
 
             if (weights.Length != result.Length || bones.Length == 0)
             {
-                bool rootIsLimb = source.rootBone != null && limbBones.Contains(source.rootBone);
+                bool isRootLimb = source.rootBone != null && limbBones.Contains(source.rootBone);
                 for (int i = 0; i < result.Length; i++)
-                    result[i] = rootIsLimb;
+                    result[i] = isRootLimb;
                 return result;
             }
 
             for (int i = 0; i < result.Length; i++)
             {
-                BoneWeight w = weights[i];
-                float limbWeight = LimbWeight(bones, limbBones, w.boneIndex0, w.weight0)
-                                   + LimbWeight(bones, limbBones, w.boneIndex1, w.weight1)
-                                   + LimbWeight(bones, limbBones, w.boneIndex2, w.weight2)
-                                   + LimbWeight(bones, limbBones, w.boneIndex3, w.weight3);
+                BoneWeight weight = weights[i];
+                float limbWeight = LimbWeight(bones, limbBones, weight.boneIndex0, weight.weight0)
+                                   + LimbWeight(bones, limbBones, weight.boneIndex1, weight.weight1)
+                                   + LimbWeight(bones, limbBones, weight.boneIndex2, weight.weight2)
+                                   + LimbWeight(bones, limbBones, weight.boneIndex3, weight.weight3);
                 result[i] = limbWeight >= LimbWeightThreshold;
             }
             return result;
         }
 
         /// <summary>
-        /// 가중치 하나가 팔다리 뼈 몫이면 그 값을, 아니면 0을 돌려준다.
+        /// 쓰이지 않는 슬롯은 인덱스가 범위를 벗어날 수 있어서, 그런 경우도 0으로 안전하게 처리한다.
         /// </summary>
         private static float LimbWeight(Transform[] bones, HashSet<Transform> limbBones, int boneIndex, float weight)
         {

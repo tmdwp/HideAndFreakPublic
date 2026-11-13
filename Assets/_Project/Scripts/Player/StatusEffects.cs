@@ -4,12 +4,7 @@ using GuardVsMannequin.Core;
 
 namespace GuardVsMannequin.Player
 {
-    /// <summary>
-    /// 수류탄에 맞은 효과(외곽선 표시, 감속)를 서버 Tick 기준 "끝나는 시각"으로 동기화한다.
-    /// 다시 맞으면 끝 시각만 늦춘다(중첩 없음).
-    /// 감속은 <see cref="IMoveSpeedModifier"/>로 <see cref="MoveSpeedController"/>가 곱한다.
-    /// 서버에서도 같은 배율이 적용되므로 <see cref="MovementValidator"/>가 감속 중 허용 속도를 낮춰 검사한다.
-    /// </summary>
+    /// <summary>매 프레임 보내지 않도록 수류탄 효과를 끝나는 서버 Tick으로 동기화한다.</summary>
     public class StatusEffects : NetworkBehaviour, IStatusEffects, IMoveSpeedModifier
     {
         private readonly SyncVar<uint> revealEndTick = new();
@@ -24,9 +19,7 @@ namespace GuardVsMannequin.Player
         /// <inheritdoc />
         public float SpeedMultiplier => IsSlowed ? GameTuning.GrenadeSlowMultiplier : 1f;
 
-        /// <summary>
-        /// 수류탄 효과를 건다. (서버 전용)
-        /// </summary>
+        /// <summary>남은 시간을 매번 보내지 않도록 끝나는 Tick만 보내고, 다시 맞으면 덮어써 중첩되지 않게 한다.</summary>
         [Server]
         public void ApplyGrenadeHit()
         {
@@ -36,7 +29,7 @@ namespace GuardVsMannequin.Player
         }
 
         /// <summary>
-        /// 끝 시각이 아직 지나지 않았는지 확인한다. 네트워크 초기화 전에는 효과 없음.
+        /// 네트워크 초기화 전에는 TimeManager가 없어 예외가 나므로, 그때는 효과가 없는 것으로 본다.
         /// </summary>
         private bool IsActive(uint endTick)
         {

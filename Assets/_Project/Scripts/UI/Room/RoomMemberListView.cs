@@ -8,9 +8,7 @@ using UnityEngine.UI;
 
 namespace GuardVsMannequin.UI
 {
-    /// <summary>
-    /// 룸 화면의 참가자 목록(인원 수, 이름, 호스트/준비 상태).
-    /// </summary>
+    /// <summary>룸 화면의 참가자 목록.</summary>
     public class RoomMemberListView : MonoBehaviour
     {
         [SerializeField] private Text memberListText;
@@ -19,9 +17,7 @@ namespace GuardVsMannequin.UI
         private readonly List<KeyValuePair<int, RoomMember>> sortedMembers = new();
         private RefreshTimer refreshTimer;
 
-        /// <summary>
-        /// 참가자 목록을 호스트 먼저, 접속 순서대로 표시한다. (문자열을 새로 만들므로 일정 간격으로만 갱신)
-        /// </summary>
+        /// <summary>목록이 흔들리지 않도록 호스트 먼저 접속 순서대로 정렬하고 일정 간격으로만 갱신한다.</summary>
         private void Update()
         {
             RoomState room = RoomState.Instance;
@@ -30,16 +26,18 @@ namespace GuardVsMannequin.UI
 
             sortedMembers.Clear();
             sortedMembers.AddRange(room.Members);
-            sortedMembers.Sort((a, b) => a.Value.isHost != b.Value.isHost ? (a.Value.isHost ? -1 : 1) : a.Key.CompareTo(b.Key));
+            sortedMembers.Sort((first, second) => first.Value.isHost != second.Value.isHost
+                ? (first.Value.isHost ? -1 : 1)
+                : first.Key.CompareTo(second.Key));
 
             builder.Clear();
             builder.AppendLine(Loc.Format("room.members.count", sortedMembers.Count, GameConstants.MaxPlayers));
-            foreach (KeyValuePair<int, RoomMember> pair in sortedMembers)
+            foreach (KeyValuePair<int, RoomMember> member in sortedMembers)
             {
-                string name = room.GetDisplayName(pair.Key);
-                string state = Loc.Get(pair.Value.isHost ? "room.member.host" : (pair.Value.isReady ? "room.member.ready" : "room.member.notReady"));
-                string modWarning = pair.Value.modState == MemberModState.Missing ? "  " + Loc.Get("room.member.modsMissing") : string.Empty;
-                builder.AppendLine($"{name}  —  {state}{modWarning}");
+                string displayName = room.GetDisplayName(member.Key);
+                string stateLabel = Loc.Get(member.Value.isHost ? "room.member.host" : (member.Value.isReady ? "room.member.ready" : "room.member.notReady"));
+                string modWarning = member.Value.modState == MemberModState.Missing ? "  " + Loc.Get("room.member.modsMissing") : string.Empty;
+                builder.AppendLine($"{displayName}  —  {stateLabel}{modWarning}");
             }
             memberListText.text = builder.ToString();
         }

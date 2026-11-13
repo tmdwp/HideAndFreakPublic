@@ -2,11 +2,7 @@ using UnityEngine;
 
 namespace GuardVsMannequin.Player.Guard
 {
-    /// <summary>
-    /// 사격 연출. 총구에서 총알 이펙트가 날아가 끝점에서 명중 이펙트를 보여준다.
-    /// 판정은 서버의 히트스캔이 이미 끝낸 상태이며, 여기서는 보이는 것만 처리한다.
-    /// 총알 이펙트가 지정되지 않았으면 예전처럼 선(LineRenderer)과 탄착 표시로 대신한다.
-    /// </summary>
+    /// <summary>판정은 서버가 끝냈으므로 총구에서 끝점까지 보이는 사격 연출만 처리한다.</summary>
     [RequireComponent(typeof(LineRenderer))]
     public class ShotTracerView : MonoBehaviour
     {
@@ -50,7 +46,7 @@ namespace GuardVsMannequin.Player.Guard
         private float impactHideTime;
 
         /// <summary>
-        /// 라인 렌더러를 월드 좌표 모드로 초기화하고, 탄착 표시를 아바타에서 분리한다.
+        /// 아바타가 움직여도 선과 탄착 표시가 쏜 자리에 남아야 하므로, 선은 월드 좌표로 두고 탄착 표시는 부모에서 떼어 낸다.
         /// </summary>
         private void Awake()
         {
@@ -61,14 +57,13 @@ namespace GuardVsMannequin.Player.Guard
 
             if (impactMarker != null)
             {
-                // 아바타가 움직여도 탄착 표시는 맞은 자리에 남아야 하므로 부모에서 분리한다.
                 impactMarker.SetParent(null, true);
                 impactMarker.gameObject.SetActive(false);
             }
         }
 
         /// <summary>
-        /// 아바타와 함께 분리된 탄착 표시도 제거한다.
+        /// 부모에서 떼어 낸 탄착 표시는 아바타와 함께 지워지지 않으므로 직접 지운다.
         /// </summary>
         private void OnDestroy()
         {
@@ -77,7 +72,7 @@ namespace GuardVsMannequin.Player.Guard
         }
 
         /// <summary>
-        /// 표시 시간이 지나면 선과 탄착 표시를 숨긴다.
+        /// 코루틴 없이 표시 시간을 재려고 매 프레임 끝난 것만 숨긴다.
         /// </summary>
         private void Update()
         {
@@ -88,31 +83,28 @@ namespace GuardVsMannequin.Player.Guard
                 impactMarker.gameObject.SetActive(false);
         }
 
-        /// <summary>
-        /// 총구에서 끝점까지 사격을 연출한다.
-        /// </summary>
-        /// <param name="origin">서버가 판정에 사용한 원점. 총구가 없을 때 대신 사용한다.</param>
-        /// <param name="endPoint">사격 끝점.</param>
-        /// <param name="didHit">사거리 안에서 충돌했는지 여부.</param>
+        /// <summary>자연스럽게 보이도록 서버 원점 대신 보는 사람 기준 총구에서 시작하고 이펙트는 풀에서 꺼낸다.</summary>
+        /// <param name="origin">총구가 없을 때 대신 쓰는 서버 판정 원점.</param>
+        /// <param name="didHit">빗나갔을 때 명중 이펙트를 남기지 않으려고 받는다.</param>
         public void Show(Vector3 origin, Vector3 endPoint, bool didHit)
         {
-            Transform start = GetMuzzle();
-            Vector3 startPosition = start != null ? start.position : origin;
+            Transform muzzleTransform = GetMuzzle();
+            Vector3 startPosition = muzzleTransform != null ? muzzleTransform.position : origin;
 
-            // 이펙트는 풀(EffectPool)에서 꺼내 다시 쓴다. (쏠 때마다 만들고 지우지 않도록)
-            if (muzzleFlashPrefab != null && start != null)
+            if (muzzleFlashPrefab != null && muzzleTransform != null)
             {
                 // 총과 함께 움직이도록 총구에 붙인다.
-                EffectPool.Spawn(muzzleFlashPrefab, start.position, start.rotation, start, muzzleFlashBrightness, muzzleFlashScale, EffectLifetime);
+                EffectPool.Spawn(muzzleFlashPrefab, muzzleTransform.position, muzzleTransform.rotation, muzzleTransform, muzzleFlashBrightness, muzzleFlashScale, EffectLifetime);
             }
 
             if (bulletPrefab != null)
             {
-                Quaternion direction = Quaternion.LookRotation(endPoint - startPosition + Vector3.forward * 0.0001f);
-                PooledEffect bullet = EffectPool.Spawn(bulletPrefab, startPosition, direction, null, bulletBrightness, bulletScale, EffectLifetime);
-                if (!bullet.TryGetComponent(out BulletEffect effect))
-                    effect = bullet.gameObject.AddComponent<BulletEffect>();
-                effect.Launch(endPoint, bulletSpeed, didHit ? hitPrefab : null, hitBrightness, hitScale);
+                // 끝점과 시작점이 같으면 LookRotation이 경고를 내므로 아주 작은 값을 더한다.
+                Quaternion bulletRotation = Quaternion.LookRotation(endPoint - startPosition + Vector3.forward * 0.0001f);
+                PooledEffect bullet = EffectPool.Spawn(bulletPrefab, startPosition, bulletRotation, null, bulletBrightness, bulletScale, EffectLifetime);
+                if (!bullet.TryGetComponent(out BulletEffect bulletEffect))
+                    bulletEffect = bullet.gameObject.AddComponent<BulletEffect>();
+                bulletEffect.Launch(endPoint, bulletSpeed, didHit ? hitPrefab : null, hitBrightness, hitScale);
                 return;
             }
 
@@ -120,7 +112,7 @@ namespace GuardVsMannequin.Player.Guard
         }
 
         /// <summary>
-        /// 보는 사람 기준 총구를 고른다.
+        /// 1인칭·3인칭에서 총구 위치가 달라서, 총 외형이 보는 사람 기준 총구를 알려 주면 그것을 쓴다.
         /// </summary>
         private Transform GetMuzzle()
         {
@@ -130,7 +122,7 @@ namespace GuardVsMannequin.Player.Guard
         }
 
         /// <summary>
-        /// 이펙트가 없을 때의 대체 연출: 선과 탄착 표시.
+        /// 이펙트 에셋이 아직 없어도 사격이 보이도록 선과 탄착 표시로 대신한다.
         /// </summary>
         private void ShowLine(Vector3 startPosition, Vector3 endPoint, bool didHit)
         {

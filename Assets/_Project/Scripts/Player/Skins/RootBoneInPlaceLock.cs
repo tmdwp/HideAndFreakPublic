@@ -2,11 +2,7 @@ using UnityEngine;
 
 namespace GuardVsMannequin.Player
 {
-    /// <summary>
-    /// 일반(Generic) 모델의 이동 애니메이션을 제자리 애니메이션으로 만든다.
-    /// 클립이 뿌리 뼈(또는 그 부모)를 앞으로 옮기면, 애니메이션 적용 후(LateUpdate) 그 수평 이동만큼 뿌리 뼈를 되돌린다.
-    /// 높이(통통 튀는 움직임)와 회전은 그대로 둔다. 애니메이터가 있는 오브젝트에 붙인다.
-    /// </summary>
+    /// <summary>이동은 캐릭터 코드가 맡으므로 Generic 모델의 이동 애니메이션을 제자리로 고정한다.</summary>
     [RequireComponent(typeof(Animator))]
     public class RootBoneInPlaceLock : MonoBehaviour
     {
@@ -14,7 +10,7 @@ namespace GuardVsMannequin.Player
         private Vector3 restLocalPosition;
 
         /// <summary>
-        /// 스킨드 메시의 뿌리 뼈를 찾고, 기본 자세의 위치(애니메이터 기준 좌표)를 저장한다.
+        /// 이후 매 프레임 얼마나 밀려났는지 알려면 기준이 필요해서, 기본 자세의 뿌리 뼈 위치(애니메이터 기준 좌표)를 저장한다.
         /// </summary>
         private void Awake()
         {
@@ -29,13 +25,11 @@ namespace GuardVsMannequin.Player
             restLocalPosition = transform.InverseTransformPoint(rootBone.position);
         }
 
-        /// <summary>
-        /// 애니메이션이 적용된 뒤 뿌리 뼈의 수평 이동을 지운다.
-        /// </summary>
+        /// <summary>애니메이션이 몸을 앞으로 미는 몫만 지우고, 걸음의 튀는 느낌은 남기려고 높이는 그대로 둔다.</summary>
         private void LateUpdate()
         {
-            Vector3 current = transform.InverseTransformPoint(rootBone.position);
-            Vector3 drift = current - restLocalPosition;
+            Vector3 currentLocalPosition = transform.InverseTransformPoint(rootBone.position);
+            Vector3 drift = currentLocalPosition - restLocalPosition;
             drift.y = 0f;
             if (drift.sqrMagnitude > 0f)
                 rootBone.position -= transform.TransformVector(drift);

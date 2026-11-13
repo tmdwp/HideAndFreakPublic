@@ -3,17 +3,12 @@ using UnityEngine;
 
 namespace GuardVsMannequin.Props
 {
-    /// <summary>
-    /// 지금 불러온 맵의 변신 사물을 번호로 찾는다. 변신 상태는 이 번호 하나로 동기화된다.
-    /// 번호는 에디터가 씬 저장·빌드 때 매기므로(<c>PropIndexer</c>), 같은 맵 빌드끼리는 같은 번호가 같은 물체를 가리킨다.
-    /// </summary>
+    /// <summary>변신 상태를 번호 하나로 동기화하도록 지금 맵의 변신 사물을 번호로 찾는다.</summary>
     public static class PropRegistry
     {
         private static readonly Dictionary<int, TransformableProp> props = new();
 
-        /// <summary>
-        /// 플레이 모드에 들어갈 때 목록을 비운다. (도메인 재로드를 끈 경우 이전 씬의 항목이 남지 않도록)
-        /// </summary>
+        /// <summary>도메인 재로드를 꺼도 이전 씬 항목이 남지 않도록 플레이 모드 시작 때 비운다.</summary>
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
         private static void ResetOnPlay()
         {
@@ -21,7 +16,7 @@ namespace GuardVsMannequin.Props
         }
 
         /// <summary>
-        /// 사물을 등록한다. 번호가 없거나 이미 다른 사물이 쓰는 번호면 경고한다.
+        /// 번호가 없거나 겹치면 변신이 엉뚱한 사물로 동기화되므로, 원인(씬을 저장하지 않음)을 알 수 있게 경고한다.
         /// </summary>
         public static void Register(TransformableProp prop)
         {
@@ -37,7 +32,7 @@ namespace GuardVsMannequin.Props
         }
 
         /// <summary>
-        /// 사물 등록을 해제한다. (그 번호에 다른 사물이 등록되어 있으면 건드리지 않음)
+        /// 씬 전환 중 새 사물이 먼저 등록될 수 있어, 그 번호가 아직 이 사물을 가리킬 때만 지운다.
         /// </summary>
         public static void Unregister(TransformableProp prop)
         {
@@ -46,7 +41,7 @@ namespace GuardVsMannequin.Props
         }
 
         /// <summary>
-        /// 번호에 해당하는 사물을 찾는다.
+        /// 네트워크로 받은 번호는 이미 파괴된 사물을 가리킬 수 있어, 파괴된 객체도 없는 것으로 본다.
         /// </summary>
         public static bool TryGet(int index, out TransformableProp prop)
         {

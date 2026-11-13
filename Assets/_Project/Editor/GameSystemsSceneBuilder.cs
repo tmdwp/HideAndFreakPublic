@@ -7,21 +7,14 @@ using UnityEngine.SceneManagement;
 
 namespace GuardVsMannequin.Editor
 {
-    /// <summary>
-    /// 모든 맵이 함께 쓰는 게임 시스템 씬(Game_Systems)을 만든다. 판을 시작하면 맵 씬과 함께 불러온다(<c>RoomState</c>).
-    /// 들어 있는 것: 게임 진행 시스템(씬 네트워크 오브젝트), HUD·ESC 메뉴, 저체력 효과, 씬 카메라(관전), 사냥 시간 조명 제어.
-    /// 맵 씬에는 환경·지점·변신 사물·조명만 두므로 네트워크 오브젝트가 없다. (모드 맵이 FishNet 없이 만들어질 수 있도록)
-    /// </summary>
+    /// <summary>모드 맵이 FishNet 없이 만들어질 수 있도록 네트워크 시스템을 모든 맵이 함께 쓰는 Game_Systems 씬에 모은다.</summary>
     public static class GameSystemsSceneBuilder
     {
-        /// <summary>게임 시스템 씬 경로.</summary>
         public const string ScenePath = TestEnvironmentSetupTool.SceneFolder + "/Game_Systems.unity";
 
         private const string OverviewName = "CameraOverview";
 
-        /// <summary>
-        /// 게임 시스템 씬을 새로 만들어 저장한다. (열린 씬은 닫힌다) 프리팹이 없으면 false.
-        /// </summary>
+        /// <summary>손으로 고친 시스템 씬은 코드와 어긋나기 쉬워 매번 빈 씬부터 새로 만든다.</summary>
         public static bool Build()
         {
             if (!TestEnvironmentSetupTool.TryLoadScenePrefabs(out TestEnvironmentSetupTool.ScenePrefabs prefabs))
@@ -36,9 +29,9 @@ namespace GuardVsMannequin.Editor
             TestEnvironmentSetupTool.GameSystemsRefs systems = TestEnvironmentSetupTool.CreateGameSystems(prefabs);
             TestEnvironmentSetupTool.CreateUi(systems, spectator);
 
-            var lighting = new GameObject("HuntingLighting");
-            HuntingLightingController controller = lighting.AddComponent<HuntingLightingController>();
-            TestEnvironmentSetupTool.SetField(controller, "noiseLibrary", AssetDatabase.LoadAssetAtPath<Object>(TestEnvironmentSetupTool.NoiseLibraryPath));
+            var huntingLighting = new GameObject("HuntingLighting");
+            HuntingLightingController lightingController = huntingLighting.AddComponent<HuntingLightingController>();
+            TestEnvironmentSetupTool.SetField(lightingController, "noiseLibrary", AssetDatabase.LoadAssetAtPath<Object>(TestEnvironmentSetupTool.NoiseLibraryPath));
 
             SceneLightingSetup.Apply(scene);
 
@@ -51,31 +44,27 @@ namespace GuardVsMannequin.Editor
             return true;
         }
 
-        /// <summary>
-        /// 맵 정보에 씬 카메라의 대기 화면 위치를 지정한다. (없으면 Map 아래에 만든다)
-        /// </summary>
+        /// <summary>맵 빌더를 다시 실행해도 지점이 쌓이지 않도록 이미 있는 지점을 재사용한다.</summary>
         public static void SetOverview(MapInfo mapInfo, Vector3 position, Quaternion rotation)
         {
-            Transform point = mapInfo.OverviewPoint;
-            if (point == null)
+            Transform overviewPoint = mapInfo.OverviewPoint;
+            if (overviewPoint == null)
             {
-                point = mapInfo.transform.Find(OverviewName);
-                if (point == null)
+                overviewPoint = mapInfo.transform.Find(OverviewName);
+                if (overviewPoint == null)
                 {
-                    point = new GameObject(OverviewName).transform;
-                    point.SetParent(mapInfo.transform, false);
+                    overviewPoint = new GameObject(OverviewName).transform;
+                    overviewPoint.SetParent(mapInfo.transform, false);
                 }
             }
-            point.SetPositionAndRotation(position, rotation);
+            overviewPoint.SetPositionAndRotation(position, rotation);
 
-            var serialized = new SerializedObject(mapInfo);
-            serialized.FindProperty("overviewPoint").objectReferenceValue = point;
-            serialized.ApplyModifiedPropertiesWithoutUndo();
+            var serializedMapInfo = new SerializedObject(mapInfo);
+            serializedMapInfo.FindProperty("overviewPoint").objectReferenceValue = overviewPoint;
+            serializedMapInfo.ApplyModifiedPropertiesWithoutUndo();
         }
 
-        /// <summary>
-        /// 플레이 영역을 비스듬히 내려다보는 대기 화면 위치를 지정한다.
-        /// </summary>
+        /// <summary>맵마다 손으로 정하지 않도록 플레이 영역 크기에 비례한 거리에서 내려다보게 한다.</summary>
         public static void PlaceOverview(MapInfo mapInfo, Bounds playArea)
         {
             float distance = Mathf.Max(playArea.size.x, playArea.size.z) * 0.6f + 10f;

@@ -5,16 +5,11 @@ using UnityEngine;
 
 namespace GuardVsMannequin.Room
 {
-    /// <summary>
-    /// 맵별 룸 설정 규칙(map.json의 settings·인원). 서버의 설정 보정과 시작 조건 확인에 쓴다.
-    /// - 맵을 고르면 그 맵이 정한 기본값을 적용한다.
-    /// - 설정 값은 "게임 범위 ∩ 맵 범위"로 보정한다(<see cref="GameSettingDefinitions.GetEffective"/>).
-    /// - 맵이 정한 인원 범위 밖이면 게임을 시작할 수 없다.
-    /// </summary>
+    /// <summary>맵마다 어울리는 설정이 달라 map.json의 기본값·범위·인원으로 서버 설정을 보정한다.</summary>
     public static class MapSettingRules
     {
         /// <summary>
-        /// 맵이 항목의 범위를 정했는지 찾는다.
+        /// 맵 제작자가 대소문자를 다르게 적어도 찾도록 대소문자를 무시하고 항목을 찾는다.
         /// </summary>
         public static bool TryGetRange(int mapId, GameSettingId id, out MapSettingRange range)
         {
@@ -22,10 +17,10 @@ namespace GuardVsMannequin.Room
             if (!ContentRegistry.Instance.TryGetMap(mapId, out MapEntry map) || map.Manifest.settings == null)
                 return false;
 
-            string name = id.ToString();
+            string idName = id.ToString();
             foreach (MapSettingRange candidate in map.Manifest.settings)
             {
-                if (candidate != null && string.Equals(candidate.id, name, StringComparison.OrdinalIgnoreCase))
+                if (candidate != null && string.Equals(candidate.id, idName, StringComparison.OrdinalIgnoreCase))
                 {
                     range = candidate;
                     return true;
@@ -34,9 +29,7 @@ namespace GuardVsMannequin.Room
             return false;
         }
 
-        /// <summary>
-        /// 고른 맵이 정한 기본값을 적용한다. (맵을 바꿀 때, 방을 만들 때)
-        /// </summary>
+        /// <summary>맵마다 어울리는 시간·인원이 달라 맵을 바꾸면 그 맵의 기본값을 넣되, 맵 번호 자체는 건너뛴다.</summary>
         public static GameSettings ApplyDefaults(GameSettings settings)
         {
             settings = ClampMapId(settings);
@@ -54,7 +47,7 @@ namespace GuardVsMannequin.Room
         }
 
         /// <summary>
-        /// 맵 번호를 맵 목록 범위로 맞추고, 맵이 범위를 정한 항목을 그 범위로 보정한다.
+        /// 호스트가 고른 값이 맵 범위를 벗어나지 않도록, 지금 값을 그대로 다시 넣어 맵 범위로 보정한다.
         /// </summary>
         public static GameSettings Clamp(GameSettings settings)
         {
@@ -70,11 +63,9 @@ namespace GuardVsMannequin.Room
             return settings;
         }
 
-        /// <summary>
-        /// 지금 인원으로 고른 맵을 플레이할 수 있는지 확인한다. 맵이 인원을 정하지 않았으면 항상 true.
-        /// </summary>
-        /// <param name="minPlayers">맵의 최소 인원(정하지 않았으면 게임 최소).</param>
-        /// <param name="maxPlayers">맵의 최대 인원(정하지 않았으면 게임 최대).</param>
+        /// <summary>인원이 맵 크기에 맞지 않으면 판이 성립하지 않아 맵이 정한 인원 범위로 시작을 막는다.</summary>
+        /// <param name="minPlayers">호스트에게 이유를 보여 주도록 적용된 최소 인원을 돌려준다.</param>
+        /// <param name="maxPlayers">호스트에게 이유를 보여 주도록 적용된 최대 인원을 돌려준다.</param>
         public static bool AllowsPlayerCount(GameSettings settings, int playerCount, out int minPlayers, out int maxPlayers)
         {
             minPlayers = GameConstants.MinPlayers;
@@ -90,7 +81,7 @@ namespace GuardVsMannequin.Room
         }
 
         /// <summary>
-        /// 맵 번호를 0 ~ (맵 수 - 1)로 맞춘다. (모드를 끈 뒤 남은 번호 방지)
+        /// 모드를 끄면 맵 수가 줄어 저장된 번호가 범위를 벗어날 수 있어서 0 ~ (맵 수 - 1)로 맞춘다.
         /// </summary>
         private static GameSettings ClampMapId(GameSettings settings)
         {

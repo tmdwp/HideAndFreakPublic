@@ -3,17 +3,14 @@ using UnityEngine;
 
 namespace GuardVsMannequin.PropPhysics
 {
-    /// <summary>
-    /// 날아가는 몸체(사물, 변신한 마네킹의 대리 물체)가 멈춰 있는 대상에 부딪히면 같은 세기의 충격을 넘긴다. (서버)
-    /// 멈춘 사물은 키네마틱이라 물리만으로는 밀리지 않으므로, 충분히 세게 부딪힌 경우에만 깨워 연쇄를 제한한다.
-    /// </summary>
+    /// <summary>키네마틱 대상은 물리만으로 밀리지 않으므로, 충분히 세게 부딪힌 경우에만 충격을 넘겨 연쇄를 제한한다.</summary>
     public static class ImpactRelay
     {
         /// <summary>
-        /// 충돌 상대가 충격을 받을 수 있고 충격이 <see cref="GameTuning.PropWakeImpulse"/> 이상이면 넘긴다.
+        /// 살짝 스친 것까지 깨우면 연쇄로 맵 전체가 움직이므로 충격이 <see cref="GameTuning.PropWakeImpulse"/> 이상일 때만 넘긴다.
         /// </summary>
         /// <param name="collision">날아가는 몸체 쪽에서 받은 충돌 정보.</param>
-        /// <param name="self">날아가는 몸체 자신. (자기에게 되돌려 주지 않도록)</param>
+        /// <param name="self">자기에게 되돌려 주지 않도록 날아가는 몸체 자신을 받는다.</param>
         public static void Relay(Collision collision, IImpactReceiver self)
         {
             float strength = collision.impulse.magnitude;

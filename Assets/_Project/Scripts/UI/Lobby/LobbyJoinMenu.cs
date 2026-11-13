@@ -4,10 +4,7 @@ using UnityEngine.UI;
 
 namespace GuardVsMannequin.UI
 {
-    /// <summary>
-    /// 참가 화면(스팀 방 입장 / IP로 참가)과 스팀 방 입장 화면(방 코드·암호), IP로 참가 화면(주소)의 버튼.
-    /// 초대로 들어가려는 방에 암호가 필요하면 스팀 방 입장 화면을 열어 암호를 받는다.
-    /// </summary>
+    /// <summary>참가 관련 화면들의 버튼을 맡고, 초대로 들어가려는 방에 암호가 필요하면 입장 화면을 연다.</summary>
     public class LobbyJoinMenu : MonoBehaviour
     {
         [Header("참가 화면")]
@@ -25,9 +22,7 @@ namespace GuardVsMannequin.UI
 
         private ILobbyNavigator navigator;
 
-        /// <summary>
-        /// 버튼 동작을 연결하고 암호 요청 이벤트를 구독한다. 접속은 세션 서비스에 맡긴다.
-        /// </summary>
+        /// <summary>메뉴가 접속 방법을 몰라도 되도록 접속은 세션 서비스에 맡긴다.</summary>
         private void Start()
         {
             navigator = UiLookup.FindInParent<ILobbyNavigator>(this);
@@ -43,7 +38,7 @@ namespace GuardVsMannequin.UI
         }
 
         /// <summary>
-        /// 이벤트 구독을 해제한다.
+        /// 세션 서비스는 씬보다 오래 살아서, 끊지 않으면 파괴된 메뉴를 부른다.
         /// </summary>
         private void OnDestroy()
         {
@@ -52,7 +47,7 @@ namespace GuardVsMannequin.UI
         }
 
         /// <summary>
-        /// Steam 연결과 진행 중인 작업 여부에 따라 버튼을 켜고 끈다.
+        /// Steam 상태와 접속 진행 여부는 알림 없이 바뀌므로 매 프레임 확인해, 실패할 버튼을 미리 막는다.
         /// </summary>
         private void Update()
         {
@@ -66,7 +61,7 @@ namespace GuardVsMannequin.UI
         }
 
         /// <summary>
-        /// 방 코드를 채운 스팀 방 입장 화면을 열고 암호 입력칸에 초점을 둔다.
+        /// 초대로 들어온 사람은 방 코드를 모르므로 미리 채워 두고, 바로 칠 수 있게 암호 입력칸에 초점을 둔다.
         /// </summary>
         private void OnPasswordRequired(string roomCode)
         {

@@ -3,14 +3,7 @@ using UnityEngine;
 
 namespace GuardVsMannequin.Player
 {
-    /// <summary>
-    /// 이번 판 게임 설정(룸에서 호스트가 정한 값)에 맞춰 캐릭터 이동 속도를 적용한다.
-    /// 역할별 속도와 사냥 시간 배율은 <see cref="RoleDefinitions"/>가 정한다. (마네킹은 사냥 시간에 느려짐)
-    /// 같은 오브젝트의 <see cref="IMoveSpeedModifier"/>(달리기 등) 배율을 곱한다.
-    /// 벽타기(Flying 모드)도 걷기와 같은 속도를 쓴다.
-    /// 이동은 소유자 권한이지만 설정은 모든 피어에 동기화되므로 어디서 실행해도 같은 값이 된다.
-    /// (달리기 배율은 소유자에서만 1보다 커지며, 서버는 <see cref="MovementValidator"/>가 달리기 거리를 따로 허용한다)
-    /// </summary>
+    /// <summary>호스트가 정한 설정에 맞춰 역할 속도와 배율을 캐릭터 이동 속도에 적용한다.</summary>
     public class MoveSpeedController : MonoBehaviour
     {
         [Tooltip("속도 설정을 고를 역할. (Guard 또는 Mannequin)")]
@@ -21,7 +14,7 @@ namespace GuardVsMannequin.Player
         private float appliedSpeed = -1f;
 
         /// <summary>
-        /// 캐릭터 이동 구현과 속도 배율 제공자를 캐시한다.
+        /// 매 프레임 GetComponent를 부르지 않도록 이동 구현과 배율 제공자를 미리 찾아 둔다.
         /// </summary>
         private void Awake()
         {
@@ -29,9 +22,7 @@ namespace GuardVsMannequin.Player
             modifiers = GetComponents<IMoveSpeedModifier>();
         }
 
-        /// <summary>
-        /// 목표 속도가 바뀌었을 때만 캐릭터에 적용한다. (설정 동기화, 사냥 시간 진입, 달리기)
-        /// </summary>
+        /// <summary>속도가 바뀌는 계기가 여러 곳이라 매 프레임 계산하되 값이 같으면 건드리지 않는다.</summary>
         private void Update()
         {
             IGameStateProvider state = GameServices.State;
@@ -39,21 +30,21 @@ namespace GuardVsMannequin.Player
                 return;
 
             float baseSpeed = RoleDefinitions.Get(role).GetMoveSpeed(state.Settings, state.CurrentState);
-            // 설정이 아직 동기화되지 않았으면(0) 프리팹 값을 유지한다.
+            // 설정이 아직 동기화되지 않았으면(0) 멈춰 버리지 않도록 프리팹 값을 유지한다.
             if (baseSpeed <= 0f)
                 return;
 
-            float speed = baseSpeed * GetMultiplier();
-            if (Mathf.Approximately(speed, appliedSpeed))
+            float targetSpeed = baseSpeed * GetMultiplier();
+            if (Mathf.Approximately(targetSpeed, appliedSpeed))
                 return;
 
-            appliedSpeed = speed;
-            motor.MaxWalkSpeed = speed;
-            motor.MaxFlySpeed = speed;
+            appliedSpeed = targetSpeed;
+            motor.MaxWalkSpeed = targetSpeed;
+            motor.MaxFlySpeed = targetSpeed;
         }
 
         /// <summary>
-        /// 모든 속도 배율 제공자의 배율을 곱한다.
+        /// 달리기와 감속이 동시에 걸릴 수 있어서 모든 배율을 곱해 합친다.
         /// </summary>
         private float GetMultiplier()
         {

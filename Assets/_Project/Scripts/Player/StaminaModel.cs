@@ -3,33 +3,29 @@ using UnityEngine;
 
 namespace GuardVsMannequin.Player
 {
-    /// <summary>
-    /// 스태미나 계산만 맡는 순수 로직. (MonoBehaviour·입력에 의존하지 않음)
-    /// 달리는 동안 줄고, 멈추면 잠시 뒤 회복된다. 바닥나면 <see cref="SprintRules.RestartRatio"/>까지 회복해야 다시 달릴 수 있다.
-    /// </summary>
+    /// <summary>입력·MonoBehaviour 없이 시험하도록 스태미나 계산만 맡는 순수 로직.</summary>
     public sealed class StaminaModel
     {
         private float recoverDelayRemaining;
 
-        /// <summary>남은 스태미나(0~1).</summary>
+        /// <summary>0~1 비율.</summary>
         public float Current { get; private set; } = 1f;
 
-        /// <summary>스태미나를 다 써서 다시 달릴 수 없는 상태인지 여부.</summary>
+        /// <summary>바닥난 뒤 조금만 차도 바로 달리면 끊기듯 반복되므로, 다시 달릴 수 없는 구간을 따로 표시한다.</summary>
         public bool IsExhausted { get; private set; }
 
         /// <summary>
-        /// 한 프레임 진행한다.
+        /// 입력과 떨어진 순수 로직으로 두어야 테스트와 재사용이 쉬워서, 판단에 필요한 값만 받아 한 프레임 진행한다.
         /// </summary>
-        /// <param name="wantsSprint">달리기 키를 누른 채 움직이고 있는지 여부.</param>
-        /// <param name="deltaTime">프레임 시간(초).</param>
-        /// <returns>이번 프레임에 실제로 달리는지 여부.</returns>
+        /// <param name="wantsSprint">달리기 키를 누른 채 움직이고 있는지.</param>
+        /// <returns>소진 상태면 키를 눌러도 달리지 않으므로 실제로 달리는지를 돌려준다.</returns>
         public bool Tick(bool wantsSprint, float deltaTime)
         {
             if (IsExhausted && Current >= SprintRules.RestartRatio)
                 IsExhausted = false;
 
-            bool sprinting = wantsSprint && !IsExhausted && Current > 0f;
-            if (sprinting)
+            bool isSprinting = wantsSprint && !IsExhausted && Current > 0f;
+            if (isSprinting)
             {
                 Current = Mathf.Max(0f, Current - SprintRules.DrainPerSecond * deltaTime);
                 recoverDelayRemaining = SprintRules.RecoverDelay;
@@ -38,6 +34,7 @@ namespace GuardVsMannequin.Player
             }
             else if (recoverDelayRemaining > 0f)
             {
+                // 잠깐 멈췄다 다시 달리는 것으로 회복을 챙기지 못하게 멈춘 직후에는 바로 채우지 않는다.
                 recoverDelayRemaining -= deltaTime;
             }
             else
@@ -45,7 +42,7 @@ namespace GuardVsMannequin.Player
                 Current = Mathf.Min(1f, Current + SprintRules.RecoverPerSecond * deltaTime);
             }
 
-            return sprinting;
+            return isSprinting;
         }
     }
 }

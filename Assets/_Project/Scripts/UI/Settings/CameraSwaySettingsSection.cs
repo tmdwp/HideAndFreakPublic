@@ -5,10 +5,7 @@ using UnityEngine.UI;
 
 namespace GuardVsMannequin.UI
 {
-    /// <summary>
-    /// 카메라 흔들림 설정(◀ 보통 / 약하게 / 끄기 ▶). 바꾸는 즉시 저장되고 다음 화면부터 적용된다(<see cref="CameraSwaySettings"/>).
-    /// "모두 기본값으로"를 누르면 보통으로 돌아간다.
-    /// </summary>
+    /// <summary>바꾸는 즉시 저장되는 카메라 흔들림 설정.</summary>
     public class CameraSwaySettingsSection : MonoBehaviour, ISettingsSection
     {
         [SerializeField] private Button previousCameraSwayButton;
@@ -16,7 +13,7 @@ namespace GuardVsMannequin.UI
         [SerializeField] private Text cameraSwayValueText;
 
         /// <summary>
-        /// 버튼 이벤트를 연결한다.
+        /// 설정 화면이 처음 열릴 때 한 번만 연결해 이벤트가 중복되지 않게 한다.
         /// </summary>
         public void Initialize()
         {
@@ -25,16 +22,16 @@ namespace GuardVsMannequin.UI
         }
 
         /// <summary>
-        /// 현재 카메라 흔들림을 표시한다.
+        /// 저장 파일을 손으로 고쳐 범위 밖 값이 들어와도 목록 밖을 읽지 않도록 보정해 표시한다.
         /// </summary>
         public void Refresh()
         {
-            int mode = CameraSwaySettings.ClampMode(OptionsStore.Current.cameraSway);
-            cameraSwayValueText.text = Loc.Get(CameraSwaySettings.Modes[mode].labelKey);
+            int swayMode = CameraSwaySettings.ClampMode(OptionsStore.Current.cameraSway);
+            cameraSwayValueText.text = Loc.Get(CameraSwaySettings.Modes[swayMode].labelKey);
         }
 
         /// <summary>
-        /// 보통으로 되돌린다.
+        /// 의도한 연출이 보이는 값이 "보통"이라 그 값으로 되돌린다.
         /// </summary>
         public void ResetToDefaults()
         {
@@ -42,17 +39,17 @@ namespace GuardVsMannequin.UI
         }
 
         /// <summary>
-        /// 이전/다음 흔들림 단계로 바꾼다.
+        /// 버튼 두 개로 목록을 순환하도록 끝에서 처음으로 돌아간다.
         /// </summary>
         private void ChangeCameraSway(int direction)
         {
-            int count = CameraSwaySettings.Modes.Length;
-            int current = CameraSwaySettings.ClampMode(OptionsStore.Current.cameraSway);
-            SetCameraSway((current + direction + count) % count);
+            int modeCount = CameraSwaySettings.Modes.Length;
+            int currentMode = CameraSwaySettings.ClampMode(OptionsStore.Current.cameraSway);
+            SetCameraSway((currentMode + direction + modeCount) % modeCount);
         }
 
         /// <summary>
-        /// 흔들림 단계를 저장하고 표시를 갱신한다.
+        /// 흔들림은 카메라가 매 프레임 설정을 읽으므로 저장만 하면 다음 화면부터 적용된다.
         /// </summary>
         private void SetCameraSway(int mode)
         {

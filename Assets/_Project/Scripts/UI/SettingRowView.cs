@@ -6,13 +6,7 @@ using UnityEngine.UI;
 
 namespace GuardVsMannequin.UI
 {
-    /// <summary>
-    /// 게임 설정 한 줄(이름, 값, -/+ 버튼). 모든 플레이어에게 값이 보이고, 호스트만 조정할 수 있다.
-    /// 값 입력 칸(valueInput)이 있으면 호스트는 값을 눌러 키보드로 직접 입력할 수 있다.
-    /// - 누르면 단위 없는 숫자로 바뀌고, Enter 또는 다른 곳을 누르면 적용된다. (범위를 넘으면 가장 가까운 값으로 맞춤)
-    /// - 숫자가 아니면 원래 값으로 돌아간다.
-    /// 맵처럼 입력 칸이 없는 줄은 -/+ 버튼으로만 바꾼다.
-    /// </summary>
+    /// <summary>모두에게 값이 보이고 호스트만 조정할 수 있는 게임 설정 한 줄.</summary>
     public class SettingRowView : MonoBehaviour
     {
         [SerializeField] private GameSettingId settingId;
@@ -27,15 +21,14 @@ namespace GuardVsMannequin.UI
 
         private Action<GameSettingId, float> onSetValue;
 
-        /// <summary>이 줄이 다루는 설정 항목.</summary>
         public GameSettingId SettingId => settingId;
         private GameSettings lastSettings;
         private bool wasFocused;
 
         /// <summary>
-        /// 버튼과 입력 칸에 조정 함수를 연결하고 이름을 표시한다.
+        /// 값 변경은 서버를 거쳐야 하므로 이 줄은 직접 바꾸지 않고 바깥에서 받은 함수로 요청만 보낸다.
         /// </summary>
-        /// <param name="onAdjust">(항목, 방향 -1/+1)을 받는 조정 함수.</param>
+        /// <param name="onAdjust">항목과 방향을 받는 조정 함수.</param>
         /// <param name="setValue">(항목, 입력한 값)을 받는 직접 지정 함수.</param>
         public void Bind(Action<GameSettingId, int> onAdjust, Action<GameSettingId, float> setValue)
         {
@@ -55,28 +48,23 @@ namespace GuardVsMannequin.UI
             }
         }
 
-        /// <summary>
-        /// 입력 칸을 누른 순간 단위 없는 숫자로 바꿔 바로 고칠 수 있게 한다.
-        /// </summary>
+        /// <summary>InputField는 포커스 이벤트가 없어 매 프레임 확인하고, 누른 순간 바로 고칠 수 있게 숫자만 남긴다.</summary>
         private void Update()
         {
             if (valueInput == null)
                 return;
 
-            bool focused = valueInput.isFocused;
-            if (focused && !wasFocused)
+            bool isFocused = valueInput.isFocused;
+            if (isFocused && !wasFocused)
             {
                 valueInput.SetTextWithoutNotify(GameSettingDefinitions.FormatNumber(lastSettings, settingId));
                 valueInput.selectionAnchorPosition = 0;
                 valueInput.selectionFocusPosition = valueInput.text.Length;
             }
-            wasFocused = focused;
+            wasFocused = isFocused;
         }
 
-        /// <summary>
-        /// 현재 설정 값을 표시하고, 호스트일 때만 버튼과 입력 칸을 켠다. (언어가 바뀌었을 수 있어 이름도 다시 표시)
-        /// 입력 중에는 입력한 내용을 덮어쓰지 않는다.
-        /// </summary>
+        /// <summary>언어가 바뀌었을 수 있어 이름도 다시 표시하되, 입력 중에는 치던 내용을 덮지 않는다.</summary>
         public void Refresh(GameSettings settings, bool editable)
         {
             lastSettings = settings;
@@ -84,27 +72,27 @@ namespace GuardVsMannequin.UI
             decreaseButton.interactable = editable;
             increaseButton.interactable = editable;
 
-            string formatted = GameSettingDefinitions.Format(settings, settingId);
+            string formattedValue = GameSettingDefinitions.Format(settings, settingId);
             if (valueInput == null)
             {
-                valueText.text = formatted;
+                valueText.text = formattedValue;
                 return;
             }
 
             valueInput.interactable = editable;
             if (!valueInput.isFocused)
-                valueInput.SetTextWithoutNotify(formatted);
+                valueInput.SetTextWithoutNotify(formattedValue);
         }
 
         /// <summary>
-        /// 입력을 마치면(Enter, 다른 곳 클릭) 숫자를 읽어 적용을 요청한다. 숫자가 아니면 원래 값을 다시 보여준다.
+        /// 잘못 입력해도 이상한 글자가 남지 않도록, 적용 여부와 상관없이 마지막으로 받은 값으로 표시를 되돌린다.
         /// </summary>
         private void OnEndEdit(string text)
         {
             if (GameSettingDefinitions.TryParseInput(text, out float value))
                 onSetValue?.Invoke(settingId, value);
 
-            // 서버가 보정한 값은 다음 갱신 때 표시된다. 그 전까지는 이전 값을 보여준다.
+            // 서버가 보정한 값은 다음 갱신 때 표시된다.
             valueInput.SetTextWithoutNotify(GameSettingDefinitions.Format(lastSettings, settingId));
         }
     }

@@ -6,13 +6,7 @@ using UnityEngine.Rendering;
 
 namespace GuardVsMannequin.Player.Mannequin
 {
-    /// <summary>
-    /// 사냥 시간 진입 시 마네킹을 사냥 모드로 바꾼다.
-    /// - 모든 피어: 외형을 사냥 외형(맵 지정, 없으면 기본 Ghoul)으로 교체 (<see cref="CharacterSkinView.UseHuntSkin"/>)하고, 다음 프레임에 비명(애니메이션 + 소리)
-    /// - 서버: 강제 변신 해제(이후 다시 변신 가능), 최대 체력 = 기본 체력 × huntHealthMultiplier (가득 채움)
-    /// - 소유자: 1인칭 전환(본인 몸은 그림자만, 팔다리는 FirstPersonBodyView로 보임), 제한된 시야(HuntVisionEffect)
-    /// 동기화된 게임 상태를 보고 각자 한 번씩 적용한다.
-    /// </summary>
+    /// <summary>사냥 시간 진입 시 마네킹을 구울 외형과 1인칭 사냥 모드로 바꾼다.</summary>
     [RequireComponent(typeof(MannequinTransformer), typeof(PlayerHealth))]
     public class MannequinHuntingMode : NetworkBehaviour
     {
@@ -27,14 +21,13 @@ namespace GuardVsMannequin.Player.Mannequin
         private CharacterSkinView skinView;
         private FirstPersonBodyView firstPersonBody;
         private NoiseEmitter noiseEmitter;
-        private bool skinApplied;
-        private bool shriekPending;
-        private bool serverApplied;
-        private bool ownerApplied;
+        private bool isSkinApplied;
+        private bool isShriekPending;
+        private bool isServerApplied;
+        private bool isOwnerApplied;
+        private bool spawnedDuringHunt;
 
-        /// <summary>
-        /// 같은 오브젝트의 구성 요소를 캐시한다.
-        /// </summary>
+        /// <summary>매 프레임 조회하지 않도록 미리 찾아 둔다.</summary>
         private void Awake()
         {
             perspective = GetComponent<IPerspectiveCamera>();
@@ -47,45 +40,54 @@ namespace GuardVsMannequin.Player.Mannequin
             noiseEmitter = GetComponent<NoiseEmitter>();
         }
 
+        /// <summary>사냥 중에 나타난 아바타가 엉뚱하게 비명을 지르지 않도록 기억해 둔다.</summary>
+        public override void OnStartClient()
+        {
+            base.OnStartClient();
+            spawnedDuringHunt = GameServices.CurrentStateOrWaiting == GameState.Hunting;
+        }
+
         /// <summary>
-        /// 사냥 시간이 되면 외형 교체와 서버/소유자 측 변경을 한 번씩 적용한다.
-        /// 외형을 먼저 바꿔야 소유자의 1인칭 그림자 처리가 새 몸체에 적용된다.
+        /// 사냥 중에 끊겼다가 돌아온 사람이 체력을 가득 다시 받지 않도록, 스폰 직전에 서버 쪽 적용을 이미 한 것으로 표시한다.
         /// </summary>
+        public void ServerSkipHuntSetup()
+        {
+            isServerApplied = true;
+        }
+
+        /// <summary>이벤트를 놓쳐도 적용되도록 매 프레임 동기화된 상태를 보고 피어별로 한 번만 적용한다.</summary>
         private void Update()
         {
             if (!this.IsNetworkReady() || GameServices.CurrentStateOrWaiting != GameState.Hunting)
                 return;
 
-            if (!skinApplied)
+            if (!isSkinApplied)
                 ApplyHuntSkin();
-            else if (shriekPending)
+            else if (isShriekPending)
                 Shriek();
 
-            if (IsServerInitialized && !serverApplied)
+            if (IsServerInitialized && !isServerApplied)
                 ApplyOnServer();
 
-            if (IsOwner && !ownerApplied)
+            if (IsOwner && !isOwnerApplied)
                 ApplyOnOwner();
         }
 
         /// <summary>
-        /// 사냥 외형으로 바꾼다. (모든 피어에서 각자 실행, 외형은 맵·프리팹이 같으므로 결과도 같다)
+        /// 외형은 맵·프리팹이 같으므로 결과도 같아서 동기화하지 않고 모든 피어가 각자 바꾼다.
         /// </summary>
         private void ApplyHuntSkin()
         {
-            skinApplied = true;
-            shriekPending = true;
+            isSkinApplied = true;
+            isShriekPending = !spawnedDuringHunt;
             if (skinView != null)
                 skinView.UseHuntSkin();
         }
 
-        /// <summary>
-        /// 사냥 시간이 시작되면 구울이 머리를 젖히고 비명을 지른다. (외형을 바꾼 다음 프레임: 새 애니메이터가 준비된 뒤)
-        /// 변신 중이거나 죽었으면 건너뛴다.
-        /// </summary>
+        /// <summary>외형을 바꾼 프레임에는 새 애니메이터가 준비되지 않아 다음 프레임에 비명을 지른다.</summary>
         private void Shriek()
         {
-            shriekPending = false;
+            isShriekPending = false;
             if (transformer.IsDisguised || !health.IsAlive)
                 return;
             if (skinView != null)
@@ -95,11 +97,11 @@ namespace GuardVsMannequin.Player.Mannequin
         }
 
         /// <summary>
-        /// 변신을 해제하고 사냥 시간 체력을 적용한다.
+        /// 체력과 변신 상태는 서버 권한이라 서버에서 변신을 풀고 사냥 시간 체력을 가득 채운다.
         /// </summary>
         private void ApplyOnServer()
         {
-            serverApplied = true;
+            isServerApplied = true;
             transformer.ForceUntransform();
 
             GameSettings settings = GameServices.State.Settings;
@@ -108,12 +110,10 @@ namespace GuardVsMannequin.Player.Mannequin
             health.SetMaxHealth(huntMaxHealth, refill: true);
         }
 
-        /// <summary>
-        /// 1인칭으로 전환한다. (사냥 시간 속도는 MoveSpeedController가 적용)
-        /// </summary>
+        /// <summary>카메라·시야 제한은 본인 화면에만 적용돼야 해서 소유자에서만 1인칭으로 바꾼다.</summary>
         private void ApplyOnOwner()
         {
-            ownerApplied = true;
+            isOwnerApplied = true;
             perspective?.SetFirstPerson(true);
 
             foreach (Renderer bodyRenderer in CharacterSkinView.ResolveBodyRenderers(this, bodyRenderers))
@@ -127,7 +127,6 @@ namespace GuardVsMannequin.Player.Mannequin
             if (disguiseView != null)
                 disguiseView.SetDisguiseShadowsOnly(true);
 
-            // 주변만 보이도록 시야를 제한한다. (본인 화면에만 적용)
             if (huntVision != null)
                 huntVision.Activate();
         }

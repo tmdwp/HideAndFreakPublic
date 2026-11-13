@@ -7,10 +7,7 @@ using UnityEngine;
 
 namespace GuardVsMannequin.Editor
 {
-    /// <summary>
-    /// 빌드가 끝나면 실행 파일 옆에 빈 Mods 폴더와 설치 안내문(README.txt)을 만든다.
-    /// 플레이어가 모드를 어디에 넣을지 바로 알 수 있게 한다. 이미 들어 있는 모드는 건드리지 않는다.
-    /// </summary>
+    /// <summary>플레이어가 모드를 어디에 넣을지 바로 알도록 빌드 옆에 Mods 폴더와 안내문을 만든다.</summary>
     public class ModsFolderBuildProcessor : IPostprocessBuildWithReport
     {
         private const string FolderName = "Mods";
@@ -18,13 +15,11 @@ namespace GuardVsMannequin.Editor
 
         public int callbackOrder => 10;
 
-        /// <summary>
-        /// Windows/Linux 독립 실행 빌드에서만 만든다.
-        /// </summary>
+        /// <summary>모드는 실행 파일 옆 폴더에서 읽으므로 그 구조가 있는 독립 실행 빌드에서만 만든다.</summary>
         public void OnPostprocessBuild(BuildReport report)
         {
-            BuildTarget target = report.summary.platform;
-            if (target != BuildTarget.StandaloneWindows && target != BuildTarget.StandaloneWindows64 && target != BuildTarget.StandaloneLinux64)
+            BuildTarget buildTarget = report.summary.platform;
+            if (buildTarget != BuildTarget.StandaloneWindows && buildTarget != BuildTarget.StandaloneWindows64 && buildTarget != BuildTarget.StandaloneLinux64)
                 return;
 
             string modsFolder = Path.Combine(Path.GetDirectoryName(report.summary.outputPath) ?? ".", FolderName);
@@ -33,9 +28,7 @@ namespace GuardVsMannequin.Editor
             Debug.Log($"[ModsFolderBuildProcessor] 모드 폴더를 만들었습니다: {modsFolder}");
         }
 
-        /// <summary>
-        /// 모드 설치 안내문. (한국어·영어)
-        /// </summary>
+        /// <summary>게임을 켜지 않고도 설치 방법을 알 수 있게 한국어·영어 안내문을 만든다.</summary>
         private static string BuildReadme()
         {
             return

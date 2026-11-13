@@ -6,9 +6,7 @@ using UnityEngine.UI;
 
 namespace GuardVsMannequin.UI
 {
-    /// <summary>
-    /// 룸 화면의 게임 설정 목록. 모두에게 값이 보이고, 호스트만 -/+ 버튼과 키보드 입력으로 조정한다.
-    /// </summary>
+    /// <summary>모두에게 값이 보이고 호스트만 조정하는 룸 게임 설정 목록.</summary>
     public class RoomSettingsView : MonoBehaviour
     {
         [SerializeField] private Text settingsHintText;
@@ -17,7 +15,7 @@ namespace GuardVsMannequin.UI
         private RefreshTimer refreshTimer;
 
         /// <summary>
-        /// 룸에서 숨기는 항목의 줄을 끄고(이전에 만든 프리팹 대비), 남은 줄의 조정 동작을 연결한다.
+        /// 예전에 만든 프리팹에는 지금은 숨기는 항목의 줄이 남아 있을 수 있어 끄고, 갱신 대상에서도 뺀다.
         /// </summary>
         private void Start()
         {
@@ -32,9 +30,7 @@ namespace GuardVsMannequin.UI
                 row.Bind(OnAdjustSetting, OnSetSettingValue);
         }
 
-        /// <summary>
-        /// 설정 값을 표시하고 호스트에게만 조정 버튼을 켠다. (값 문구를 새로 만들므로 일정 간격으로만 갱신)
-        /// </summary>
+        /// <summary>변경 알림이 없어 주기적으로 다시 그리되 가비지를 줄이려고 일정 간격으로만 갱신한다.</summary>
         private void Update()
         {
             RoomState room = RoomState.Instance;
@@ -47,9 +43,7 @@ namespace GuardVsMannequin.UI
                 row.Refresh(room.Settings, isHost);
         }
 
-        /// <summary>
-        /// 호스트가 설정을 조정한다. (호스트는 서버이므로 직접 호출)
-        /// </summary>
+        /// <summary>게스트가 바꾸지 못하도록 한 번 더 확인한 뒤 호스트가 직접 호출한다.</summary>
         private static void OnAdjustSetting(GameSettingId id, int direction)
         {
             if (RoomClient.IsHost && RoomState.Instance != null)
@@ -57,7 +51,7 @@ namespace GuardVsMannequin.UI
         }
 
         /// <summary>
-        /// 호스트가 키보드로 입력한 값을 적용한다. (범위·인원 조건은 서버가 보정)
+        /// 범위·인원 조건은 서버가 한곳에서 보정하므로 여기서는 입력값을 그대로 넘긴다.
         /// </summary>
         private static void OnSetSettingValue(GameSettingId id, float value)
         {

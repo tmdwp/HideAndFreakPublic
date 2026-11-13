@@ -6,10 +6,7 @@ using UnityEngine.UI;
 
 namespace GuardVsMannequin.UI
 {
-    /// <summary>
-    /// 화면 설정: 화면 모드(◀ ▶)와 해상도(누르면 펼쳐지는 스크롤 목록).
-    /// 바꾸는 즉시 적용·저장된다(<see cref="DisplaySettings"/>). "모두 기본값으로"로는 되돌리지 않는다.
-    /// </summary>
+    /// <summary>화면 모드와 해상도를 바꾸는 즉시 적용·저장하는 화면 설정.</summary>
     public class DisplaySettingsSection : MonoBehaviour, ISettingsSection
     {
         [SerializeField] private Button previousScreenModeButton;
@@ -22,7 +19,7 @@ namespace GuardVsMannequin.UI
         private readonly List<Vector2Int> resolutions = new();
 
         /// <summary>
-        /// 버튼과 목록 이벤트를 연결한다.
+        /// 설정 화면이 처음 열릴 때 한 번만 연결해 이벤트가 중복되지 않게 한다.
         /// </summary>
         public void Initialize()
         {
@@ -31,9 +28,7 @@ namespace GuardVsMannequin.UI
             resolutionDropdown.onValueChanged.AddListener(OnResolutionSelected);
         }
 
-        /// <summary>
-        /// 현재 화면 모드와, 모니터가 지원하는 해상도 목록을 표시한다.
-        /// </summary>
+        /// <summary>모니터를 바꿨을 수 있어 열 때마다 지원 해상도 목록을 다시 만든다.</summary>
         public void Refresh()
         {
             GameOptions options = OptionsStore.Current;
@@ -41,40 +36,38 @@ namespace GuardVsMannequin.UI
 
             resolutions.Clear();
             resolutions.AddRange(DisplaySettings.GetResolutions());
-            var labels = new List<string>();
+            var resolutionLabels = new List<string>();
             foreach (Vector2Int size in resolutions)
-                labels.Add($"{size.x} × {size.y}");
+                resolutionLabels.Add($"{size.x} × {size.y}");
 
             resolutionDropdown.ClearOptions();
-            resolutionDropdown.AddOptions(labels);
+            resolutionDropdown.AddOptions(resolutionLabels);
 
-            int selected = resolutions.IndexOf(GetSelectedResolution(options));
-            resolutionDropdown.SetValueWithoutNotify(selected >= 0 ? selected : resolutions.Count - 1);
+            int selectedIndex = resolutions.IndexOf(GetSelectedResolution(options));
+            resolutionDropdown.SetValueWithoutNotify(selectedIndex >= 0 ? selectedIndex : resolutions.Count - 1);
             resolutionDropdown.RefreshShownValue();
         }
 
         /// <summary>
-        /// 화면 설정은 기본값으로 되돌리지 않는다. (바꾸면 화면이 깜빡이므로)
+        /// 화면 설정을 되돌리면 화면이 깜빡이고 모니터에 맞춘 값을 잃으므로 비워 둔다.
         /// </summary>
         public void ResetToDefaults()
         {
         }
 
-        /// <summary>
-        /// 화면 모드를 이전/다음으로 바꾸고 바로 적용한다.
-        /// </summary>
+        /// <summary>버튼 두 개로 순환하도록 끝에서 처음으로 돌아가고, 모드만 바꿔도 크기가 바뀌지 않게 해상도를 함께 저장한다.</summary>
         private void ChangeScreenMode(int direction)
         {
             GameOptions options = OptionsStore.Current;
-            int count = DisplaySettings.Modes.Length;
-            options.screenMode = (DisplaySettings.ClampMode(options.screenMode) + direction + count) % count;
+            int modeCount = DisplaySettings.Modes.Length;
+            options.screenMode = (DisplaySettings.ClampMode(options.screenMode) + direction + modeCount) % modeCount;
             KeepCurrentResolution(ref options);
             OptionsStore.SetOptions(options);
             Refresh();
         }
 
         /// <summary>
-        /// 목록에서 고른 해상도를 적용한다.
+        /// 목록이 다시 만들어지는 도중 범위를 벗어난 값이 올 수 있어 확인한 뒤 적용한다.
         /// </summary>
         private void OnResolutionSelected(int index)
         {
@@ -88,7 +81,7 @@ namespace GuardVsMannequin.UI
         }
 
         /// <summary>
-        /// 저장된 해상도. 고른 적이 없으면 현재 화면 크기.
+        /// 해상도를 고른 적이 없으면 저장값이 0이라, 그때는 지금 화면 크기를 선택된 것으로 본다.
         /// </summary>
         private static Vector2Int GetSelectedResolution(GameOptions options)
         {

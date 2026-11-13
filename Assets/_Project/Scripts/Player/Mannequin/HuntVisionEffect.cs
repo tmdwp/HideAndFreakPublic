@@ -1,15 +1,10 @@
 using GuardVsMannequin.Core;
+using GuardVsMannequin.Rendering;
 using UnityEngine;
 
 namespace GuardVsMannequin.Player.Mannequin
 {
-    /// <summary>
-    /// 사냥 시간 마네킹의 시야. 로컬 화면에만 적용된다.
-    /// - 주변을 은은하게 비추는 개인 조명(본인 화면에만 켜짐)으로 가까운 곳은 보이게 한다.
-    /// - 검은 선형 안개로 일정 거리 밖은 보이지 않게 해 시야 범위를 줄인다.
-    /// 조명 범위·밝기와 안개 거리는 <see cref="GameTuning"/>(game_tuning.csv)에서 읽는다.
-    /// 가드와 다른 플레이어의 화면에는 영향을 주지 않는다. (이 마네킹을 관전하는 사람에게는 같은 시야가 적용된다)
-    /// </summary>
+    /// <summary>사냥 시간 마네킹이 가까운 곳만 보도록 본인 화면에 개인 조명과 검은 안개를 건다.</summary>
     public class HuntVisionEffect : MonoBehaviour, IViewEffect
     {
         [Tooltip("본인 화면에서만 켜지는 개인 조명. 다른 플레이어에게는 꺼진 상태로 남는다.")]
@@ -18,14 +13,10 @@ namespace GuardVsMannequin.Player.Mannequin
         [SerializeField] private Color fogColor = Color.black;
 
         private bool isActive;
-        private bool originalFog;
-        private FogMode originalFogMode;
-        private Color originalFogColor;
-        private float originalFogStart;
-        private float originalFogEnd;
+        private FogSettings originalFog;
 
         /// <summary>
-        /// 개인 조명을 꺼 둔다.
+        /// 프리팹에서 켜져 있으면 다른 플레이어 화면도 밝아지므로, 시작할 때 개인 조명을 꺼 둔다.
         /// </summary>
         private void Awake()
         {
@@ -34,34 +25,22 @@ namespace GuardVsMannequin.Player.Mannequin
         }
 
         /// <summary>
-        /// 사망(아바타 제거)이나 판 종료로 사라질 때 안개를 되돌린다.
+        /// 안개는 씬 전역 설정이라, 사망·판 종료로 아바타가 사라질 때 되돌리지 않으면 다음 화면까지 남는다.
         /// </summary>
         private void OnDestroy()
         {
             Deactivate();
         }
 
-        /// <summary>
-        /// 사냥 시간 시야를 켠다. (로컬 소유자, 또는 이 마네킹을 관전하는 클라이언트에서 호출)
-        /// </summary>
+        /// <summary>안개는 씬 전역 설정이라 되돌릴 수 있게 원래 값을 먼저 저장한다.</summary>
         public void Activate()
         {
             if (isActive)
                 return;
             isActive = true;
 
-            originalFog = RenderSettings.fog;
-            originalFogMode = RenderSettings.fogMode;
-            originalFogColor = RenderSettings.fogColor;
-            originalFogStart = RenderSettings.fogStartDistance;
-            originalFogEnd = RenderSettings.fogEndDistance;
-
-            float fogStart = GameTuning.HuntVisionFogStart;
-            RenderSettings.fog = true;
-            RenderSettings.fogMode = FogMode.Linear;
-            RenderSettings.fogColor = fogColor;
-            RenderSettings.fogStartDistance = fogStart;
-            RenderSettings.fogEndDistance = Mathf.Max(fogStart + 0.1f, GameTuning.HuntVisionFogEnd);
+            originalFog = FogSettings.Capture();
+            FogSettings.Linear(fogColor, GameTuning.HuntVisionFogStart, GameTuning.HuntVisionFogEnd).Apply();
 
             if (visionLight != null)
             {
@@ -72,7 +51,7 @@ namespace GuardVsMannequin.Player.Mannequin
         }
 
         /// <summary>
-        /// 사냥 시간 시야를 끄고 원래 안개 설정으로 되돌린다.
+        /// 켠 적이 없을 때 되돌리면 저장하지 않은 값으로 안개를 덮어쓰므로, 켜져 있을 때만 원래 설정을 복원한다.
         /// </summary>
         public void Deactivate()
         {
@@ -80,11 +59,7 @@ namespace GuardVsMannequin.Player.Mannequin
                 return;
             isActive = false;
 
-            RenderSettings.fog = originalFog;
-            RenderSettings.fogMode = originalFogMode;
-            RenderSettings.fogColor = originalFogColor;
-            RenderSettings.fogStartDistance = originalFogStart;
-            RenderSettings.fogEndDistance = originalFogEnd;
+            originalFog.Apply();
 
             if (visionLight != null)
                 visionLight.enabled = false;

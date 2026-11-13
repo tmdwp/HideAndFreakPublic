@@ -6,21 +6,18 @@ using Object = UnityEngine.Object;
 
 namespace GuardVsMannequin.UI
 {
-    /// <summary>
-    /// HUD에 보여줄 키 이름을 지금 키 설정대로 알려준다. 입력 에셋 복제본에 저장된 키 설정을 적용해 두고,
-    /// 게임 중 키 설정·언어가 바뀌면 <see cref="Changed"/>로 알린다. (조작 안내, 손전등 키 아이콘이 함께 쓴다)
-    /// </summary>
+    /// <summary>HUD 키 이름이 키 설정·언어 변경을 따라가도록 바뀌면 알린다.</summary>
     public sealed class HudKeyNames : IDisposable
     {
         private readonly InputActionAsset displayActions;
 
-        /// <summary>키 설정이나 언어가 바뀌어 표시 이름을 다시 읽어야 할 때.</summary>
+        /// <summary>표시 문구를 매 프레임 다시 만들지 않도록, 다시 읽어야 할 때만 알린다.</summary>
         public event Action Changed;
 
         /// <summary>
-        /// 입력 에셋을 복제해 저장된 키 설정을 적용하고 변경 이벤트를 구독한다.
+        /// 원본 입력 에셋을 고치지 않도록 복제본에 저장된 키 설정을 적용한다.
         /// </summary>
-        /// <param name="source">키 이름을 읽을 입력 에셋. null이면 모든 키가 "-".</param>
+        /// <param name="source">키 이름을 읽을 입력 에셋.</param>
         public HudKeyNames(InputActionAsset source)
         {
             if (source != null)
@@ -32,16 +29,14 @@ namespace GuardVsMannequin.UI
             Loc.LanguageChanged += OnLanguageChanged;
         }
 
-        /// <summary>
-        /// 액션에 지금 묶인 키의 표시 이름.
-        /// </summary>
+        /// <summary>표시 규칙을 한곳에 두려고 KeyBindingDisplay에 맡긴다.</summary>
         public string Get(string actionName)
         {
             return KeyBindingDisplay.Get(displayActions, actionName);
         }
 
         /// <summary>
-        /// 구독을 해제하고 복제본을 지운다.
+        /// 정적 이벤트는 끊지 않으면 HUD가 파괴된 뒤에도 불리고, 복제본은 씬과 함께 지워지지 않아 직접 정리한다.
         /// </summary>
         public void Dispose()
         {
@@ -52,7 +47,7 @@ namespace GuardVsMannequin.UI
         }
 
         /// <summary>
-        /// 게임 중 키 설정을 바꾸면 복제본에도 적용하고 알린다.
+        /// 게임 중 설정 화면에서 키를 바꾸면 복제본은 모르므로 다시 적용한 뒤 알린다.
         /// </summary>
         private void OnBindingsChanged()
         {
@@ -62,7 +57,7 @@ namespace GuardVsMannequin.UI
         }
 
         /// <summary>
-        /// 언어가 바뀌면 키 이름(마우스 버튼 등 번역 문구)이 달라질 수 있어 알린다.
+        /// 마우스 버튼 같은 키 이름은 번역 문구라 언어가 바뀌면 달라지므로 알린다.
         /// </summary>
         private void OnLanguageChanged()
         {

@@ -19,7 +19,6 @@
   - ECM2를 직접 설치하면 `GVM_ECM2` 기호가 자동으로 켜지고(`Ecm2DefineSync`), 이동 어셈블리(`Assets/_Project/Scripts/MovementEcm2`)가 컴파일되어 동작합니다.
 - 에셋 스토어의 캐릭터·무기·소품·사운드·이펙트 팩
 - Mixamo 감정 표현 애니메이션(`Assets/_Project/Animation/*.fbx`)
-- Ghoul 모델·텍스처(`Assets/_Project/Art/Skins/Ghoul.fbx`, `Ghoul_Scribble.png`)
 
 사용한 에셋 목록과 위치는 [Docs/AssetLicenses.md](Docs/AssetLicenses.md)에 있습니다. 실행하려면 각자 구입·임포트해야 합니다.
 
@@ -51,7 +50,7 @@
 
 최근 추가된 것
 - **사냥 시간 Ghoul 외형**: 사냥 시간이 되면 모든 PC에서 마네킹이 Ghoul로 바뀌고, 오른팔로 할퀴어 공격합니다.
-- **가드 외형·무기 교체**: SWAT 외형에 소총을 들고, 양손 조준 IK로 두 손이 총을 잡습니다.
+- **캐릭터 화풍 통일**: 마네킹·가드·구울·소총을 Blender로 직접 만든 로우폴리 모델로 바꿨습니다. 가드는 양손 조준 IK로 두 손이 총을 잡습니다.
 - **판마다 변신 사물 배치 섞기**: 크기가 비슷한 사물끼리 자리를 바꾸고, 조금씩 옮기거나 돌립니다.
 - **MapKit**: Blender로 만든 맵 제작용 구조물·소품 모델 39개입니다.
 - **새 맵 "지하 연구소"(Map_Laboratory), "환승역"(Map_TransferStation)**: 아래 맵 목록 참고.
@@ -59,10 +58,13 @@
 ## 맵
 | 번호 | 씬 | 내용 |
 |---|---|---|
-| 0 | Map_Forest | 숲. Terrain 지형과 나무, 변신용 덤불 4종 (`Scenes/Custom`, 메뉴 **맵 생성 → 숲 덤불 배치**) |
-| 1 | Map_Laboratory | 지하 연구소. MapKit 모델만으로 직접 설계했습니다. 6m 높이 중앙 실험실을 8개 구역이 둘러싸고 '#' 모양 복도로 이어집니다. (`Scenes/Custom`, 메뉴 **맵 생성 → 지하 연구소**) |
-| 2 | Map_TransferStation | 환승역. 지하 2호선(B2 승강장·B1 대합실)과 지상 1호선(승강장·선로 위 다리형 대합실)이 환승 계단으로 이어진 4층 구조입니다. (`Scenes/Custom`, 메뉴 **맵 생성 → 환승역**) |
+| 0 | Map_CityStreet | 도시 길거리. 밤의 사거리와 카페·편의점(들어갈 수 있음)·뒷골목·주차장·공사장. 도시 소품 32종을 Blender로 만들었고, 벽은 변신 대상이 아닙니다. (`Scenes/Custom`, 메뉴 **맵 생성 → 도시 길거리**, 설명 `Docs/CityStreetMap.md`) |
+| 1 | Map_Forest | 숲. Terrain 지형과 나무, 변신용 덤불 4종 (`Scenes/Custom`, 메뉴 **맵 생성 → 숲 덤불 배치**). 산은 **맵 생성 → 숲 지형 다듬기**로 최대 경사 32°·높이 20m 안으로 다듬어 걸어 오를 수 있습니다. |
+| 2 | Map_GiantRoom | 거대한 방. 50×50m·높이 35m 방에서 플레이어가 손가락만 해집니다. 10배 크기 가구는 변신 대상이 아니고 연필·지우개 같은 작은 물건만 변신됩니다. 책 계단·책 다리·흘러내린 이불·스탠드 전선·책갈피 끈(타고 오르기)으로 가구 위에 오릅니다. (`Scenes/Custom`, 메뉴 **맵 생성 → 거대한 방**, 설명 `Docs/GiantRoomMap.md`) |
+| 3 | Map_Laboratory | 지하 연구소. MapKit 모델만으로 직접 설계했습니다. 6m 높이 중앙 실험실을 8개 구역이 둘러싸고 '#' 모양 복도로 이어집니다. (`Scenes/Custom`, 메뉴 **맵 생성 → 지하 연구소**) |
+| 4 | Map_TransferStation | 환승역. 지하 2호선(B2 승강장·B1 대합실)과 지상 1호선(승강장·선로 위 다리형 대합실)이 환승 계단으로 이어진 4층 구조입니다. (`Scenes/Custom`, 메뉴 **맵 생성 → 환승역**) |
 
+- 맵 물체: 모든 소품·가구·구조물 조각은 `Assets/_Project/Prefabs/Obj`의 프리팹으로 관리합니다. 크기만 다른 같은 물체는 프리팹 하나를 크기만 바꿔 씁니다. (`Docs/MapObjectPrefabs.md`, 메뉴 **맵 물체**)
 - 직접 만든 맵: `Assets/_Project/Scenes/Custom`에 두면 맵 목록에 파일 이름 순서로 자동으로 붙습니다. 맵 제작 도우미의 **맵 목록 갱신**을 누르세요.
 - `Game_Test`는 게임에 넣지 않는 시험용 씬입니다(모드 SDK 시험 원본). **맵 생성 → 지하 연구소 (Map_Laboratory)** 가 연구소 맵과 함께 이 씬도 새로 만듭니다.
 

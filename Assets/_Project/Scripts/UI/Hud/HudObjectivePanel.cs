@@ -5,13 +5,7 @@ using UnityEngine.UI;
 
 namespace GuardVsMannequin.UI
 {
-    /// <summary>
-    /// HUD 중앙 우측: 내 역할의 현재 목표와 그 아래 남은 수.
-    /// - 가드: 포획(가드 타임) / 생존(헌트 타임)
-    /// - 마네킹: 전원 장치 파괴 + 남은 전원 장치(가드 타임) / 사냥 + 남은 가드(헌트 타임)
-    /// 무엇을 셀지는 <see cref="RoleDefinition.GetObjectiveCounter"/>가 정한다. (역할로 분기하지 않음)
-    /// 목표 횟수가 0인 판은 남은 수 대신 헌트 타임까지 남은 시간을 보여준다.
-    /// </summary>
+    /// <summary>할 일을 잊지 않도록 내 역할의 현재 목표와 남은 수를 보여 준다.</summary>
     public class HudObjectivePanel : MonoBehaviour, IHudSection
     {
         [SerializeField] private GameObject objectivePanel;
@@ -21,31 +15,34 @@ namespace GuardVsMannequin.UI
         private HudContext context;
         private RefreshTimer refreshTimer;
 
-        /// <inheritdoc />
+        /// <summary>
+        /// 매 프레임 씬에서 찾지 않도록 공용 정보를 기억한다.
+        /// </summary>
         public void Bind(HudContext hudContext)
         {
             context = hudContext;
         }
 
-        /// <inheritdoc />
+        /// <summary>
+        /// 네트워크 준비 전에는 역할을 몰라 목표를 보여 줄 수 없으므로 숨긴다.
+        /// </summary>
         public void Hide()
         {
             objectivePanel.SetActive(false);
         }
 
-        /// <inheritdoc />
+        /// <summary>관전 중이면 할 일이 없어 숨기고, 가비지를 줄이려고 일정 간격으로만 갱신한다.</summary>
         public void Refresh(GameState state)
         {
             bool isInMatch = state is GameState.Preparation or GameState.Playing or GameState.Hunting;
-            bool visible = isInMatch && context.LocalPlayer.Player != null;
-            objectivePanel.SetActive(visible);
-            if (!visible)
+            bool isVisible = isInMatch && context.LocalPlayer.Player != null;
+            objectivePanel.SetActive(isVisible);
+            if (!isVisible)
             {
                 // 다시 보일 때 바로 최신 문구를 보여주도록 한다.
                 refreshTimer.Reset();
                 return;
             }
-            // 남은 수·시간 문구를 새로 만드므로 일정 간격으로만 갱신한다.
             if (!refreshTimer.Tick())
                 return;
 
@@ -55,9 +52,7 @@ namespace GuardVsMannequin.UI
             detailText.text = GetDetail(RoleDefinitions.Get(role).GetObjectiveCounter(isHunting), state);
         }
 
-        /// <summary>
-        /// 목표 아래 줄 문구를 만든다.
-        /// </summary>
+        /// <summary>역할을 추가해도 고치지 않도록 셀 대상은 역할 정의로 고르고, 목표 0회 판은 사냥까지 남은 시간을 보여 준다.</summary>
         private string GetDetail(ObjectiveCounter counter, GameState state)
         {
             GameSettings settings = context.State.Settings;
@@ -76,15 +71,15 @@ namespace GuardVsMannequin.UI
         }
 
         /// <summary>
-        /// 목표 0회 판에서 헌트 타임 시작까지의 안내 문구.
+        /// 준비 단계에는 보호 시간이 아직 줄지 않으므로 설정값을, 진행 중에는 실제 남은 시간을 보여 준다.
         /// </summary>
         private string GetTimedHuntText(GameSettings settings, GameState state)
         {
             if (state == GameState.Preparation)
                 return Loc.Format("hud.objective.none.preparation", settings.huntDelay.ToString("0"));
 
-            float remaining = HuntTiming.GetProtectionRemaining(settings, context.State.RemainingTime);
-            return Loc.Format("hud.objective.none.playing", Mathf.CeilToInt(Mathf.Max(0f, remaining)));
+            float protectionRemaining = HuntTiming.GetProtectionRemaining(settings, context.State.RemainingTime);
+            return Loc.Format("hud.objective.none.playing", Mathf.CeilToInt(Mathf.Max(0f, protectionRemaining)));
         }
     }
 }

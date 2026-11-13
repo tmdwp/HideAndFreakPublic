@@ -8,11 +8,7 @@ using UnityEngine;
 
 namespace GuardVsMannequin.Core
 {
-    /// <summary>
-    /// 한 판의 진행 상태를 서버 권한으로 관리하고 클라이언트에 동기화한다.
-    /// 상태별 규칙은 <see cref="IGameStateHandler"/>에 위임한다.
-    /// 다른 코드에는 읽기(<see cref="IGameStateProvider"/>)와 판 조작(<see cref="IMatchControl"/>)으로 나눠 노출한다.
-    /// </summary>
+    /// <summary>상태별 규칙을 핸들러에 맡기며 판 진행 상태를 서버 권한으로 관리하고 동기화한다.</summary>
     public class GameStateMachine : NetworkBehaviour, IGameStateContext, IGameStateProvider, IMatchControl
     {
         [Tooltip("IMatchRules를 구현한 컴포넌트. 비어 있으면 시간만으로 단계를 넘긴다.")]
@@ -24,23 +20,22 @@ namespace GuardVsMannequin.Core
 
         private readonly Dictionary<GameState, IGameStateHandler> handlers = new();
 
-        /// <summary>서버에서 상태가 바뀐 직후 호출된다. (이전 상태, 새 상태)</summary>
+        /// <summary>서버 시스템이 단계 전환에 맞춰 움직이도록 알린다.</summary>
         public event Action<GameState, GameState> ServerStateChanged;
 
-        /// <summary>클라이언트에서 상태 변경을 수신했을 때 호출된다. (이전 상태, 새 상태)</summary>
+        /// <summary>클라이언트 UI·연출이 단계 전환에 맞춰 바뀌도록 알린다.</summary>
         public event Action<GameState, GameState> ClientStateChanged;
 
-        /// <summary>현재 상태.</summary>
         public GameState CurrentState => currentState.Value;
 
-        /// <summary>이번 판에 확정된 게임 설정.</summary>
+        /// <summary>룸 설정을 시작 인원으로 보정한 값이라 룸 쪽 원본과 다를 수 있다.</summary>
         public GameSettings Settings => currentSettings.Value;
 
-        /// <summary>현재 상태 타이머의 남은 시간(초).</summary>
+        /// <summary>단위는 초.</summary>
         public float RemainingTime => stateTimer.Remaining;
 
         /// <summary>
-        /// 기본 상태 핸들러를 등록하고 동기화 콜백을 연결한다.
+        /// 다른 컴포넌트가 OnStart 단계에서 바로 상태를 읽을 수 있도록, 네트워크 시작 전에 핸들러와 서비스 등록을 끝내 둔다.
         /// </summary>
         private void Awake()
         {
@@ -57,7 +52,7 @@ namespace GuardVsMannequin.Core
         }
 
         /// <summary>
-        /// 동기화 콜백과 서비스 등록을 해제한다.
+        /// 씬이 바뀐 뒤 파괴된 상태 기계를 다른 코드가 계속 참조하지 않도록 등록을 해제한다.
         /// </summary>
         private void OnDestroy()
         {
@@ -66,7 +61,7 @@ namespace GuardVsMannequin.Core
         }
 
         /// <summary>
-        /// 서버 시작 시 룸 설정(없으면 기본 설정 파일)으로 초기화하고 대기 상태에 진입한다.
+        /// 룸 없이 씬만 열어 테스트할 때도 동작하도록, 룸 설정이 없으면 기본 설정 파일로 시작한다.
         /// </summary>
         public override void OnStartServer()
         {
@@ -75,17 +70,14 @@ namespace GuardVsMannequin.Core
             handlers[GameState.Waiting].Enter(this);
         }
 
-        /// <summary>
-        /// 상태 핸들러를 등록한다. 같은 상태의 핸들러가 있으면 교체한다.
-        /// 이후 Phase에서 규칙을 확장할 때 사용한다.
-        /// </summary>
+        /// <summary>상태 기계를 고치지 않고 핸들러만 갈아 끼울 수 있게 한다.</summary>
         public void RegisterHandler(IGameStateHandler handler)
         {
             handlers[handler.State] = handler;
         }
 
         /// <summary>
-        /// 타이머를 진행하고, 서버에서는 현재 상태 핸들러를 갱신한다.
+        /// 남은 시간 표시는 클라이언트도 필요해서 타이머는 모두 돌리고, 전환 판단은 서버만 한다.
         /// </summary>
         private void Update()
         {
@@ -94,16 +86,15 @@ namespace GuardVsMannequin.Core
             if (!this.IsServerReady())
                 return;
 
-            GameState? next = handlers[currentState.Value].Tick(this, Time.deltaTime);
-            if (next.HasValue)
-                ChangeState(next.Value);
+            GameState? nextState = handlers[currentState.Value].Tick(this, Time.deltaTime);
+            if (nextState.HasValue)
+                ChangeState(nextState.Value);
         }
 
         /// <summary>
-        /// 대기 상태에서 게임 시작을 시도한다. 현재 참가 인원으로 설정을 보정한 뒤 준비 단계로 넘어간다.
+        /// 룸에 있던 사람이 나갔을 수도 있으므로, 시작하는 순간의 인원으로 설정을 다시 보정한 뒤 준비 단계로 넘어간다.
         /// </summary>
-        /// <param name="failReason">실패 시 사유.</param>
-        /// <returns>시작에 성공했는지 여부.</returns>
+        /// <param name="failReason">호스트에게 왜 시작하지 못했는지 보여 주기 위한 문구.</param>
         [Server]
         public bool TryStartMatch(out string failReason)
         {
@@ -114,7 +105,7 @@ namespace GuardVsMannequin.Core
             }
 
             int playerCount = ServerManager.Clients.Count;
-            // 테스트 방은 혼자서도 시작한다.
+            // 테스트 방은 혼자 기능을 확인하려는 용도라 인원 제한을 두지 않는다.
             bool isTestRoom = GameServices.Room?.IsTestRoom ?? false;
             if (!isTestRoom && !GameSettingsValidator.CanStart(playerCount))
             {
@@ -122,7 +113,7 @@ namespace GuardVsMannequin.Core
                 return false;
             }
 
-            // 룸에서 호스트가 정한 설정을 우선 사용하고, 룸 없이 실행하면 기본 설정 파일을 쓴다.
+            // 룸 없이 씬만 열어 테스트할 때도 시작할 수 있도록 기본 설정 파일로 물러난다.
             GameSettings baseSettings = GameServices.Room?.Settings ?? DefaultGameSettings.Load();
             currentSettings.Value = GameSettingsValidator.Validate(baseSettings, playerCount);
 
@@ -131,10 +122,7 @@ namespace GuardVsMannequin.Core
             return true;
         }
 
-        /// <summary>
-        /// 진행 중인 판의 설정을 바꾼다. (테스트 방의 게임 중 설정 변경용, 현재 인원 기준으로 보정)
-        /// 이동 속도·공격 범위·쿨타임처럼 매번 설정을 읽는 값은 바로, 체력처럼 스폰 때 정하는 값은 다음 스폰부터 반영된다.
-        /// </summary>
+        /// <summary>테스트 방에서 판을 다시 시작하지 않고 수치를 바로 바꿔 보도록 설정을 교체한다.</summary>
         [Server]
         public void OverrideSettings(GameSettings newSettings)
         {
@@ -142,20 +130,20 @@ namespace GuardVsMannequin.Core
         }
 
         /// <summary>
-        /// 상태를 강제로 전환한다. 승패 판정 등 외부 시스템이 사용한다.
+        /// 승패 판정 같은 외부 시스템이 타이머를 기다리지 않고 단계를 끝낼 수 있게 연다.
         /// </summary>
         [Server]
-        public void ChangeState(GameState next)
+        public void ChangeState(GameState nextState)
         {
-            GameState prev = currentState.Value;
-            if (prev == next)
+            GameState previousState = currentState.Value;
+            if (previousState == nextState)
                 return;
 
-            handlers[prev].Exit(this);
-            currentState.Value = next;
-            handlers[next].Enter(this);
+            handlers[previousState].Exit(this);
+            currentState.Value = nextState;
+            handlers[nextState].Enter(this);
 
-            ServerStateChanged?.Invoke(prev, next);
+            ServerStateChanged?.Invoke(previousState, nextState);
         }
 
         /// <inheritdoc />
@@ -164,13 +152,13 @@ namespace GuardVsMannequin.Core
         /// <inheritdoc />
         public void ReturnToRoom()
         {
-            // 대기 상태로 바뀌면 MatchSessionBridge가 모두를 룸으로 보낸다.
+            // 씬 전환은 MatchSessionBridge가 대기 상태를 보고 처리하므로 여기서는 상태만 바꾼다.
             if (CanControlMatch)
                 ChangeState(GameState.Waiting);
         }
 
         /// <summary>
-        /// 상태 타이머를 시작한다.
+        /// 상태 핸들러가 SyncTimer를 직접 만지지 않도록 컨텍스트를 통해 연다.
         /// </summary>
         [Server]
         public void StartTimer(float seconds)
@@ -179,7 +167,7 @@ namespace GuardVsMannequin.Core
         }
 
         /// <summary>
-        /// 상태 타이머를 멈춘다.
+        /// 이미 멈춘 타이머를 다시 멈추면 불필요한 동기화가 나가므로 돌고 있을 때만 멈춘다.
         /// </summary>
         [Server]
         public void StopTimer()
@@ -189,12 +177,12 @@ namespace GuardVsMannequin.Core
         }
 
         /// <summary>
-        /// 상태 SyncVar 변경을 클라이언트 이벤트로 전달한다.
+        /// 서버 쪽은 ChangeState에서 이미 알렸으므로, 클라이언트에서 받은 변경만 이벤트로 넘긴다.
         /// </summary>
-        private void OnCurrentStateChanged(GameState prev, GameState next, bool asServer)
+        private void OnCurrentStateChanged(GameState previousState, GameState nextState, bool asServer)
         {
             if (!asServer)
-                ClientStateChanged?.Invoke(prev, next);
+                ClientStateChanged?.Invoke(previousState, nextState);
         }
     }
 }

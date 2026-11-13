@@ -7,16 +7,15 @@ namespace GuardVsMannequin.Core.States
     {
         public abstract GameState State { get; }
 
-        /// <summary>시간이 다 되었을 때 넘어갈 상태.</summary>
         protected abstract GameState NextState { get; }
 
         /// <summary>
-        /// 이 상태의 지속 시간을 설정에서 계산한다.
+        /// 단계 길이가 호스트 설정에서 오기도 하고 조정 파일에서 오기도 해서 하위 클래스가 정한다.
         /// </summary>
         protected abstract float GetDuration(GameSettings settings);
 
         /// <summary>
-        /// 상태 진입 시 지속 시간만큼 타이머를 시작한다.
+        /// 진입할 때 정한 길이만큼만 진행되도록 바로 타이머를 건다.
         /// </summary>
         public virtual void Enter(IGameStateContext context)
         {
@@ -24,7 +23,7 @@ namespace GuardVsMannequin.Core.States
         }
 
         /// <summary>
-        /// 타이머가 끝나면 다음 상태를 반환한다.
+        /// 시간 말고 다른 전환 조건이 없으므로 타이머만 본다.
         /// </summary>
         public virtual GameState? Tick(IGameStateContext context, float deltaTime)
         {
@@ -32,7 +31,7 @@ namespace GuardVsMannequin.Core.States
         }
 
         /// <summary>
-        /// 상태 종료 시 타이머를 멈춘다.
+        /// 외부에서 단계를 일찍 끝냈을 때 남은 타이머가 다음 단계에 보이지 않도록 멈춘다.
         /// </summary>
         public virtual void Exit(IGameStateContext context)
         {

@@ -5,9 +5,7 @@ using UnityEngine.UI;
 
 namespace GuardVsMannequin.UI
 {
-    /// <summary>
-    /// 조작 설정: 마우스 감도와 키 설정. 키는 편집용 입력 에셋 복제본에서 바꾸고 저장하며, 게임 중이면 바로 적용된다.
-    /// </summary>
+    /// <summary>마우스 감도와 키 설정을 편집용 복제본에서 바꾸고 저장하는 조작 설정.</summary>
     public class ControlSettingsSection : MonoBehaviour, ISettingsSection
     {
         [SerializeField] private InputActionAsset inputActions;
@@ -17,15 +15,13 @@ namespace GuardVsMannequin.UI
 
         private InputActionAsset editingActions;
 
-        /// <summary>
-        /// 편집용 입력 에셋을 만들고 키 설정 줄과 감도 슬라이더를 연결한다.
-        /// </summary>
+        /// <summary>원본 에셋이 바뀌지 않도록 복제본을 편집하고, 감도 범위는 저장 보정 범위와 맞춘다.</summary>
         public void Initialize()
         {
             editingActions = Instantiate(inputActions);
             OptionsStore.ApplyBindings(editingActions);
 
-            // 줄 순서와 목록 순서가 달라도(프리팹에 줄을 나중에 추가한 경우) 액션 이름으로 짝짓는다.
+            // 프리팹에 줄을 나중에 추가해도 맞도록 액션 이름으로 짝짓는다.
             foreach (RebindRowView row in rebindRows)
             {
                 if (KeyBindingCatalog.TryFind(row.ActionName, row.PartName, out KeyBindingCatalog.Entry entry))
@@ -40,7 +36,7 @@ namespace GuardVsMannequin.UI
         }
 
         /// <summary>
-        /// 편집용 입력 에셋을 해제한다.
+        /// Instantiate로 만든 에셋은 씬과 함께 지워지지 않으므로 직접 해제한다.
         /// </summary>
         private void OnDestroy()
         {
@@ -48,9 +44,7 @@ namespace GuardVsMannequin.UI
                 Destroy(editingActions);
         }
 
-        /// <summary>
-        /// 저장된 감도와 키를 표시한다.
-        /// </summary>
+        /// <summary>다른 화면에서 키가 바뀌었을 수 있어 열 때마다 저장된 키를 복제본에 다시 적용한다.</summary>
         public void Refresh()
         {
             GameOptions options = OptionsStore.Current;
@@ -65,7 +59,7 @@ namespace GuardVsMannequin.UI
         }
 
         /// <summary>
-        /// 감도와 모든 키를 기본값으로 되돌린다.
+        /// 다른 묶음의 설정을 건드리지 않도록 감도와 키만 기본값으로 되돌린다.
         /// </summary>
         public void ResetToDefaults()
         {
@@ -78,9 +72,7 @@ namespace GuardVsMannequin.UI
             Refresh();
         }
 
-        /// <summary>
-        /// 감도를 저장한다.
-        /// </summary>
+        /// <summary>움직이는 즉시 게임에 반영되도록 바로 저장하고 보정된 값을 보여 준다.</summary>
         private void OnSensitivityChanged(float value)
         {
             GameOptions options = OptionsStore.Current;
@@ -90,7 +82,7 @@ namespace GuardVsMannequin.UI
         }
 
         /// <summary>
-        /// 키를 바꾸면 저장한다.
+        /// 저장해야 게임 중인 입력에도 새 키가 적용되므로 바뀔 때마다 저장한다.
         /// </summary>
         private void OnBindingEdited()
         {

@@ -23,6 +23,8 @@ lobby.steamCreate.hint,암호를 정하면 같은 암호를 입력한 사람만 
 lobby.password.placeholder,암호 (비우면 없음),Password (blank = none)
 lobby.steamCreate.confirm,만들기,Create
 lobby.join.steam,스팀 방 입장,Join Steam Room
+lobby.rejoin.button,다시 참가 ({0}초),Rejoin ({0}s)
+lobby.rejoin.discard,포기,Give up
 lobby.roomName.placeholder,방 이름 (비우면 내 이름의 방),Room name (blank = your name)
 lobby.roomName.default,{0}의 방,{0}'s room
 lobby.steamCreate.public,공개방 (끄면 친구 전용),Public room (off = friends only)
@@ -97,7 +99,13 @@ notice.lobbyDataInvalid,방 정보를 읽을 수 없습니다.,Could not read th
 notice.rejected.version,호스트와 게임 버전이 달라 들어갈 수 없습니다. 같은 버전으로 맞춰 주세요. (호스트 ≠ 내 게임: {0}),Your game version doesn't match the host's. Please use the same version. (host ≠ yours: {0})
 notice.rejected.full,방이 가득 찼습니다.,The room is full.
 notice.rejected.password,암호가 틀렸습니다.,Wrong password.
+notice.rejected.kicked,방장이 방에서 내보냈습니다.,The host removed you from the room.
+notice.rejected.banned,이 방에는 다시 들어갈 수 없습니다.,You can't rejoin this room.
+notice.rejoinAvailable,연결이 끊겼습니다. 다시 참가를 시도합니다.,Connection lost. Trying to rejoin.
+notice.rejoinFailed,다시 참가하지 못했습니다. 아래 버튼으로 다시 시도할 수 있습니다.,Couldn't rejoin. You can try again with the button below.
+notice.rejoinExpired,돌아갈 수 있는 시간이 지났습니다.,The time to rejoin has run out.
 notice.rejected.passwordLocked,암호를 여러 번 틀렸습니다. 1분 뒤 다시 시도하세요.,Too many wrong passwords. Try again in a minute.
+notice.modRejected,이 맵에 게임에서 허용하지 않는 구성 요소가 있어 방을 나왔습니다.,"This map contains components the game doesn't allow, so you left the room."
 notice.modLoadFailed,맵을 불러오지 못해 방을 나왔습니다. 모드 파일을 다시 설치해 보세요.,"Couldn't load the map, so you left the room. Try reinstalling the mod files."
 notice.passwordRequired,암호가 필요한 방입니다. 암호를 입력하고 입장을 누르세요.,This room needs a password. Enter it and press Join.
 notice.rejected.inGame,게임이 진행 중이라 들어갈 수 없습니다. 판이 끝난 뒤 다시 시도하세요.,A game is in progress. Try again after it ends.
@@ -111,6 +119,14 @@ room.members.count,참가자 {0} / {1},Players {0} / {1}
 room.member.host,★ 호스트,★ Host
 room.member.ready,준비 완료,Ready
 room.member.notReady,준비 중,Not ready
+room.players.open,플레이어 관리,Players
+room.players.title,플레이어 관리,Players
+room.players.hint,누르면 방에서 내보냅니다. 내보낸 사람은 이 방에 다시 들어올 수 없습니다.,Click to remove a player. They can't rejoin this room.
+room.players.empty,내보낼 수 있는 사람이 없습니다.,No one to remove.
+room.players.close,닫기,Close
+room.players.confirm,{0}님을 내보낼까요?,Remove {0}?
+room.players.confirmYes,내보내기,Remove
+room.players.confirmNo,취소,Cancel
 room.visibility.public,공개방,Public
 room.visibility.friends,친구 전용,Friends only
 room.member.modsMissing,[모드 없음],[Missing mods]
@@ -179,6 +195,8 @@ unit.rounds,{0}발,{0}
 map.4, 연구실, Laboratory
 map.5,환승역,Transfer Station
 map.6,숲,Forest
+map.0,도시 길거리,City Street
+map.1,거대한 방,Giant Room
 # 설정 화면
 options.title,설정,Settings
 options.language,언어,Language
@@ -200,6 +218,10 @@ options.cameraSway,카메라 흔들림,Camera Sway
 options.cameraSway.normal,보통,Normal
 options.cameraSway.weak,약하게,Weak
 options.cameraSway.off,끄기,Off
+options.statsDisplay,FPS·핑 표시,FPS & Ping
+options.statsDisplay.all,FPS·핑,FPS & Ping
+options.statsDisplay.fpsOnly,FPS만,FPS Only
+options.statsDisplay.off,끄기,Off
 options.sensitivity,마우스 감도,Mouse Sensitivity
 options.masterVolume,전체 음량,Master Volume
 options.bgmVolume,배경 음악,Music
@@ -288,6 +310,9 @@ test.settingsHint,"게임 설정 (바로 적용: 이동 속도·공격 범위·�
 test.close,닫기,Close
 test.returnToRoom,룸으로 돌아가기 (맵 바꾸기),Return to Room (change map)
 hud.spectating,관전 중,Spectating
+hud.stats.fps,FPS {0},FPS {0}
+hud.stats.ping,핑 {0}ms,Ping {0}ms
+hud.stats.pingHost,핑 - (호스트),Ping - (host)
 hud.spectatingDead,사망했습니다 · 관전 중,You died · Spectating
 hud.spectate.none,관전할 생존자가 없습니다.,No survivors to spectate.
 hud.spectate.target,{0} ({1})   ← / → : 관전 대상 전환,{0} ({1})   ← / → : Switch target

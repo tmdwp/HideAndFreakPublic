@@ -1,4 +1,5 @@
 using FishNet;
+using GuardVsMannequin.Network;
 using GuardVsMannequin.Room;
 
 namespace GuardVsMannequin.UI
@@ -8,20 +9,42 @@ namespace GuardVsMannequin.UI
     /// </summary>
     public static class RoomClient
     {
-        /// <summary>로컬 플레이어가 호스트(서버)인지 여부.</summary>
+        // 게임 중 나가기: 나간다는 알림이 서버에 전달될 때까지 기다리는 시간(초)
+        private const float LeaveNoticeSeconds = 0.25f;
+
+        /// <summary>
+        /// 그냥 끊으면 서버가 재접속을 기다리며 자리를 남기므로, 게임 중인 게스트는 스스로 나간다고 먼저 알리고 잠시 뒤 끊는다.
+        /// </summary>
+        public static void LeaveRoom()
+        {
+            ISessionService session = SessionServices.Session;
+            if (session == null)
+                return;
+
+            RoomState room = RoomState.Instance;
+            if (room != null && room.IsInGame && !IsHost)
+            {
+                room.DeclareLeavingServerRpc();
+                session.LeaveAfterDelay(LeaveNoticeSeconds);
+                return;
+            }
+            session.Leave();
+        }
+
+        /// <summary>호스트가 곧 서버이므로 서버가 켜져 있는지로 판단한다.</summary>
         public static bool IsHost => InstanceFinder.IsServerStarted;
 
         /// <summary>
-        /// 로컬 플레이어의 참가자 정보를 찾는다.
+        /// 화면마다 접속 ID로 직접 찾지 않도록 로컬 참가자 조회를 한곳에 둔다.
         /// </summary>
         public static bool TryGetLocalMember(RoomState room, out RoomMember member)
         {
-            int localId = InstanceFinder.ClientManager.Connection.ClientId;
-            return room.Members.TryGetValue(localId, out member);
+            int localClientId = InstanceFinder.ClientManager.Connection.ClientId;
+            return room.Members.TryGetValue(localClientId, out member);
         }
 
         /// <summary>
-        /// 로컬 플레이어가 준비 상태인지 여부.
+        /// 참가자 정보가 아직 없으면 준비 전으로 보아야 버튼 문구가 맞으므로 false를 돌려준다.
         /// </summary>
         public static bool IsLocalReady(RoomState room)
         {

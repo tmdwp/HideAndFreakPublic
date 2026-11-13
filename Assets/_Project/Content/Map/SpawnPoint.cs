@@ -3,19 +3,15 @@ using UnityEngine;
 
 namespace GuardVsMannequin.Map
 {
-    /// <summary>
-    /// 역할별 플레이어 스폰 위치.
-    /// 가드용은 스폰 후보다. 실제 위치는 판마다 마네킹 스폰에서 먼 곳을 고른다. (GuardSpawnSelector)
-    /// </summary>
+    /// <summary>역할별 스폰 후보 위치이며, 가드는 판마다 마네킹에서 먼 후보가 골라진다.</summary>
     public class SpawnPoint : MonoBehaviour
     {
         [SerializeField] private PlayerRole role = PlayerRole.Mannequin;
 
-        /// <summary>이 지점에서 스폰될 역할.</summary>
         public PlayerRole Role => role;
 
         /// <summary>
-        /// 씬 뷰에서 역할별 색으로 위치와 방향을 표시한다.
+        /// 빈 오브젝트라 씬 뷰에서 보이지 않으므로, 맵을 만들 때 역할과 바라보는 방향을 확인할 수 있게 그린다.
         /// </summary>
         private void OnDrawGizmos()
         {

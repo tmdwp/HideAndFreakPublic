@@ -2,11 +2,7 @@ using System;
 
 namespace GuardVsMannequin.Mods
 {
-    /// <summary>
-    /// 모드 다운로드 링크(<see cref="ModManifest.url"/>)를 열어도 되는지 판단한다.
-    /// 링크는 호스트의 mod.json에서 오므로 호스트가 마음대로 바꿀 수 있다. 공개방에서는 모르는 사람이 보낸 링크와 같으므로
-    /// https + 허용한 사이트만 통과시킨다. (받는 쪽이 항상 다시 검사한다. 내보내기 도구도 같은 규칙으로 미리 경고한다)
-    /// </summary>
+    /// <summary>호스트가 바꿀 수 있는 다운로드 링크로 피해를 입지 않도록 https와 허용한 사이트만 통과시킨다.</summary>
     public static class ModLinkPolicy
     {
         private const int MaxLength = 512;
@@ -14,16 +10,17 @@ namespace GuardVsMannequin.Mods
         // 주소 해석기마다 다르게 읽을 수 있어 다른 사이트로 속일 때 쓰는 문자.
         private static readonly char[] ForbiddenCharacters = { '\\', '@', ' ', '"', '\'', '<', '>', '`' };
 
-        /// <summary>허용한 사이트(정확히 일치, 하위 도메인 제외)와 그 사이트에서 허용한 경로 앞부분. 비어 있으면 모든 경로.</summary>
-        private static readonly (string host, string[] pathPrefixes)[] AllowedSites =
-        {
-            // steamcommunity.com에는 다른 사이트로 넘기는 /linkfilter 경로가 있어 창작마당 경로만 허용한다.
-            ("steamcommunity.com", new[] { "/sharedfiles/", "/workshop/" }),
-            ("github.com", Array.Empty<string>())
-        };
+        private const string SteamHost = "steamcommunity.com";
+        private const string GitHubHost = "github.com";
+
+        // steamcommunity.com에는 다른 사이트로 넘기는 /linkfilter 경로가 있어 창작마당 경로만 허용한다.
+        private static readonly string[] SteamPathPrefixes = { "/sharedfiles/", "/workshop/" };
+
+        // 로그인·권한 승인 화면으로 보낼 수 있는 GitHub 기능 경로.
+        private static readonly string[] GitHubReservedOwners = { "login", "logout", "sessions", "session", "settings", "apps", "marketplace", "account", "orgs", "organizations", "users" };
 
         /// <summary>
-        /// 열어도 되는 링크면 정리한 주소를 돌려준다.
+        /// 호스트가 보낸 원문 대신 Uri가 정리한 주소를 돌려줘, 검사한 주소와 실제로 여는 주소가 달라지지 않게 한다.
         /// </summary>
         /// <param name="url">검사할 주소.</param>
         /// <param name="safeUrl">통과하면 정리한 주소, 아니면 빈 문자열.</param>
@@ -46,37 +43,48 @@ namespace GuardVsMannequin.Mods
         }
 
         /// <summary>
-        /// 제어 문자나 속임수에 쓰이는 문자가 있는지 확인한다.
+        /// 비슷하게 생긴 유니코드 글자나 제어 문자로 다른 사이트처럼 보이게 속일 수 있어, ASCII 출력 문자가 아니면 거부한다.
         /// </summary>
         private static bool HasForbiddenCharacter(string url)
         {
-            foreach (char c in url)
+            foreach (char character in url)
             {
-                if (char.IsControl(c) || c > 126 || Array.IndexOf(ForbiddenCharacters, c) >= 0)
+                if (char.IsControl(character) || character > 126 || Array.IndexOf(ForbiddenCharacters, character) >= 0)
                     return true;
             }
             return false;
         }
 
         /// <summary>
-        /// 허용한 사이트와 경로인지 확인한다.
+        /// 하위 도메인은 누구나 만들 수 있는 곳(예: *.github.io)이 있어 호스트가 정확히 일치할 때만 허용한다.
         /// </summary>
         private static bool IsAllowedSite(Uri uri)
         {
-            foreach ((string host, string[] pathPrefixes) in AllowedSites)
-            {
-                if (!string.Equals(uri.Host, host, StringComparison.OrdinalIgnoreCase))
-                    continue;
-                if (pathPrefixes.Length == 0)
-                    return true;
+            if (string.Equals(uri.Host, GitHubHost, StringComparison.OrdinalIgnoreCase))
+                return IsGitHubProjectPage(uri);
+            if (!string.Equals(uri.Host, SteamHost, StringComparison.OrdinalIgnoreCase))
+                return false;
 
-                foreach (string prefix in pathPrefixes)
-                {
-                    if (uri.AbsolutePath.StartsWith(prefix, StringComparison.Ordinal))
-                        return true;
-                }
+            foreach (string prefix in SteamPathPrefixes)
+            {
+                if (uri.AbsolutePath.StartsWith(prefix, StringComparison.Ordinal))
+                    return true;
             }
             return false;
+        }
+
+        /// <summary>링크를 열어도 파일이 바로 받아지지 않도록 저장소 첫 화면과 릴리스 화면만 허용한다.</summary>
+        private static bool IsGitHubProjectPage(Uri uri)
+        {
+            if (!string.IsNullOrEmpty(uri.Query) || !string.IsNullOrEmpty(uri.Fragment))
+                return false;
+
+            string[] segments = uri.AbsolutePath.Split(new[] { '/' }, StringSplitOptions.RemoveEmptyEntries);
+            if (segments.Length < 2 || Array.IndexOf(GitHubReservedOwners, segments[0].ToLowerInvariant()) >= 0)
+                return false;
+            if (segments.Length == 2)
+                return true;
+            return segments[2] == "releases" && (segments.Length == 3 || segments[3] != "download");
         }
     }
 }

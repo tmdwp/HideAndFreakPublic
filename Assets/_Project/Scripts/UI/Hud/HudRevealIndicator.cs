@@ -5,9 +5,7 @@ using UnityEngine.UI;
 
 namespace GuardVsMannequin.UI
 {
-    /// <summary>
-    /// 체력 바 위: 수류탄(섬광)에 맞아 위치가 드러난 동안(<see cref="IStatusEffects.IsRevealed"/>) 눈 아이콘을 깜빡이며 보여준다.
-    /// </summary>
+    /// <summary>수류탄에 맞아 위치가 드러난 동안 눈 아이콘을 깜빡여 알린다.</summary>
     public class HudRevealIndicator : MonoBehaviour, IHudSection
     {
         [SerializeField] private GameObject indicator;
@@ -22,31 +20,37 @@ namespace GuardVsMannequin.UI
 
         private HudContext context;
 
-        /// <inheritdoc />
+        /// <summary>
+        /// 로컬 아바타가 바뀌어도 따라가도록 아바타 대신 추적기를 담은 공용 정보를 기억한다.
+        /// </summary>
         public void Bind(HudContext hudContext)
         {
             context = hudContext;
         }
 
-        /// <inheritdoc />
+        /// <summary>
+        /// 네트워크 준비 전에는 효과 정보가 없으므로 숨긴다.
+        /// </summary>
         public void Hide()
         {
             indicator.SetActive(false);
         }
 
-        /// <inheritdoc />
+        /// <summary>
+        /// 들킨 상태는 놓치면 위험하므로 정지 아이콘보다 눈에 띄게 투명도를 깜빡인다.
+        /// </summary>
         public void Refresh(GameState state)
         {
             IStatusEffects effects = context.LocalPlayer.StatusEffects;
-            bool visible = state != GameState.Waiting && context.LocalPlayer.Player != null && effects != null && effects.IsRevealed;
-            indicator.SetActive(visible);
-            if (!visible)
+            bool isVisible = state != GameState.Waiting && context.LocalPlayer.Player != null && effects != null && effects.IsRevealed;
+            indicator.SetActive(isVisible);
+            if (!isVisible)
                 return;
 
             float pulse = blinkRate > 0f ? 0.5f + 0.5f * Mathf.Cos(Time.time * blinkRate * Mathf.PI * 2f) : 1f;
-            Color current = color;
-            current.a = color.a * Mathf.Lerp(minAlpha, 1f, pulse);
-            icon.color = current;
+            Color blinkColor = color;
+            blinkColor.a = color.a * Mathf.Lerp(minAlpha, 1f, pulse);
+            icon.color = blinkColor;
         }
     }
 }

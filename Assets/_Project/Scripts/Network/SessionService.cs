@@ -7,13 +7,7 @@ using UnityEngine;
 
 namespace GuardVsMannequin.Network
 {
-    /// <summary>
-    /// Steam 로비와 트랜스포트 연결을 묶어 "방"을 만든다/참가한다/나간다.
-    /// - Steam 방 만들기: 로비 생성 → 서버(Tugboat + Steam) 시작 → 로컬 클라이언트 접속
-    /// - Steam 방 참가: 로비 입장 → 호스트 SteamID로 Steam 클라이언트 접속
-    /// - 직접 방: Tugboat만 사용 (한 PC에서 여러 개를 띄워 테스트할 때)
-    /// 서버가 시작되면 FishNet DefaultScene이 룸 씬을, 연결이 끊기면 로비 씬을 불러온다.
-    /// </summary>
+    /// <summary>UI가 연결 순서를 몰라도 되도록 Steam 로비와 트랜스포트 연결을 묶어 방을 만들고 참가하고 나간다.</summary>
     public class SessionService : MonoBehaviour, ISessionService
     {
         [SerializeField] private TransportConnector connector;
@@ -23,11 +17,27 @@ namespace GuardVsMannequin.Network
         private bool isRegistered;
         private SteamRoomBrowser roomBrowser;
 
-        // 호스트가 알려 준 접속 거부 이유 (연결이 끊길 때 안내에 사용)
+        // 끊겼을 때 돌아갈 곳
+        private sealed class RejoinTarget
+        {
+            public ulong lobbyId;
+            public string address;
+            public float deadline;
+            public float autoAttemptTime;
+        }
+
+        // 로비 씬으로 돌아갈 시간을 주는 자동 재시도 대기 시간(초).
+        private const float AutoRejoinDelay = 1.5f;
+
+        private RejoinTarget rejoinTarget;
+        private bool wasInMatch;
+        private string directAddress = string.Empty;
+
+        // 연결이 끊길 때 안내에 쓸 호스트의 거부 이유.
         private string rejectNoticeKey;
         private string rejectNoticeDetail;
 
-        // 안내 문구는 key와 끼워 넣을 값으로 보관하고, 읽을 때 현재 언어로 만든다. (언어를 바꾸면 바로 반영)
+        // 언어를 바꾸면 바로 반영되도록 안내 문구는 key와 값으로 보관한다.
         private string noticeKey = string.Empty;
         private string noticeDetail = string.Empty;
 
@@ -48,13 +58,22 @@ namespace GuardVsMannequin.Network
             ? roomBrowser ??= new SteamRoomBrowser(() => steamLobby.CurrentLobbyId, ModService.Instance.HasMap)
             : null;
 
+        /// <inheritdoc />
+        public RoomMembership Membership { get; private set; } = new();
+
+        /// <inheritdoc />
+        public string ClientToken { get; } = Guid.NewGuid().ToString("N");
+
+        /// <inheritdoc />
+        public float RejoinSecondsLeft => rejoinTarget == null ? 0f : Mathf.Max(0f, rejoinTarget.deadline - Time.unscaledTime);
+
         public string RoomPassword { get; private set; } = string.Empty;
         public string JoinPassword { get; private set; } = string.Empty;
 
         public event Action<string> PasswordRequired;
 
         /// <summary>
-        /// 첫 인스턴스만 서비스로 등록하고 이벤트를 연결한다. (로비 씬 재로딩 시 생기는 중복은 무시)
+        /// 로비 씬을 다시 불러올 때 생기는 중복이 연결 상태를 가진 기존 서비스와 섞이지 않도록 첫 인스턴스만 등록하고 이벤트를 건다.
         /// </summary>
         private void Awake()
         {
@@ -68,10 +87,7 @@ namespace GuardVsMannequin.Network
             steamLobby.Failed += OnLobbyFailed;
         }
 
-        /// <summary>
-        /// 클라이언트 연결 상태를 구독하고 접속 검증기를 서버에 연결한다.
-        /// (NetworkManager의 하위 매니저는 NetworkManager.Awake 이후에 준비됨)
-        /// </summary>
+        /// <summary>하위 매니저가 NetworkManager.Awake 이후에 준비되므로 연결 이벤트와 검증기는 Start에서 연결한다.</summary>
         private void Start()
         {
             if (!isRegistered)
@@ -80,13 +96,10 @@ namespace GuardVsMannequin.Network
             connector.NetworkManager.ClientManager.OnClientConnectionState += OnClientConnectionState;
             connector.NetworkManager.ClientManager.RegisterBroadcast<ConnectionRejectedBroadcast>(OnConnectionRejected);
             SetupAuthenticator();
-            // 모드 맵 씬을 불러오기 전에 번들을 불러오는 씬 처리기 (모든 PC)
             ModSceneProcessor.Install(connector.NetworkManager);
         }
 
-        /// <summary>
-        /// 새 접속을 검증하는 <see cref="RoomAuthenticator"/>를 준비해 서버에 등록한다.
-        /// </summary>
+        /// <summary>아무나 들어오지 못하도록 검증기를 서버에 붙이고, 프리팹에 없으면 직접 추가한다.</summary>
         private void SetupAuthenticator()
         {
             if (!TryGetComponent(out RoomAuthenticator authenticator))
@@ -97,7 +110,7 @@ namespace GuardVsMannequin.Network
         }
 
         /// <summary>
-        /// 등록된 인스턴스라면 이벤트 연결을 해제한다.
+        /// 중복 인스턴스는 구독한 적이 없으므로 등록된 인스턴스일 때만 이벤트를 끊는다.
         /// </summary>
         private void OnDestroy()
         {
@@ -117,7 +130,7 @@ namespace GuardVsMannequin.Network
         }
 
         /// <summary>
-        /// 호스트가 접속을 거부한 이유를 기억한다. 곧 연결이 끊기면 이 이유로 안내한다.
+        /// 거부 알림 직후 연결이 끊기는데, 끊김 처리에서 이유를 보여 줄 수 있도록 미리 기억해 둔다.
         /// </summary>
         private void OnConnectionRejected(ConnectionRejectedBroadcast message, Channel channel)
         {
@@ -129,13 +142,14 @@ namespace GuardVsMannequin.Network
                 ConnectionRejectReason.NotLobbyMember => ("notice.rejected.notMember", string.Empty),
                 ConnectionRejectReason.WrongPassword => ("notice.rejected.password", string.Empty),
                 ConnectionRejectReason.TooManyPasswordAttempts => ("notice.rejected.passwordLocked", string.Empty),
+                ConnectionRejectReason.Kicked => ("notice.rejected.kicked", string.Empty),
+                ConnectionRejectReason.Banned => ("notice.rejected.banned", string.Empty),
+                // 새 이유가 생겼는데 옛 빌드가 모르면 버전 차이일 가능성이 높아서 버전 안내로 보여 준다.
                 _ => ("notice.rejected.version", $"{message.hostVersion} ≠ {GameVersion.Current}")
             };
         }
 
-        /// <summary>
-        /// Steam 로비를 먼저 만들고, 생성되면 서버를 시작한다. 암호를 정하면 참가자는 같은 암호를 입력해야 한다.
-        /// </summary>
+        /// <summary>방 코드를 주려면 로비 ID가 필요해 Steam 로비를 먼저 만든 뒤 서버를 시작한다.</summary>
         public void HostSteamRoom(SteamRoomOptions options)
         {
             if (!CanStartNewSession())
@@ -147,7 +161,6 @@ namespace GuardVsMannequin.Network
                 return;
             }
 
-            // 호스트 자신의 접속도 암호 확인을 거치므로 참가 암호도 같게 둔다.
             RoomPassword = NormalizePassword(options.password);
             JoinPassword = RoomPassword;
             IsBusy = true;
@@ -164,7 +177,7 @@ namespace GuardVsMannequin.Network
         }
 
         /// <summary>
-        /// 방 코드(로비 ID)로 로비에 들어가고, 입장하면 입력한 암호와 함께 호스트에 접속한다.
+        /// 호스트 SteamID는 로비에 들어가야 알 수 있으므로 로비부터 들어가고, 입장하면 입력한 암호와 함께 호스트에 접속한다.
         /// </summary>
         public void JoinSteamRoom(string roomCode, string password)
         {
@@ -192,7 +205,7 @@ namespace GuardVsMannequin.Network
         }
 
         /// <summary>
-        /// Tugboat만으로 방을 만든다.
+        /// Steam 없이 개발·LAN에서 시험할 수 있도록 Tugboat만으로 방을 만든다.
         /// </summary>
         public void HostDirectRoom()
         {
@@ -205,15 +218,12 @@ namespace GuardVsMannequin.Network
             StartDirectRoom(isTestRoom: true);
         }
 
-        /// <summary>
-        /// Tugboat만으로 방을 만든다. 테스트 방이면 서버가 시작되기 전에 표시해 방(RoomState)이 읽을 수 있게 한다.
-        /// </summary>
+        /// <summary>방이 서버 시작 직후 테스트 방 여부를 읽으므로 서버 시작 전에 표시해 둔다.</summary>
         private void StartDirectRoom(bool isTestRoom)
         {
             if (!CanStartNewSession())
                 return;
 
-            // 직접 방은 개발/LAN용이라 암호가 없다.
             RoomPassword = string.Empty;
             JoinPassword = string.Empty;
             IsSteamRoom = false;
@@ -228,7 +238,7 @@ namespace GuardVsMannequin.Network
         }
 
         /// <summary>
-        /// IP 주소로 직접 접속 방에 참가한다.
+        /// 끊겼을 때 같은 주소로 다시 들어갈 수 있도록 주소를 기억해 두고 접속한다.
         /// </summary>
         public void JoinDirectRoom(string address)
         {
@@ -239,12 +249,13 @@ namespace GuardVsMannequin.Network
             JoinPassword = string.Empty;
             IsSteamRoom = false;
             IsBusy = true;
+            directAddress = address ?? string.Empty;
             SetNotice("notice.joiningRoom");
             connector.StartDirectClient(address);
         }
 
         /// <summary>
-        /// Steam 친구 초대 창을 연다.
+        /// 직접 방은 Steam 로비가 없어 초대할 수 없으므로 Steam 방일 때만 연다.
         /// </summary>
         public void OpenInviteDialog()
         {
@@ -252,21 +263,111 @@ namespace GuardVsMannequin.Network
                 steamLobby.OpenInviteDialog();
         }
 
-        /// <summary>
-        /// Steam 로비의 참가 가능 여부를 바꾼다.
-        /// </summary>
-        public void SetRoomJoinable(bool joinable)
+        /// <summary>공개 목록에서 판 중인 방을 숨기려고 Steam 로비에 적는다.</summary>
+        public void SetRoomInGame(bool inGame)
         {
             if (IsSteamRoom)
-                steamLobby.SetJoinable(joinable);
+                steamLobby.SetInGame(inGame);
+        }
+
+        /// <summary>끊긴 뒤에는 판 정보가 사라지므로 연결 중에 판 진행 여부를 기억하고 끊긴 뒤 재접속을 처리한다.</summary>
+        private void Update()
+        {
+            if (!isRegistered)
+                return;
+
+            SimulateDisconnectIfRequested();
+
+            if (connector.IsClientRunning && GameServices.Room != null)
+            {
+                wasInMatch = GameServices.Room.IsInGame && !connector.IsServerRunning;
+                // 방 정보가 다시 왔으면 돌아온 것이다.
+                rejoinTarget = null;
+                return;
+            }
+
+            if (rejoinTarget == null || IsBusy || connector.IsClientRunning)
+                return;
+
+            if (Time.unscaledTime >= rejoinTarget.deadline)
+            {
+                DiscardRejoin();
+                SetNotice("notice.rejoinExpired");
+            }
+            else if (rejoinTarget.autoAttemptTime > 0f && Time.unscaledTime >= rejoinTarget.autoAttemptTime)
+            {
+                rejoinTarget.autoAttemptTime = 0f;
+                Rejoin();
+            }
+        }
+
+        /// <summary>PC 1대로 끊김을 시험하도록 개발 빌드에서 F9로 알림 없이 연결만 끊는다.</summary>
+        [System.Diagnostics.Conditional("UNITY_EDITOR"), System.Diagnostics.Conditional("DEVELOPMENT_BUILD")]
+        private void SimulateDisconnectIfRequested()
+        {
+            UnityEngine.InputSystem.Keyboard keyboard = UnityEngine.InputSystem.Keyboard.current;
+            if (keyboard != null && keyboard.f9Key.wasPressedThisFrame && connector.IsClientRunning && !connector.IsServerRunning)
+            {
+                Debug.Log("[SessionService] 시험용 연결 끊기 (F9)");
+                connector.NetworkManager.ClientManager.StopConnection();
+            }
+        }
+
+        /// <inheritdoc />
+        public void Rejoin()
+        {
+            if (rejoinTarget == null || IsBusy || connector.IsClientRunning || connector.IsServerRunning)
+                return;
+
+            rejoinTarget.autoAttemptTime = 0f;
+            isLeaving = false;
+            IsBusy = true;
+            SetNotice("notice.joiningRoom");
+            if (rejoinTarget.lobbyId != 0)
+            {
+                // 이미 로비에 있어도 입장 결과가 다시 오고, 그 결과로 로비 주인에게 접속한다.
+                steamLobby.JoinLobby(rejoinTarget.lobbyId);
+            }
+            else
+            {
+                IsSteamRoom = false;
+                connector.StartDirectClient(rejoinTarget.address);
+            }
+        }
+
+        /// <inheritdoc />
+        public void DiscardRejoin()
+        {
+            if (rejoinTarget == null)
+                return;
+
+            rejoinTarget = null;
+            steamLobby.LeaveLobby();
+            ModService.Instance.ClearSessionMods();
+        }
+
+        /// <inheritdoc />
+        public void LeaveAfterDelay(float seconds)
+        {
+            isLeaving = true;
+            StartCoroutine(LeaveAfter(seconds));
         }
 
         /// <summary>
-        /// 연결과 로비를 모두 정리한다. 로비 씬으로의 이동은 DefaultScene이 처리한다.
+        /// 일시정지 중에도 나갈 수 있도록 실제 시간으로 기다린다.
         /// </summary>
+        private System.Collections.IEnumerator LeaveAfter(float seconds)
+        {
+            yield return new WaitForSecondsRealtime(seconds);
+            Leave();
+        }
+
+        /// <summary>다음 방을 깨끗하게 시작하도록 연결·로비·암호·재접속 대상을 모두 비운다.</summary>
         public void Leave()
         {
             isLeaving = true;
+            rejoinTarget = null;
+            wasInMatch = false;
             connector.StopAll();
             steamLobby.LeaveLobby();
             IsSteamRoom = false;
@@ -283,34 +384,28 @@ namespace GuardVsMannequin.Network
             SetNotice(noticeKey);
         }
 
-        /// <summary>
-        /// 앞뒤 공백을 지운 암호. 없으면 빈 문자열.
-        /// </summary>
+        /// <summary>복사한 암호의 앞뒤 공백으로 틀리지 않도록 지운다.</summary>
         private static string NormalizePassword(string password)
         {
             return string.IsNullOrWhiteSpace(password) ? string.Empty : password.Trim();
         }
 
         /// <summary>
-        /// 안내 메시지를 지운다.
+        /// 읽은 안내가 다음에 로비를 열 때 또 뜨지 않도록 지운다.
         /// </summary>
         public void ClearNotice()
         {
             SetNotice(string.Empty);
         }
 
-        /// <summary>
-        /// 안내 문구를 key(strings.csv)와 끼워 넣을 세부 정보로 정한다. 빈 key는 문구 없음.
-        /// </summary>
+        /// <summary>언어를 바꾸면 바로 반영되도록 완성된 문장 대신 key와 값으로 보관한다.</summary>
         private void SetNotice(string key, string detail = "")
         {
             noticeKey = key ?? string.Empty;
             noticeDetail = detail ?? string.Empty;
         }
 
-        /// <summary>
-        /// 이미 방에 있거나 연결 중이면 새 작업을 막는다.
-        /// </summary>
+        /// <summary>트랜스포트가 꼬이지 않도록 연결 중 재시작을 막고, 지난 접속 기록을 비운다.</summary>
         private bool CanStartNewSession()
         {
             if (IsBusy || connector.IsServerRunning || connector.IsClientRunning)
@@ -319,19 +414,19 @@ namespace GuardVsMannequin.Network
                 return false;
             }
 
+            DiscardRejoin();
+            wasInMatch = false;
+            Membership = new RoomMembership();
             isLeaving = false;
             IsTestRoom = false;
             rejectNoticeKey = null;
             rejectNoticeDetail = null;
             SetNotice(string.Empty);
-            // 지난 접속에서 쓰던 맵 모드 구성이 남아 있으면 내 설정으로 돌린다.
             ModService.Instance.ClearSessionMods();
             return true;
         }
 
-        /// <summary>
-        /// 로비가 만들어지면 서버와 로컬 클라이언트를 시작한다.
-        /// </summary>
+        /// <summary>로비가 생겨야 방 코드를 줄 수 있어 이때 서버를 열고, 실패하면 빈 로비가 남지 않게 나간다.</summary>
         private void OnLobbyCreated(ulong lobbyId)
         {
             IsSteamRoom = true;
@@ -346,15 +441,13 @@ namespace GuardVsMannequin.Network
             steamLobby.LeaveLobby();
         }
 
-        /// <summary>
-        /// 다른 사람의 로비에 들어가면 호스트에 Steam으로 접속한다.
-        /// 암호가 있는 방인데 암호를 입력하지 않았으면(초대로 들어온 경우 등) 접속하지 않고 암호를 요청한다.
-        /// </summary>
+        /// <summary>초대로 들어오면 암호를 모르므로 암호 있는 방이면 로비에 암호 입력을 요청한다.</summary>
         private void OnJoinedLobby(ulong lobbyId, ulong hostSteamId, bool hasPassword)
         {
             if (hasPassword && JoinPassword.Length == 0)
             {
                 IsBusy = false;
+                rejoinTarget = null;
                 ModService.Instance.ClearSessionMods();
                 steamLobby.LeaveLobby();
                 SetNotice("notice.passwordRequired");
@@ -366,15 +459,15 @@ namespace GuardVsMannequin.Network
             if (!connector.StartSteamClient(hostSteamId))
             {
                 IsBusy = false;
-                ModService.Instance.ClearSessionMods();
                 SetNotice("notice.hostConnectFailed");
+                if (rejoinTarget != null)
+                    return;
+                ModService.Instance.ClearSessionMods();
                 steamLobby.LeaveLobby();
             }
         }
 
-        /// <summary>
-        /// 친구 초대 수락 등으로 참가 요청이 오면, 다른 방에 있지 않을 때만 참가한다.
-        /// </summary>
+        /// <summary>지금 연결이 끊기지 않도록 다른 방에 있지 않을 때만 초대로 참가한다.</summary>
         private void OnJoinRequested(ulong lobbyId)
         {
             if (connector.IsClientRunning || connector.IsServerRunning)
@@ -383,24 +476,21 @@ namespace GuardVsMannequin.Network
                 return;
             }
 
-            // 초대로 들어올 때는 암호를 모른다. 암호가 있는 방이면 로비 입장 후 암호를 요청한다.
             JoinSteamRoom(lobbyId.ToString(), string.Empty);
         }
 
         /// <summary>
-        /// 로비 작업 실패를 안내한다.
+        /// 재접속 중이 아니면 이번 시도를 위해 바꾼 맵 모드 구성을 되돌리고 이유를 안내한다.
         /// </summary>
         private void OnLobbyFailed(string reasonKey, string detail)
         {
             IsBusy = false;
-            ModService.Instance.ClearSessionMods();
+            if (rejoinTarget == null)
+                ModService.Instance.ClearSessionMods();
             SetNotice(reasonKey, detail);
         }
 
-        /// <summary>
-        /// 접속 성공 시 작업을 끝내고, 스스로 나가지 않았는데 끊기면 안내 메시지를 남긴다.
-        /// (호스트가 방을 닫으면 게스트는 이 경로로 로비에 돌아간다)
-        /// </summary>
+        /// <summary>끊긴 이유에 따라 다른 안내를 보이고, 다시 참가할 수 있는 동안은 같은 맵을 위해 구성을 남긴다.</summary>
         private void OnClientConnectionState(ClientConnectionStateArgs args)
         {
             if (args.ConnectionState == LocalConnectionState.Started)
@@ -415,25 +505,51 @@ namespace GuardVsMannequin.Network
 
             bool wasConnecting = IsBusy;
             IsBusy = false;
-            steamLobby.LeaveLobby();
-            // 접속 동안 쓰던 맵 모드 구성을 버리고 내 설정으로 돌아간다.
-            ModService.Instance.ClearSessionMods();
+            bool isRejected = !string.IsNullOrEmpty(rejectNoticeKey);
+            UpdateRejoinTarget(isRejected);
+            wasInMatch = false;
+            if (rejoinTarget == null)
+            {
+                steamLobby.LeaveLobby();
+                ModService.Instance.ClearSessionMods();
+            }
 
-            // 호스트가 이유를 알려 줬으면(버전 불일치 등) 그 이유로 안내한다.
-            if (!string.IsNullOrEmpty(rejectNoticeKey))
+            if (isRejected)
                 SetNotice(rejectNoticeKey, rejectNoticeDetail);
+            else if (rejoinTarget != null)
+                SetNotice(wasConnecting ? "notice.rejoinFailed" : "notice.rejoinAvailable");
             else if (!isLeaving)
                 SetNotice(wasConnecting ? "notice.joinFailed" : "notice.hostDisconnected");
             rejectNoticeKey = null;
             rejectNoticeDetail = null;
 
-            // 호스트가 아닌 경우에만 여기서 정리한다. (호스트는 Leave에서 서버까지 정리)
+            // 호스트는 Leave에서 서버까지 정리하므로 여기서는 게스트일 때만 방 표시를 지운다.
             if (!connector.IsServerRunning)
             {
                 IsSteamRoom = false;
                 IsTestRoom = false;
             }
             isLeaving = false;
+        }
+
+        /// <summary>게임 중 예상치 못하게 끊긴 게스트만 같은 판에 돌아갈 의미가 있어 그때만 돌아갈 곳을 만든다.</summary>
+        private void UpdateRejoinTarget(bool isRejected)
+        {
+            if (isRejected || isLeaving || connector.IsServerRunning)
+            {
+                rejoinTarget = null;
+                return;
+            }
+            if (rejoinTarget != null || !wasInMatch)
+                return;
+
+            rejoinTarget = new RejoinTarget
+            {
+                lobbyId = IsSteamRoom ? steamLobby.CurrentLobbyId : 0,
+                address = directAddress,
+                deadline = Time.unscaledTime + GameTuning.RejoinGraceSeconds,
+                autoAttemptTime = Time.unscaledTime + AutoRejoinDelay
+            };
         }
     }
 }

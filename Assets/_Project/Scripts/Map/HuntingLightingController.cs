@@ -8,13 +8,7 @@ using UnityEngine.Rendering;
 
 namespace GuardVsMannequin.Map
 {
-    /// <summary>
-    /// 사냥 시간 진입 연출. 별도의 텍스트/알림 없이 전원 차단음과 함께 맵 조명이 꺼진다.
-    /// 일부 조명(game_tuning.csv의 HuntFlickerLightRatio)은 꺼지지 않고 어둡게 깜빡이며 남는다(<see cref="FlickeringLight"/>).
-    /// 남는 조명은 위치로 고르므로(<see cref="HuntFlickerSelector"/>) 모든 PC에서 같다.
-    /// 동기화된 게임 상태만 보고 각 피어가 똑같이 연출하므로 네트워크 오브젝트가 필요 없다.
-    /// 사냥 시간과 결과 화면 동안 어둡게 유지하고, 다음 판(대기/준비)에서 원래대로 되돌린다.
-    /// </summary>
+    /// <summary>사냥 시간 진입을 알림 대신 전원 차단음과 꺼지는 조명으로 연출한다.</summary>
     public class HuntingLightingController : MonoBehaviour
     {
         [SerializeField] private NoiseLibrary noiseLibrary;
@@ -36,10 +30,7 @@ namespace GuardVsMannequin.Map
         private Material originalSkybox;
         private Material darkSkybox;
 
-        /// <summary>
-        /// 어두운 하늘과 전원 차단음용 2D 오디오 소스를 만든다.
-        /// (맵 조명과 원래 환경 설정은 어두워지는 순간에 읽는다. 이 컴포넌트는 공용 시스템 씬에 있어 Awake 때는 맵이 아직 없을 수 있다)
-        /// </summary>
+        /// <summary>어두워지는 순간 끊김이 없도록 하늘과 오디오 소스를 미리 만들고, 맵 조명은 그 순간에 읽는다.</summary>
         private void Awake()
         {
             darkSkybox = CreateDarkSkybox();
@@ -50,7 +41,7 @@ namespace GuardVsMannequin.Map
         }
 
         /// <summary>
-        /// 씬을 떠날 때 환경 설정을 되돌린다. (RenderSettings는 씬 전환 후에도 남을 수 있음)
+        /// RenderSettings는 씬 전환 후에도 남아서 다음 화면이 어두운 채 열릴 수 있으므로 떠날 때 되돌린다.
         /// </summary>
         private void OnDestroy()
         {
@@ -60,9 +51,7 @@ namespace GuardVsMannequin.Map
                 Destroy(darkSkybox);
         }
 
-        /// <summary>
-        /// 상태에 맞게 어둡게 하거나 원래대로 되돌린다.
-        /// </summary>
+        /// <summary>이벤트를 놓친 피어도 같은 화면이 되도록 동기화된 상태를 매 프레임 보고 연출한다.</summary>
         private void Update()
         {
             GameState state = GameServices.CurrentStateOrWaiting;
@@ -75,7 +64,7 @@ namespace GuardVsMannequin.Map
         }
 
         /// <summary>
-        /// 전원 차단음을 재생하고 조명을 조금씩 어긋나게 끄며 환경광을 낮춘다.
+        /// 되돌릴 수 있도록 원래 환경 설정을 저장한 뒤, 전원 차단음과 함께 조명을 조금씩 어긋나게 끈다.
         /// </summary>
         private void BlackOut()
         {
@@ -89,11 +78,11 @@ namespace GuardVsMannequin.Map
             if (noiseLibrary != null)
                 audioSource.PlayOneShot(noiseLibrary.GetClip(NoiseType.PowerDown), noiseLibrary.Get(NoiseType.PowerDown).volume * AudioVolumes.Sfx);
 
-            HashSet<MapLight> flickering = HuntFlickerSelector.Choose(mapLights, GameTuning.HuntFlickerLightRatio);
+            HashSet<MapLight> flickeringLights = HuntFlickerSelector.Choose(mapLights, GameTuning.HuntFlickerLightRatio);
             foreach (MapLight mapLight in mapLights)
             {
                 float delay = Random.Range(0f, maxOffDelay);
-                StartCoroutine(flickering.Contains(mapLight) ? StartFlickerAfter(mapLight, delay) : TurnOffAfter(mapLight, delay));
+                StartCoroutine(flickeringLights.Contains(mapLight) ? StartFlickerAfter(mapLight, delay) : TurnOffAfter(mapLight, delay));
             }
 
             RenderSettings.ambientMode = AmbientMode.Flat;
@@ -103,7 +92,7 @@ namespace GuardVsMannequin.Map
         }
 
         /// <summary>
-        /// 사냥 시간 환경광 = 색조 × 조정 파일의 밝기(0~1). 완전히 검으면 손전등 밖이 아무것도 안 보인다.
+        /// 완전히 검으면 손전등 밖이 아무것도 안 보이므로, 색조 × 조정 파일 밝기(0~1)만큼은 남긴다.
         /// </summary>
         private Color GetHuntingAmbient()
         {
@@ -114,7 +103,7 @@ namespace GuardVsMannequin.Map
         }
 
         /// <summary>
-        /// 지정한 시간 뒤에 조명 하나를 끈다.
+        /// 그사이 상태가 되돌아갔으면 다시 끄지 않도록 기다린 뒤에 한 번 더 확인한다.
         /// </summary>
         private IEnumerator TurnOffAfter(MapLight mapLight, float delay)
         {
@@ -124,8 +113,7 @@ namespace GuardVsMannequin.Map
         }
 
         /// <summary>
-        /// 지정한 시간 뒤에 조명 기구 하나를 어둡게 깜빡이게 한다.
-        /// 맵 제작자가 이미 깜빡임을 붙여 둔 조명은 그대로 둔다. (이 컨트롤러가 붙인 것만 나중에 제거)
+        /// 맵 제작자가 이미 깜빡임을 붙여 둔 조명은 그 설정을 존중해 그대로 두고, 이 컨트롤러가 붙인 것만 기억해 나중에 뗀다.
         /// </summary>
         private IEnumerator StartFlickerAfter(MapLight mapLight, float delay)
         {
@@ -140,7 +128,7 @@ namespace GuardVsMannequin.Map
         }
 
         /// <summary>
-        /// 사냥 시간에 붙인 깜빡임을 제거한다. 먼저 꺼서 그 자리에서 원래 밝기로 되돌린다. (Destroy는 프레임 끝에 처리됨)
+        /// Destroy는 프레임 끝에 처리되어 그 사이 어두운 밝기가 남으므로, 먼저 꺼서 그 자리에서 원래 밝기로 되돌린다.
         /// </summary>
         private void RemoveHuntFlickers()
         {
@@ -155,7 +143,7 @@ namespace GuardVsMannequin.Map
         }
 
         /// <summary>
-        /// 모든 조명을 켜고 환경 설정을 되돌린다.
+        /// 아직 기다리는 끄기 코루틴이 다시 켠 조명을 끄지 않도록 먼저 멈춘 뒤, 모든 조명과 환경 설정을 되돌린다.
         /// </summary>
         private void RestoreLights()
         {
@@ -173,8 +161,7 @@ namespace GuardVsMannequin.Map
         }
 
         /// <summary>
-        /// 노출을 0으로 낮춘 기본 절차적 스카이박스로 검은 하늘을 만든다.
-        /// (스카이박스를 비우면 카메라 기본 배경색(푸른색)이 보일 수 있음)
+        /// 스카이박스를 비우면 카메라 기본 배경색(푸른색)이 보일 수 있으므로, 노출을 0으로 낮춘 기본 절차적 스카이박스로 검은 하늘을 만든다.
         /// </summary>
         private static Material CreateDarkSkybox()
         {
@@ -188,7 +175,7 @@ namespace GuardVsMannequin.Map
         }
 
         /// <summary>
-        /// 저장해 둔 환경광, 반사광, 스카이박스를 되돌린다.
+        /// 맵마다 환경 설정이 달라서, 어두워지기 직전에 저장해 둔 값으로 되돌린다.
         /// </summary>
         private void RestoreEnvironment()
         {

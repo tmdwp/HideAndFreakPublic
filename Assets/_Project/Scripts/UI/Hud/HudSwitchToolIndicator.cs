@@ -5,10 +5,7 @@ using UnityEngine.UI;
 
 namespace GuardVsMannequin.UI
 {
-    /// <summary>
-    /// 체력·스태미나 바 옆: 켜고 끄는 도구(<see cref="ISwitchableTool"/> — 손전등)의 아이콘과 단축키 상자.
-    /// 켜져 있음 / 꺼져 있지만 켤 수 있음 / 지금은 쓸 수 없음(사냥 시간 아님)에 따라 아이콘과 키 글자 색을 바꾼다.
-    /// </summary>
+    /// <summary>켜고 끄는 도구의 아이콘과 단축키를 상태별 색으로 보여 준다.</summary>
     public class HudSwitchToolIndicator : MonoBehaviour, IHudSection
     {
         [SerializeField] private GameObject indicatorPanel;
@@ -32,7 +29,9 @@ namespace GuardVsMannequin.UI
         private HudContext context;
         private bool isKeyDirty = true;
 
-        /// <inheritdoc />
+        /// <summary>
+        /// 키 이름은 설정·언어가 바뀔 때만 다시 읽으면 되므로 변경 알림을 받아 표시만 해 둔다.
+        /// </summary>
         public void Bind(HudContext hudContext)
         {
             context = hudContext;
@@ -41,7 +40,7 @@ namespace GuardVsMannequin.UI
         }
 
         /// <summary>
-        /// 구독을 해제하고 키 이름 공급자를 정리한다.
+        /// 키 이름 공급자는 정적 이벤트를 구독하고 입력 에셋 복제본을 가지므로 함께 정리한다.
         /// </summary>
         private void OnDestroy()
         {
@@ -51,20 +50,22 @@ namespace GuardVsMannequin.UI
             keyNames.Dispose();
         }
 
-        /// <inheritdoc />
+        /// <summary>
+        /// 네트워크 준비 전에는 도구가 없으므로 숨긴다.
+        /// </summary>
         public void Hide()
         {
             indicatorPanel.SetActive(false);
         }
 
-        /// <inheritdoc />
+        /// <summary>도구가 있을 때만 보이고, 지금 쓸 수 있는지 상태별 색으로 알린다.</summary>
         public void Refresh(GameState state)
         {
             bool isInMatch = state is GameState.Preparation or GameState.Playing or GameState.Hunting;
             ISwitchableTool tool = FindSwitchableTool();
-            bool visible = isInMatch && tool != null;
-            indicatorPanel.SetActive(visible);
-            if (!visible)
+            bool isVisible = isInMatch && tool != null;
+            indicatorPanel.SetActive(isVisible);
+            if (!isVisible)
                 return;
 
             if (isKeyDirty)
@@ -78,21 +79,19 @@ namespace GuardVsMannequin.UI
                 icon.color = stateColor;
         }
 
-        /// <summary>
-        /// 로컬 아바타의 도구 중 켜고 끄는 도구를 찾는다. 없으면 null.
-        /// </summary>
+        /// <summary>역할마다 도구 구성이 달라 인터페이스로 찾고 첫 도구만 쓴다.</summary>
         private ISwitchableTool FindSwitchableTool()
         {
             foreach (ITool tool in context.LocalPlayer.Tools)
             {
-                if (tool is ISwitchableTool switchable)
-                    return switchable;
+                if (tool is ISwitchableTool switchableTool)
+                    return switchableTool;
             }
             return null;
         }
 
         /// <summary>
-        /// 다음 갱신 때 키 이름을 다시 읽게 한다.
+        /// 알림이 Refresh 밖에서 오므로 바로 읽지 않고 다음 갱신 때 읽게 한다.
         /// </summary>
         private void MarkKeyDirty()
         {

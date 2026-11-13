@@ -4,11 +4,7 @@ using UnityEngine;
 
 namespace GuardVsMannequin.Player.Mannequin
 {
-    /// <summary>
-    /// 마네킹 캐릭터.
-    /// - 3인칭(기본): 카메라는 추적 대상을 중심으로 궤도 회전하고, 몸체는 이동 방향을 바라본다.
-    /// - 1인칭(사냥 시간): 카메라가 눈 위치(외형 머리를 따라감, <see cref="IEyePointProvider"/>)에 붙고, 좌우 시점이 몸체를 회전시킨다.
-    /// </summary>
+    /// <summary>평소에는 3인칭, 사냥 시간에는 눈 위치 1인칭으로 바뀌는 마네킹 캐릭터.</summary>
     public class MannequinCharacter : PlayerCharacter, ILookControllable, IPerspectiveCamera
     {
         [Space(15f)]
@@ -34,18 +30,15 @@ namespace GuardVsMannequin.Player.Mannequin
         private IMovementPlaneProvider movementPlaneProvider;
         private IEyePointProvider eyePoint;
 
-        /// <summary>1인칭 시점인지 여부. (사냥 시간)</summary>
+        /// <summary>몸 회전 방식이 달라지는 사냥 시간 1인칭 여부.</summary>
         public bool IsFirstPerson { get; private set; }
 
-        /// <summary>
-        /// 회전 방식을 적용한다. (이동 속도는 MoveSpeedController가 게임 설정으로 적용)
-        /// </summary>
+        /// <summary>3인칭에서는 몸이 이동 방향을 보게 하고, 벽타기 중 입력을 떼면 바로 멈추도록 감속을 크게 둔다.</summary>
         protected override void Awake()
         {
             base.Awake();
             SetRotationMode(RotationMode.OrientRotationToMovement);
 
-            // 벽타기는 Flying 모드를 쓰므로 입력을 떼면 바로 멈추게 한다.
             brakingDecelerationFlying = 20f;
 
             cameraYaw = transform.eulerAngles.y;
@@ -53,10 +46,7 @@ namespace GuardVsMannequin.Player.Mannequin
             eyePoint = GetComponent<IEyePointProvider>();
         }
 
-        /// <summary>
-        /// 1인칭/3인칭 시점을 전환한다. 1인칭에서는 몸의 정면을 바라보도록 시점을 초기화한다.
-        /// 몸체 회전 방식은 <see cref="DisguiseRotationAbility"/>가 이 값을 보고 결정한다.
-        /// </summary>
+        /// <summary>1인칭으로 바뀌는 순간 엉뚱한 방향을 보지 않도록 몸 정면으로 시점을 초기화한다.</summary>
         public void SetFirstPerson(bool firstPerson)
         {
             IsFirstPerson = firstPerson;
@@ -65,7 +55,7 @@ namespace GuardVsMannequin.Player.Mannequin
         }
 
         /// <summary>
-        /// 시점 입력을 반영한다. 3인칭은 카메라 궤도 각도, 1인칭은 몸체 Yaw와 카메라 Pitch에 적용한다.
+        /// 3인칭에서는 카메라만 몸 주위를 돌고, 1인칭에서는 시선이 곧 몸 방향이라 좌우 입력으로 몸을 돌린다.
         /// </summary>
         public void AddLookInput(Vector2 lookDelta)
         {
@@ -85,7 +75,7 @@ namespace GuardVsMannequin.Player.Mannequin
         }
 
         /// <summary>
-        /// 모아 둔 좌우 입력이 물리 단계에서 몸에 반영되면 카메라용 대기 입력도 비운다.
+        /// 몸에 반영된 입력을 카메라가 한 번 더 더하면 두 배로 돌아가므로 대기 입력도 함께 비운다.
         /// </summary>
         protected override void ConsumeRotationInput()
         {
@@ -94,7 +84,7 @@ namespace GuardVsMannequin.Player.Mannequin
         }
 
         /// <summary>
-        /// 카메라가 할당된 경우(로컬 소유자)에만 카메라 위치와 회전을 갱신한다.
+        /// 원격 아바타에는 카메라가 없으므로 카메라가 할당된 로컬 소유자에서만 갱신한다.
         /// </summary>
         private void LateUpdate()
         {
@@ -105,40 +95,36 @@ namespace GuardVsMannequin.Player.Mannequin
         }
 
         /// <summary>
-        /// 추적 대상 뒤쪽 궤도 위치에 카메라를 배치하고, 벽에 가려지면 앞으로 당긴다.
+        /// 3인칭 카메라가 벽 너머로 들어가 맵 밖이 보이지 않도록, 궤도 위치에 두되 벽에 가려지면 앞으로 당긴다.
         /// </summary>
         private void UpdateCamera()
         {
             if (IsFirstPerson)
             {
-                // 눈 위치(외형 머리, 없으면 추적 대상)에서 몸의 정면(+아직 몸에 반영되지 않은 좌우 입력) + 상하 시점을 바라본다.
+                // 몸은 물리 주기로만 돌아 화면이 끊겨 보이므로, 아직 몸에 반영되지 않은 좌우 입력까지 더해 바라본다.
                 Quaternion viewRotation = Quaternion.Euler(cameraPitch, pendingYaw.ViewYaw(this), 0f);
-                Vector3 eye = eyePoint != null && eyePoint.TryGetEyePosition(out Vector3 headEye) ? headEye : followTarget.position;
-                cameraTransform.SetPositionAndRotation(eye, viewRotation);
+                Vector3 eyePosition = eyePoint != null && eyePoint.TryGetEyePosition(out Vector3 headEye) ? headEye : followTarget.position;
+                cameraTransform.SetPositionAndRotation(eyePosition, viewRotation);
                 return;
             }
 
             ClampOrbitToSurface();
 
             Quaternion orbitRotation = Quaternion.Euler(cameraPitch, cameraYaw, 0f);
-            Vector3 pivot = followTarget.position;
-            Vector3 back = orbitRotation * Vector3.back;
+            Vector3 pivotPosition = followTarget.position;
+            Vector3 backDirection = orbitRotation * Vector3.back;
 
             float distance = followDistance;
-            if (Physics.SphereCast(pivot, cameraCollisionRadius, back, out RaycastHit hit, followDistance,
+            if (Physics.SphereCast(pivotPosition, cameraCollisionRadius, backDirection, out RaycastHit hit, followDistance,
                     cameraCollisionMask, QueryTriggerInteraction.Ignore) && !hit.transform.IsChildOf(transform))
             {
                 distance = hit.distance;
             }
 
-            cameraTransform.SetPositionAndRotation(pivot + back * distance, orbitRotation);
+            cameraTransform.SetPositionAndRotation(pivotPosition + backDirection * distance, orbitRotation);
         }
 
-        /// <summary>
-        /// 벽이나 천장에 붙어 있을 때 카메라가 면 안쪽으로 돌아가지 않도록 회전 각도를 제한한다.
-        /// - 벽: 벽을 정면으로 보는 방향 기준 좌우 wallYawLimit도까지
-        /// - 천장: 카메라가 캐릭터 아래에서 올려다보도록 Pitch를 음수로 제한
-        /// </summary>
+        /// <summary>벽·천장에 붙어 있을 때 카메라가 면 안쪽만 보지 않도록 회전 각도를 제한한다.</summary>
         private void ClampOrbitToSurface()
         {
             Vector3 surfaceUp = movementPlaneProvider?.MovementPlaneNormal ?? -GetGravityDirection();
@@ -151,8 +137,8 @@ namespace GuardVsMannequin.Player.Mannequin
             {
                 // 벽 법선의 반대 방향(벽을 바라보는 방향)의 Yaw
                 float wallYaw = Mathf.Atan2(-surfaceUp.x, -surfaceUp.z) * Mathf.Rad2Deg;
-                float offset = Mathf.Clamp(Mathf.DeltaAngle(wallYaw, cameraYaw), -wallYawLimit, wallYawLimit);
-                cameraYaw = wallYaw + offset;
+                float yawOffset = Mathf.Clamp(Mathf.DeltaAngle(wallYaw, cameraYaw), -wallYawLimit, wallYawLimit);
+                cameraYaw = wallYaw + yawOffset;
             }
         }
     }

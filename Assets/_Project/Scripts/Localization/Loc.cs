@@ -6,12 +6,7 @@ using UnityEngine;
 
 namespace GuardVsMannequin.Localization
 {
-    /// <summary>
-    /// 화면에 보이는 문장을 언어별로 제공한다.
-    /// 문장은 strings.csv(열: key, ko, en, ...)에서 읽는다. 빌드 폴더의 GameData/Localization/strings.csv가 우선이다.
-    /// 새 언어는 CSV에 열을 하나 추가하는 것만으로 설정 화면의 언어 목록에 나타난다.
-    /// 번역이 비어 있으면 첫 번째 언어(ko)로, 키 자체가 없으면 키 이름을 보여준다.
-    /// </summary>
+    /// <summary>CSV에 열만 추가해도 새 언어가 되도록 화면 문장을 strings.csv에서 언어별로 제공한다.</summary>
     public static class Loc
     {
         private const string TablePath = "Localization/strings";
@@ -22,10 +17,10 @@ namespace GuardVsMannequin.Localization
         private static bool isLoaded;
         private static string currentLanguage;
 
-        /// <summary>언어가 바뀌었을 때.</summary>
+        /// <summary>이미 표시된 문구들이 다시 그려지도록 알린다.</summary>
         public static event Action LanguageChanged;
 
-        /// <summary>사용할 수 있는 언어 코드 목록. (CSV 머리글 순서)</summary>
+        /// <summary>설정 화면이 CSV에 있는 언어만 고를 수 있도록 머리글 순서대로 준다.</summary>
         public static IReadOnlyList<string> Languages
         {
             get
@@ -35,7 +30,6 @@ namespace GuardVsMannequin.Localization
             }
         }
 
-        /// <summary>현재 언어 코드.</summary>
         public static string CurrentLanguage
         {
             get
@@ -46,7 +40,7 @@ namespace GuardVsMannequin.Localization
         }
 
         /// <summary>
-        /// 현재 언어의 문장을 반환한다.
+        /// 처음 쓰는 곳이 어디든 표가 먼저 읽히도록 조회할 때 확인한다.
         /// </summary>
         public static string Get(string key)
         {
@@ -55,7 +49,7 @@ namespace GuardVsMannequin.Localization
         }
 
         /// <summary>
-        /// 문장 표에 키가 있는지 확인한다.
+        /// 없는 키는 키 이름이 그대로 보이므로, 에디터 도구와 모드 검사가 빠진 문구를 찾을 수 있게 연다.
         /// </summary>
         public static bool HasKey(string key)
         {
@@ -64,7 +58,7 @@ namespace GuardVsMannequin.Localization
         }
 
         /// <summary>
-        /// 현재 언어의 문장에 값을 끼워 넣어 반환한다. ({0}, {1} ...)
+        /// 번역자가 {0} 자리를 잘못 적어도 게임이 멈추지 않도록 예외 대신 원문을 보여 주고 경고한다.
         /// </summary>
         public static string Format(string key, params object[] args)
         {
@@ -80,18 +74,14 @@ namespace GuardVsMannequin.Localization
             }
         }
 
-        /// <summary>
-        /// 언어의 표시 이름(그 언어로 쓴 이름, 예: 한국어, English)을 반환한다.
-        /// </summary>
+        /// <summary>다른 언어 사용자도 알아보도록 언어 목록에는 그 언어로 쓴 이름을 보여 준다.</summary>
         public static string GetLanguageName(string languageCode)
         {
             EnsureLoaded();
             return Lookup(LanguageNameKey, languageCode);
         }
 
-        /// <summary>
-        /// 언어를 바꾸고 설정에 저장한 뒤 알린다.
-        /// </summary>
+        /// <summary>다음 실행에도 같은 언어로 시작하도록 설정에 저장한 뒤 알린다.</summary>
         public static void SetLanguage(string languageCode)
         {
             EnsureLoaded();
@@ -105,12 +95,9 @@ namespace GuardVsMannequin.Localization
             LanguageChanged?.Invoke();
         }
 
-        /// <summary>
-        /// 모드의 문장 파일(strings.csv와 같은 형식)을 더한다. 키가 접두사로 시작하는 줄만 받아 게임 문장을 덮어쓰지 못하게 한다.
-        /// 게임에 없는 언어 열은 무시한다. 더한 문장 수를 반환한다.
-        /// </summary>
-        /// <param name="csv">CSV 내용. (머리글: key, 언어 코드...)</param>
-        /// <param name="requiredPrefix">허용하는 키 접두사. (예: "mod.author.mymod.")</param>
+        /// <summary>모드가 게임 문장을 덮어쓰지 못하도록 접두사로 시작하는 키만 받는다.</summary>
+        /// <param name="csv">머리글: key, 언어 코드...</param>
+        /// <param name="requiredPrefix">예: "mod.author.mymod."</param>
         public static int AddStrings(string csv, string requiredPrefix)
         {
             EnsureLoaded();
@@ -119,7 +106,7 @@ namespace GuardVsMannequin.Localization
                 return 0;
 
             string[] header = rows[0];
-            int added = 0;
+            int addedCount = 0;
             for (int rowIndex = 1; rowIndex < rows.Count; rowIndex++)
             {
                 string[] row = rows[rowIndex];
@@ -133,13 +120,13 @@ namespace GuardVsMannequin.Localization
                         translations[header[column]] = row[column];
                 }
                 table[row[0]] = translations;
-                added++;
+                addedCount++;
             }
-            return added;
+            return addedCount;
         }
 
         /// <summary>
-        /// 문장 표를 다시 읽는다. (에디터 도구가 CSV 수정 내용을 바로 반영할 때 사용)
+        /// 에디터 도구가 CSV 수정 내용을 게임을 다시 켜지 않고 바로 반영할 수 있게 표를 다시 읽는다.
         /// </summary>
         public static void Reload()
         {
@@ -150,9 +137,7 @@ namespace GuardVsMannequin.Localization
             LanguageChanged?.Invoke();
         }
 
-        /// <summary>
-        /// 문장 표를 한 번만 불러오고, 저장된 언어(없으면 시스템 언어)를 고른다.
-        /// </summary>
+        /// <summary>CSV를 매번 읽지 않도록 한 번만 불러오고, 파일이 깨져도 화면이 비지 않게 ko로 시작한다.</summary>
         private static void EnsureLoaded()
         {
             if (isLoaded)
@@ -173,7 +158,7 @@ namespace GuardVsMannequin.Localization
         }
 
         /// <summary>
-        /// CSV를 행 목록으로 읽는다. 머리글(key, 언어...)과 문장 한 줄 이상이 없으면 깨진 파일로 본다.
+        /// 머리글(key, 언어...)과 문장 한 줄 이상이 없으면 쓸 수 없으므로 깨진 파일로 보고 내장 원본으로 물러나게 한다.
         /// </summary>
         private static bool TryParseTable(string csv, out List<string[]> rows)
         {
@@ -182,7 +167,7 @@ namespace GuardVsMannequin.Localization
         }
 
         /// <summary>
-        /// CSV 행 목록으로 키별·언어별 문장 표를 만든다.
+        /// 빈 칸을 표에 넣으면 첫 언어로 물러나지 않고 빈 문구가 보이므로, 값이 있는 칸만 넣는다.
         /// </summary>
         private static void LoadTable(List<string[]> rows)
         {
@@ -206,21 +191,19 @@ namespace GuardVsMannequin.Localization
             }
         }
 
-        /// <summary>
-        /// 저장된 언어가 있으면 그것을, 없으면 시스템 언어(한국어면 ko, 아니면 en)를 고른다.
-        /// </summary>
+        /// <summary>처음 켜는 사람도 읽을 수 있도록 저장된 언어가 없으면 시스템 언어를 고른다.</summary>
         private static string ChooseInitialLanguage()
         {
-            string saved = OptionsStore.Current.languageCode;
-            if (!string.IsNullOrEmpty(saved) && languages.Contains(saved))
-                return saved;
+            string savedLanguage = OptionsStore.Current.languageCode;
+            if (!string.IsNullOrEmpty(savedLanguage) && languages.Contains(savedLanguage))
+                return savedLanguage;
 
-            string system = Application.systemLanguage == SystemLanguage.Korean ? "ko" : "en";
-            return languages.Contains(system) ? system : languages[0];
+            string systemLanguage = Application.systemLanguage == SystemLanguage.Korean ? "ko" : "en";
+            return languages.Contains(systemLanguage) ? systemLanguage : languages[0];
         }
 
         /// <summary>
-        /// 문장을 찾는다. 번역이 없으면 첫 번째 언어, 키가 없으면 키 이름을 반환한다.
+        /// 번역이 덜 된 언어에서도 빈 칸이 보이지 않도록 첫 번째 언어로 물러나고, 키가 없으면 무엇이 빠졌는지 보이게 키 이름을 준다.
         /// </summary>
         private static string Lookup(string key, string languageCode)
         {
@@ -230,7 +213,7 @@ namespace GuardVsMannequin.Localization
                 return key;
             if (translations.TryGetValue(languageCode, out string text))
                 return text;
-            return languages.Count > 0 && translations.TryGetValue(languages[0], out string fallback) ? fallback : key;
+            return languages.Count > 0 && translations.TryGetValue(languages[0], out string fallbackText) ? fallbackText : key;
         }
     }
 }

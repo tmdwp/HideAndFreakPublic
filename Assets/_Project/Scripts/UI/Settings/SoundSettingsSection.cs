@@ -4,9 +4,7 @@ using UnityEngine.UI;
 
 namespace GuardVsMannequin.UI
 {
-    /// <summary>
-    /// 사운드 설정: 전체 / 배경 음악 / 효과음 음량. 바꾸는 즉시 적용·저장된다.
-    /// </summary>
+    /// <summary>바꾸는 즉시 적용·저장하는 음량 설정.</summary>
     public class SoundSettingsSection : MonoBehaviour, ISettingsSection
     {
         [SerializeField] private Slider masterVolumeSlider;
@@ -17,20 +15,20 @@ namespace GuardVsMannequin.UI
         [SerializeField] private Text sfxVolumeValueText;
 
         /// <summary>
-        /// 슬라이더 범위와 이벤트를 연결한다.
+        /// 저장값이 0~1 비율이라 씬에 어떤 범위가 들어 있든 슬라이더를 같은 범위로 맞춘다.
         /// </summary>
         public void Initialize()
         {
-            foreach (Slider volume in new[] { masterVolumeSlider, bgmVolumeSlider, sfxVolumeSlider })
+            foreach (Slider volumeSlider in new[] { masterVolumeSlider, bgmVolumeSlider, sfxVolumeSlider })
             {
-                volume.minValue = 0f;
-                volume.maxValue = 1f;
-                volume.onValueChanged.AddListener(_ => Save());
+                volumeSlider.minValue = 0f;
+                volumeSlider.maxValue = 1f;
+                volumeSlider.onValueChanged.AddListener(_ => Save());
             }
         }
 
         /// <summary>
-        /// 저장된 음량을 표시한다. (저장 이벤트는 발생시키지 않음)
+        /// 표시만 바꾸는데 저장이 다시 일어나지 않도록 알림 없이 슬라이더 값을 바꾼다.
         /// </summary>
         public void Refresh()
         {
@@ -42,7 +40,7 @@ namespace GuardVsMannequin.UI
         }
 
         /// <summary>
-        /// 음량을 기본값으로 되돌린다.
+        /// 다른 묶음의 설정을 건드리지 않도록 음량 항목만 기본값으로 바꾼다.
         /// </summary>
         public void ResetToDefaults()
         {
@@ -55,9 +53,7 @@ namespace GuardVsMannequin.UI
             Refresh();
         }
 
-        /// <summary>
-        /// 슬라이더 값을 저장한다.
-        /// </summary>
+        /// <summary>움직이는 즉시 소리로 확인하도록 바로 저장·적용하고 보정된 값을 보여 준다.</summary>
         private void Save()
         {
             GameOptions options = OptionsStore.Current;
@@ -69,7 +65,7 @@ namespace GuardVsMannequin.UI
         }
 
         /// <summary>
-        /// 슬라이더 옆 퍼센트를 갱신한다.
+        /// 0~1 비율은 사람이 읽기 어려우므로 퍼센트로 보여 준다.
         /// </summary>
         private void RefreshTexts(GameOptions options)
         {

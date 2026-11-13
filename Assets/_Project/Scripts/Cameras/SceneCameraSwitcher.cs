@@ -13,7 +13,7 @@ namespace GuardVsMannequin.Cameras
         private AudioListener sceneListener;
 
         /// <summary>
-        /// 카메라 컴포넌트를 캐시하고 로컬 플레이어 이벤트를 구독한다.
+        /// 이미 아바타가 생긴 뒤에 이 씬이 열렸을 수도 있어서, 구독과 함께 지금 상태로 한 번 맞춘다.
         /// </summary>
         private void Awake()
         {
@@ -26,7 +26,7 @@ namespace GuardVsMannequin.Cameras
         }
 
         /// <summary>
-        /// 이벤트 구독을 해제한다.
+        /// 정적 이벤트라 해제하지 않으면 파괴된 뒤에도 불리므로 끊는다.
         /// </summary>
         private void OnDestroy()
         {
@@ -34,17 +34,14 @@ namespace GuardVsMannequin.Cameras
             LocalPlayerEvents.Despawned -= OnLocalPlayerDespawned;
         }
 
-        /// <summary>로컬 플레이어가 생기면 씬 카메라를 끈다.</summary>
+        /// <summary>아바타 카메라와 겹쳐 두 화면이 그려지지 않도록 씬 카메라를 끈다.</summary>
         private void OnLocalPlayerSpawned(PlayerIdentity identity) => SetActive(false);
 
-        /// <summary>
-        /// 로컬 플레이어가 사라지면 씬 카메라를 켠다.
-        /// 다시 스폰(테스트 방 역할 전환 등)에서 새 아바타가 먼저 생긴 뒤 옛 아바타가 사라지면 켜지 않는다.
-        /// </summary>
+        /// <summary>화면이 검게 남지 않도록 아바타가 사라지면 씬 카메라를 켜되, 새 아바타가 이미 있으면 켜지 않는다.</summary>
         private void OnLocalPlayerDespawned(PlayerIdentity identity) => SetActive(LocalPlayerEvents.Current == null);
 
         /// <summary>
-        /// 카메라와 오디오 리스너를 함께 켜고 끈다.
+        /// 리스너가 둘이면 Unity가 경고를 내므로 카메라와 오디오 리스너를 함께 켜고 끈다.
         /// </summary>
         private void SetActive(bool active)
         {

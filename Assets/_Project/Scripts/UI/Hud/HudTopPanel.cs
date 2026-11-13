@@ -5,10 +5,7 @@ using UnityEngine.UI;
 
 namespace GuardVsMannequin.UI
 {
-    /// <summary>
-    /// HUD 상단 중앙: "단계 | 남은 시간(분:초)", 그 아래 "남은 마네킹 / 이번 판 마네킹".
-    /// 단계 이름: 시작 준비 / 가드 타임(탐색) / 헌트 타임(사냥) / 종료.
-    /// </summary>
+    /// <summary>HUD 상단에 단계·남은 시간·남은 마네킹을 보여 준다.</summary>
     public class HudTopPanel : MonoBehaviour, IHudSection
     {
         [SerializeField] private GameObject topPanel;
@@ -16,48 +13,53 @@ namespace GuardVsMannequin.UI
 
         private HudContext context;
 
-        // 마지막으로 표시한 값. 하나라도 바뀔 때만 문구를 다시 만든다. (시간은 초 단위라 1초에 한 번)
+        // 바뀔 때만 문구를 다시 만들려고 기억하는 마지막 값.
         private GameState shownState = GameState.Waiting;
         private int shownSeconds = -1;
-        private int shownAlive = -1;
-        private int shownTotal = -1;
+        private int shownAliveCount = -1;
+        private int shownTotalCount = -1;
         private string shownLanguage;
 
-        /// <inheritdoc />
+        /// <summary>
+        /// 매 프레임 씬에서 찾지 않도록 공용 정보를 기억한다.
+        /// </summary>
         public void Bind(HudContext hudContext)
         {
             context = hudContext;
         }
 
-        /// <inheritdoc />
+        /// <summary>
+        /// 네트워크 준비 전에는 시간·인원 정보가 없으므로 빈 패널이 보이지 않게 숨긴다.
+        /// </summary>
         public void Hide()
         {
             topPanel.SetActive(false);
         }
 
-        /// <inheritdoc />
+        /// <summary>대기 중에는 숨기고, 가비지를 줄이려고 값이 바뀔 때만 문구를 다시 만든다.</summary>
         public void Refresh(GameState state)
         {
-            bool visible = state != GameState.Waiting;
-            topPanel.SetActive(visible);
-            if (!visible)
+            bool isVisible = state != GameState.Waiting;
+            topPanel.SetActive(isVisible);
+            if (!isVisible)
                 return;
 
-            int alive = context.PlayerRegistry.AliveMannequinCount;
+            int aliveCount = context.PlayerRegistry.AliveMannequinCount;
             // 참가 인원이 아직 동기화되지 않았으면 생존 인원을 대신 쓴다.
-            int total = Mathf.Max(alive, context.PlayerRegistry.MatchMannequinCount);
-            float remaining = context.State.RemainingTime;
-            int seconds = Mathf.CeilToInt(Mathf.Max(0f, remaining));
-            if (state == shownState && seconds == shownSeconds && alive == shownAlive && total == shownTotal && Loc.CurrentLanguage == shownLanguage)
+            int totalCount = Mathf.Max(aliveCount, context.PlayerRegistry.MatchMannequinCount);
+            float remainingTime = context.State.RemainingTime;
+            int remainingSeconds = Mathf.CeilToInt(Mathf.Max(0f, remainingTime));
+            if (state == shownState && remainingSeconds == shownSeconds && aliveCount == shownAliveCount
+                && totalCount == shownTotalCount && Loc.CurrentLanguage == shownLanguage)
                 return;
 
             shownState = state;
-            shownSeconds = seconds;
-            shownAlive = alive;
-            shownTotal = total;
+            shownSeconds = remainingSeconds;
+            shownAliveCount = aliveCount;
+            shownTotalCount = totalCount;
             shownLanguage = Loc.CurrentLanguage;
-            topText.text = $"{HudText.GetPhaseName(state)}  |  {HudText.FormatTime(remaining)}\n" +
-                           Loc.Format("hud.remainingMannequins", alive, total);
+            topText.text = $"{HudText.GetPhaseName(state)}  |  {HudText.FormatTime(remainingTime)}\n" +
+                           Loc.Format("hud.remainingMannequins", aliveCount, totalCount);
         }
     }
 }

@@ -1,5 +1,4 @@
 using GuardVsMannequin.Core;
-using GuardVsMannequin.Network;
 using GuardVsMannequin.Player;
 using GuardVsMannequin.Settings;
 using UnityEngine;
@@ -8,11 +7,7 @@ using UnityEngine.UI;
 
 namespace GuardVsMannequin.UI
 {
-    /// <summary>
-    /// ESC 메뉴(계속하기 / 설정 / 방 나가기). 룸과 게임 씬에서 사용한다.
-    /// 열려 있는 동안 커서를 풀어 게임 입력을 막고, 닫으면 게임 중이면 다시 잠근다.
-    /// 설정 화면이 열려 있을 때 ESC를 누르면 설정 화면만 닫는다.
-    /// </summary>
+    /// <summary>룸과 게임이 함께 쓰는 ESC 메뉴로, 열린 동안 커서를 풀어 게임 입력을 막는다.</summary>
     public class PauseMenuView : MonoBehaviour
     {
         private const string MenuActionName = "Menu";
@@ -30,9 +25,7 @@ namespace GuardVsMannequin.UI
         private InputActionAsset runtimeActions;
         private InputAction menuAction;
 
-        /// <summary>
-        /// 메뉴 키 입력과 버튼을 준비하고 메뉴를 닫아 둔다.
-        /// </summary>
+        /// <summary>아바타가 없어도 ESC가 동작하도록 자체 입력을 만들고 복제본에 저장된 키를 적용한다.</summary>
         private void Awake()
         {
             runtimeActions = Instantiate(inputActions);
@@ -41,14 +34,14 @@ namespace GuardVsMannequin.UI
 
             resumeButton.onClick.AddListener(CloseMenu);
             settingsButton.onClick.AddListener(() => settingsPanel.Open());
-            leaveButton.onClick.AddListener(() => SessionServices.Session?.Leave());
+            leaveButton.onClick.AddListener(RoomClient.LeaveRoom);
 
             menuPanel.SetActive(false);
             settingsPanel.gameObject.SetActive(false);
         }
 
         /// <summary>
-        /// 메뉴 키를 켠다.
+        /// 켜져 있는 동안만 ESC를 받는다.
         /// </summary>
         private void OnEnable()
         {
@@ -57,7 +50,7 @@ namespace GuardVsMannequin.UI
         }
 
         /// <summary>
-        /// 메뉴 키를 끈다.
+        /// 꺼진 뒤 ESC가 이 객체를 부르지 않도록 끊는다.
         /// </summary>
         private void OnDisable()
         {
@@ -66,7 +59,7 @@ namespace GuardVsMannequin.UI
         }
 
         /// <summary>
-        /// 복제한 입력 에셋을 해제한다.
+        /// Instantiate로 만든 에셋은 씬과 함께 지워지지 않으므로 직접 해제한다.
         /// </summary>
         private void OnDestroy()
         {
@@ -74,9 +67,7 @@ namespace GuardVsMannequin.UI
                 Destroy(runtimeActions);
         }
 
-        /// <summary>
-        /// ESC: 키 설정 중이면 무시, 설정 화면이 열려 있으면 설정만 닫고, 아니면 메뉴를 열고 닫는다.
-        /// </summary>
+        /// <summary>키 설정 중 ESC는 취소라 무시하고, 설정 화면이 열려 있으면 한 단계만 닫는다.</summary>
         private void OnMenuPressed(InputAction.CallbackContext context)
         {
             if (RebindRowView.IsAnyRebinding)
@@ -90,9 +81,7 @@ namespace GuardVsMannequin.UI
                 OpenMenu();
         }
 
-        /// <summary>
-        /// 메뉴를 열고 커서를 푼다.
-        /// </summary>
+        /// <summary>버튼을 누를 수 있도록 커서를 풀어 게임 입력을 막는다.</summary>
         private void OpenMenu()
         {
             menuPanel.SetActive(true);
@@ -100,7 +89,7 @@ namespace GuardVsMannequin.UI
         }
 
         /// <summary>
-        /// 메뉴를 닫는다. 게임 중(내 아바타가 있고 결과 화면이 아님)이면 커서를 다시 잠근다.
+        /// 관전 중이나 결과 화면에서 커서를 잠그면 버튼을 누를 수 없으므로, 내 아바타가 있고 결과 화면이 아닐 때만 다시 잠근다.
         /// </summary>
         private void CloseMenu()
         {

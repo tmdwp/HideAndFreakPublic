@@ -5,17 +5,13 @@ using UnityEngine;
 
 namespace GuardVsMannequin.Player
 {
-    /// <summary>
-    /// 플레이어 카메라의 시선(Pitch, Yaw)을 다른 플레이어에게 동기화한다.
-    /// - 관전자가 대상 플레이어의 시야로 볼 수 있게 한다.
-    /// - 가드는 상하 시선을 카메라 피벗에 적용해, 원격 화면의 손전등이 실제 보는 방향을 비추게 한다.
-    /// </summary>
+    /// <summary>관전과 고개 방향 표시를 위해 카메라 시선을 다른 플레이어에게 동기화한다.</summary>
     public class PlayerViewSync : NetworkBehaviour
     {
-        /// <summary>전송 주기(초).</summary>
+        /// <summary>매 프레임 보내면 대역폭이 아까워서 둔 최소 전송 간격(초).</summary>
         private const float SendInterval = 0.1f;
 
-        /// <summary>이 각도 이상 바뀌었을 때만 전송한다.</summary>
+        /// <summary>미세한 손떨림까지 보내지 않도록 이 각도 이상 바뀌었을 때만 전송한다.</summary>
         private const float SendThreshold = 1f;
 
         [Tooltip("원격 피어에서 상하 시선을 적용할 피벗. (가드의 카메라 피벗, 없으면 적용하지 않음)")]
@@ -29,14 +25,14 @@ namespace GuardVsMannequin.Player
         private Vector2 lastSentView;
         private float nextSendTime;
 
-        /// <summary>현재 시선의 상하 각도. 소유자는 실제 카메라 값, 원격은 동기화된 값.</summary>
+        /// <summary>소유자는 전송 지연이 없도록 실제 카메라 값을, 원격은 동기화된 값을 쓴다.</summary>
         public float ViewPitch => IsOwner ? ReadLocalView().x : syncedView.Value.x;
 
-        /// <summary>현재 시선의 좌우 각도. 소유자는 실제 카메라 값, 원격은 동기화된 값.</summary>
+        /// <summary>소유자는 전송 지연이 없도록 실제 카메라 값을, 원격은 동기화된 값을 쓴다.</summary>
         public float ViewYaw => IsOwner ? ReadLocalView().y : syncedView.Value.y;
 
         /// <summary>
-        /// 같은 오브젝트의 캐릭터 이동 구현을 캐시한다.
+        /// 매 프레임 GetComponent를 부르지 않도록 이동 구현을 미리 찾아 둔다.
         /// </summary>
         private void Awake()
         {
@@ -44,7 +40,7 @@ namespace GuardVsMannequin.Player
         }
 
         /// <summary>
-        /// 소유자는 시선을 주기적으로 보내고, 원격 피어는 받은 상하 시선을 피벗에 적용한다.
+        /// 시선의 원본은 소유자에게만 있으므로 소유자는 보내고, 원격 피어는 받은 값을 손전등 피벗에 반영한다.
         /// </summary>
         private void Update()
         {
@@ -58,37 +54,38 @@ namespace GuardVsMannequin.Player
         }
 
         /// <summary>
-        /// 소유자 카메라의 시선을 읽는다. 카메라가 없으면 몸 방향을 쓴다.
+        /// 카메라가 아직 연결되지 않은 순간에도 값이 비지 않도록 몸 방향으로 대신한다.
         /// </summary>
         private Vector2 ReadLocalView()
         {
             Transform cameraView = motor?.ViewTransform;
-            Transform view = cameraView != null ? cameraView : transform;
-            Vector3 euler = view.eulerAngles;
+            Transform viewTransform = cameraView != null ? cameraView : transform;
+            Vector3 euler = viewTransform.eulerAngles;
+            // eulerAngles.x는 0~360이라 위를 보면 270 같은 값이 나오므로 -180~180으로 바꾼다.
             return new Vector2(Mathf.DeltaAngle(0f, euler.x), euler.y);
         }
 
         /// <summary>
-        /// 시선이 충분히 바뀌었고 전송 주기가 지났으면 서버에 보낸다.
+        /// 대역폭을 아끼려고 간격과 변화량 두 조건을 모두 넘을 때만 보낸다.
         /// </summary>
         private void SendViewIfChanged()
         {
             if (Time.time < nextSendTime)
                 return;
 
-            Vector2 current = ReadLocalView();
-            bool changed = Mathf.Abs(current.x - lastSentView.x) >= SendThreshold
-                           || Mathf.Abs(Mathf.DeltaAngle(current.y, lastSentView.y)) >= SendThreshold;
-            if (!changed)
+            Vector2 currentView = ReadLocalView();
+            bool hasChanged = Mathf.Abs(currentView.x - lastSentView.x) >= SendThreshold
+                              || Mathf.Abs(Mathf.DeltaAngle(currentView.y, lastSentView.y)) >= SendThreshold;
+            if (!hasChanged)
                 return;
 
-            lastSentView = current;
+            lastSentView = currentView;
             nextSendTime = Time.time + SendInterval;
-            SetViewServerRpc(current);
+            SetViewServerRpc(currentView);
         }
 
         /// <summary>
-        /// 서버에서 시선 값을 갱신해 다른 클라이언트로 동기화한다. NaN·무한대 값은 버린다.
+        /// 조작된 값이 다른 화면의 카메라를 망가뜨리지 않도록 NaN·무한대를 버리고 상하 각도를 제한한다.
         /// </summary>
         [ServerRpc]
         private void SetViewServerRpc(Vector2 view)
@@ -98,13 +95,11 @@ namespace GuardVsMannequin.Player
             syncedView.Value = new Vector2(Mathf.Clamp(view.x, -90f, 90f), view.y);
         }
 
-        /// <summary>
-        /// 동기화된 상하 시선을 피벗에 부드럽게 적용한다. (원격 가드는 GuardCharacter가 꺼져 있어 덮어쓰지 않음)
-        /// </summary>
+        /// <summary>전송 간격 때문에 값이 계단식으로 오므로 부드럽게 따라가게 한다.</summary>
         private void ApplyRemotePitch()
         {
-            Quaternion target = Quaternion.Euler(syncedView.Value.x, 0f, 0f);
-            pitchPivot.localRotation = Quaternion.Slerp(pitchPivot.localRotation, target, remoteSmoothing * Time.deltaTime);
+            Quaternion targetRotation = Quaternion.Euler(syncedView.Value.x, 0f, 0f);
+            pitchPivot.localRotation = Quaternion.Slerp(pitchPivot.localRotation, targetRotation, remoteSmoothing * Time.deltaTime);
         }
     }
 }

@@ -5,16 +5,11 @@ using UnityEngine;
 
 namespace GuardVsMannequin.Player
 {
-    /// <summary>
-    /// 위치가 드러난 동안(<see cref="IStatusEffects.IsRevealed"/>) 상대 진영 화면에만 이 아바타의 외곽선을 벽 너머로 표시한다.
-    /// (수류탄에 맞은 마네킹 → 살아 있는 가드 화면)
-    /// 변신 중이면 변신한 사물, 아니면 몸체 — 지금 켜져 있는 렌더러를 그대로 쓰므로 외형 종류와 무관하다.
-    /// 누가 볼 수 있는지는 역할의 진영(<see cref="RoleDefinition.Side"/>)으로 판단한다. (역할로 분기하지 않음)
-    /// </summary>
+    /// <summary>위치가 드러난 동안 상대 진영 화면에만 이 아바타의 외곽선을 벽 너머로 표시한다.</summary>
     [RequireComponent(typeof(PlayerIdentity))]
     public class RevealOutlineView : MonoBehaviour
     {
-        /// <summary>렌더러 목록을 다시 모으는 간격(초). (변신·해제로 바뀌는 외형을 따라가기 위함)</summary>
+        /// <summary>변신·해제로 외형이 바뀌어도 따라가되, 매 프레임 렌더러를 모으지는 않도록 하는 간격(초).</summary>
         private const float RefreshInterval = 0.25f;
 
         private readonly List<Renderer> renderers = new();
@@ -25,7 +20,7 @@ namespace GuardVsMannequin.Player
         private bool isShowing;
 
         /// <summary>
-        /// 상태 효과와 외곽선 기능을 캐시한다.
+        /// 매 프레임 조회하지 않도록 상태 효과와 외곽선 서비스를 미리 찾아 둔다.
         /// </summary>
         private void Awake()
         {
@@ -35,16 +30,14 @@ namespace GuardVsMannequin.Player
         }
 
         /// <summary>
-        /// 꺼지거나 사라질 때 외곽선을 지운다.
+        /// 아바타가 사라진 뒤에도 외곽선이 허공에 남지 않도록 지운다.
         /// </summary>
         private void OnDisable()
         {
             Hide();
         }
 
-        /// <summary>
-        /// 표시 조건을 확인하고, 표시 중이면 렌더러 목록을 주기적으로 갱신한다.
-        /// </summary>
+        /// <summary>효과 시간과 관전 대상이 언제든 바뀌어 매 프레임 조건을 다시 보고, 렌더러 수집만 간격을 둔다.</summary>
         private void Update()
         {
             bool shouldShow = statusEffects != null && statusEffects.IsRevealed && IsOpponentOfLocalPlayer();
@@ -64,7 +57,7 @@ namespace GuardVsMannequin.Player
         }
 
         /// <summary>
-        /// 살아 있는 로컬 플레이어가 이 아바타와 다른 진영인지 확인한다.
+        /// 같은 편에게 외곽선을 보여 주면 의미가 없고, 진영이 없는 관전자에게 보여 주면 정보가 새므로 상대 진영일 때만 참이다.
         /// </summary>
         private bool IsOpponentOfLocalPlayer()
         {
@@ -78,7 +71,7 @@ namespace GuardVsMannequin.Player
         }
 
         /// <summary>
-        /// 지금 화면에 그려지는 메시 렌더러만 모은다. (빛·파티클·선 렌더러 제외)
+        /// 빛·파티클·선 렌더러까지 외곽선을 그리면 엉뚱한 모양이 나오므로, 지금 켜져 있는 메시 렌더러만 모은다.
         /// </summary>
         private void CollectVisibleRenderers()
         {
@@ -91,7 +84,7 @@ namespace GuardVsMannequin.Player
         }
 
         /// <summary>
-        /// 외곽선을 지운다.
+        /// 매 프레임 불려도 서비스에 불필요한 해제를 보내지 않도록 표시 중일 때만 지운다.
         /// </summary>
         private void Hide()
         {

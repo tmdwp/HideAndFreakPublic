@@ -2,17 +2,14 @@ using UnityEngine;
 
 namespace GuardVsMannequin.Core
 {
-    /// <summary>
-    /// 마우스 커서 잠금을 한곳에서 관리한다.
-    /// 잠겨 있을 때만 게임 입력(시점, 클릭, 이동)을 받고, 메뉴·결과 화면에서는 풀어서 UI를 누를 수 있게 한다.
-    /// </summary>
+    /// <summary>메뉴에서는 UI를 누르고 게임 중에는 입력을 받도록 커서 잠금을 한곳에서 관리한다.</summary>
     public static class GameCursor
     {
-        /// <summary>커서가 잠겨 있는지(= 게임 입력을 받는 중인지) 여부.</summary>
+        /// <summary>게임 입력을 받아도 되는지를 커서 잠금으로 판단하기 때문에 노출한다.</summary>
         public static bool IsLocked => Cursor.lockState == CursorLockMode.Locked;
 
         /// <summary>
-        /// 커서를 잠그거나 푼다. 잠그면 커서가 보이지 않는다.
+        /// 잠금과 표시 여부가 어긋나면 잠긴 채 커서가 보이는 문제가 생기므로 항상 함께 바꾼다.
         /// </summary>
         public static void SetLocked(bool locked)
         {

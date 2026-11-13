@@ -5,29 +5,19 @@ using UnityEngine.SceneManagement;
 
 namespace GuardVsMannequin.Editor
 {
-    /// <summary>
-    /// 씬의 조명 계산(GI)을 끈다. 이 게임은 모든 조명이 실시간(MapLight, 사냥 시간에 꺼짐)이라 구운 조명·실시간 GI를 쓰지 않는다.
-    /// 켜 두면 에디터가 열린 씬 조합(맵 + Game_Systems)마다 GI를 다시 계산하려다 큰 맵에서 메모리가 부족해
-    /// "Clustering job failed ... Out of memory" 로그를 끝없이 남긴다.
-    /// 모든 씬이 같은 조명 설정 에셋(Baked GI·Realtime GI 끔)을 쓰게 한다. 환경광·하늘·안개는 그대로다.
-    /// </summary>
+    /// <summary>모든 조명이 실시간이라 GI가 필요 없고, 켜 두면 큰 맵에서 GI 재계산으로 메모리가 부족해지므로 모든 씬의 GI를 끈다.</summary>
     public static class SceneLightingSetup
     {
-        /// <summary>공용 조명 설정 에셋 경로.</summary>
         public const string SettingsPath = TestEnvironmentSetupTool.SoFolder + "/Lighting_RealtimeOnly.lighting";
 
-        /// <summary>
-        /// 씬에 GI를 끈 조명 설정을 지정한다. (씬 저장은 호출한 쪽이 한다)
-        /// </summary>
+        /// <summary>한 씬만 GI가 켜져 있어도 메모리 부족이 다시 나므로 모든 씬에 같은 설정 에셋을 지정한다.</summary>
         public static void Apply(Scene scene)
         {
             Lightmapping.SetLightingSettingsForScene(scene, GetOrCreateSettings());
             EditorSceneManager.MarkSceneDirty(scene);
         }
 
-        /// <summary>
-        /// 공용 조명 설정 에셋을 가져오거나 만든다.
-        /// </summary>
+        /// <summary>사용자가 바꾼 환경광 설정을 지키려고 에셋이 있으면 그대로 쓰고, 없을 때만 만든다.</summary>
         private static LightingSettings GetOrCreateSettings()
         {
             LightingSettings settings = AssetDatabase.LoadAssetAtPath<LightingSettings>(SettingsPath);

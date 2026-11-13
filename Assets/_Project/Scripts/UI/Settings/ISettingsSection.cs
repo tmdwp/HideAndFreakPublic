@@ -1,25 +1,19 @@
 namespace GuardVsMannequin.UI
 {
-    /// <summary>
-    /// 설정 화면의 설정 묶음 하나(화면, 언어, 사운드, 조작 등).
-    /// 설정 화면(<see cref="SettingsPanelView"/>)이 하위에서 자동으로 찾아 호출하므로,
-    /// 새 설정을 추가할 때는 이 인터페이스를 구현한 컴포넌트를 설정 화면 안에 두기만 하면 된다.
-    /// </summary>
+    /// <summary>설정 화면이 자동으로 찾아 호출하도록 설정 묶음 하나를 인터페이스로 둔다.</summary>
     public interface ISettingsSection
     {
         /// <summary>
-        /// 처음 열릴 때 한 번 UI 이벤트를 연결한다.
+        /// 꺼진 패널은 Awake가 늦게 불리므로, 설정 화면이 처음 열릴 때 한 번 불러 UI 이벤트를 연결하게 한다.
         /// </summary>
         void Initialize();
 
         /// <summary>
-        /// 저장된 값을 화면에 표시한다. (열 때, 언어가 바뀔 때)
+        /// 다른 곳에서 바뀐 값이나 언어 변경을 반영하도록, 열 때와 언어가 바뀔 때 저장된 값을 다시 표시하게 한다.
         /// </summary>
         void Refresh();
 
-        /// <summary>
-        /// "모두 기본값으로"를 눌렀을 때 이 묶음의 값을 기본값으로 되돌린다. (되돌리지 않는 묶음은 비워 둔다)
-        /// </summary>
+        /// <summary>묶음마다 되돌릴지 여부가 달라 기본값 복원 처리를 각 묶음에 맡긴다.</summary>
         void ResetToDefaults();
     }
 }

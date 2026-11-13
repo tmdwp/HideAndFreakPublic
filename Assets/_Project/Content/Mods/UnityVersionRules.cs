@@ -3,78 +3,66 @@ using System.Text.RegularExpressions;
 
 namespace GuardVsMannequin.Mods
 {
-    /// <summary>
-    /// 모드 번들을 만든 Unity 버전을 게임에서 읽을 수 있는지 판정한다. (게임의 모드 검사와 SDK의 모드 내보내기가 같은 규칙을 쓴다)
-    /// - 같은 메이저·마이너 라인(예: 6000.4)이고, 패치가 게임과 같거나 더 옛 버전이면 허용한다. (예: 6000.4.0f1 ~ 게임의 6000.4.2f1)
-    /// - 게임보다 새 버전은 직렬화 형식을 읽을 수 없고, 다른 라인은 번들 안 셰이더가 깨지기 쉬워 막는다.
-    /// </summary>
+    /// <summary>새 버전이나 다른 라인의 번들은 읽을 수 없거나 셰이더가 깨지므로 같은 라인의 같거나 옛 패치만 허용한다.</summary>
     public static class UnityVersionRules
     {
-        /// <summary>
-        /// 모드를 만든 Unity 버전이 게임 Unity 버전과 호환되는지 확인한다.
-        /// </summary>
-        /// <param name="modUnity">모드를 만든 Unity 버전. (예: "6000.4.0f1")</param>
-        /// <param name="gameUnity">게임의 Unity 버전. 읽을 수 없으면 확인하지 않는다.</param>
+        /// <summary>불러온 뒤 깨지면 원인을 알기 어려우므로 미리 막고 다시 내보낼 범위를 이유에 적는다.</summary>
+        /// <param name="modUnity">모드를 만든 Unity 버전.</param>
+        /// <param name="gameUnity">게임의 Unity 버전(읽을 수 없으면 확인하지 않음).</param>
         /// <param name="problem">호환되지 않을 때의 이유.</param>
         public static bool IsCompatible(string modUnity, string gameUnity, out string problem)
         {
             problem = null;
-            int[] mod = Parse(modUnity);
-            int[] game = Parse(gameUnity);
-            if (mod == null)
+            int[] modVersion = Parse(modUnity);
+            int[] gameVersion = Parse(gameUnity);
+            if (modVersion == null)
             {
                 problem = $"모드를 만든 Unity 버전을 알 수 없습니다({modUnity}). 다시 내보내세요.";
                 return false;
             }
-            if (game == null)
+            if (gameVersion == null)
                 return true;
 
-            string line = $"{game[0]}.{game[1]}";
-            if (mod[0] != game[0] || mod[1] != game[1])
+            string versionLine = $"{gameVersion[0]}.{gameVersion[1]}";
+            if (modVersion[0] != gameVersion[0] || modVersion[1] != gameVersion[1])
             {
-                problem = $"다른 Unity 버전 라인({modUnity})으로 만든 모드입니다. 게임과 같은 {line}.x 중 {gameUnity} 이하로 다시 내보내야 합니다.";
+                problem = $"다른 Unity 버전 라인({modUnity})으로 만든 모드입니다. 게임과 같은 {versionLine}.x 중 {gameUnity} 이하로 다시 내보내야 합니다.";
                 return false;
             }
-            if (Compare(mod, game) > 0)
+            if (Compare(modVersion, gameVersion) > 0)
             {
-                problem = $"게임({gameUnity})보다 새 Unity({modUnity})로 만든 모드입니다. {line}.x 중 {gameUnity} 이하로 다시 내보내야 합니다.";
+                problem = $"게임({gameUnity})보다 새 Unity({modUnity})로 만든 모드입니다. {versionLine}.x 중 {gameUnity} 이하로 다시 내보내야 합니다.";
                 return false;
             }
             return true;
         }
 
-        /// <summary>
-        /// 허용 범위를 사람이 읽는 문구로 만든다. (예: "6000.4.0 ~ 6000.4.2f1")
-        /// </summary>
+        /// <summary>모드 제작자에게 설치할 Unity를 안내하도록 허용 범위를 문구로 만든다.</summary>
         public static string DescribeRange(string gameUnity)
         {
-            int[] game = Parse(gameUnity);
-            return game == null ? gameUnity : $"{game[0]}.{game[1]}.0 ~ {gameUnity}";
+            int[] gameVersion = Parse(gameUnity);
+            return gameVersion == null ? gameUnity : $"{gameVersion[0]}.{gameVersion[1]}.0 ~ {gameUnity}";
         }
 
-        /// <summary>
-        /// "6000.4.2f1"을 [6000, 4, 2, 릴리스 종류, 릴리스 번호]로 읽는다. (a=0, b=1, f=2, p=3) 읽을 수 없으면 null.
-        /// </summary>
+        /// <summary>문자열 비교로는 "6000.4.10"이 "6000.4.2"보다 작게 나오므로 숫자 배열로 읽는다.</summary>
         private static int[] Parse(string version)
         {
             Match match = Regex.Match(version ?? string.Empty, @"^(\d+)\.(\d+)\.(\d+)(?:([abfp])(\d+))?");
             if (!match.Success)
                 return null;
 
-            int stage = match.Groups[4].Success ? "abfp".IndexOf(match.Groups[4].Value[0]) : 2;
-            int build = match.Groups[5].Success ? int.Parse(match.Groups[5].Value) : 0;
-            return new[] { int.Parse(match.Groups[1].Value), int.Parse(match.Groups[2].Value), int.Parse(match.Groups[3].Value), stage, build };
+            int releaseStage = match.Groups[4].Success ? "abfp".IndexOf(match.Groups[4].Value[0]) : 2;
+            int releaseNumber = match.Groups[5].Success ? int.Parse(match.Groups[5].Value) : 0;
+            return new[] { int.Parse(match.Groups[1].Value), int.Parse(match.Groups[2].Value), int.Parse(match.Groups[3].Value), releaseStage, releaseNumber };
         }
 
-        /// <summary>
-        /// 버전 숫자 배열을 앞에서부터 비교한다. a가 더 옛 버전이면 음수.
-        /// </summary>
-        private static int Compare(int[] a, int[] b)
+        /// <summary>앞자리일수록 중요하므로 앞에서부터 처음 다른 자리로 순서를 정한다.</summary>
+        private static int Compare(int[] first, int[] second)
         {
-            for (int i = 0; i < Math.Min(a.Length, b.Length); i++)
+            for (int i = 0; i < Math.Min(first.Length, second.Length); i++)
             {
-                if (a[i] != b[i])
-                    return a[i].CompareTo(b[i]);
+                if (first[i] != second[i])
+                    return first[i].CompareTo(second[i]);
             }
             return 0;
         }

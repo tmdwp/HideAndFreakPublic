@@ -8,10 +8,7 @@ using UnityEngine;
 
 namespace GuardVsMannequin.Objectives
 {
-    /// <summary>
-    /// 마네킹이 좌클릭을 유지해 파괴하는 전원 장치.
-    /// 참여 인원 n명일 때 총 속도 = 1.4^(n-1), 참여자가 0명이 되면 진행도가 초기화된다.
-    /// </summary>
+    /// <summary>마네킹이 함께 붙어 파괴하는 전원 장치로, 모두 손을 떼면 진행도가 초기화된다.</summary>
     [RequireComponent(typeof(Collider))]
     public class Generator : NetworkBehaviour, IInteractable
     {
@@ -22,26 +19,27 @@ namespace GuardVsMannequin.Objectives
         private readonly SyncVar<bool> isDestroyed = new();
 
         private readonly Dictionary<int, IInteractor> participants = new();
+        // 반복 중에 사전을 고칠 수 없어서 뺄 키를 모아 두는 버퍼
         private readonly List<int> removeBuffer = new();
         private Collider interactCollider;
         private NoiseEmitter noiseEmitter;
 
-        /// <summary>서버에서 파괴가 완료되었을 때.</summary>
+        /// <summary>목표 집계가 장치를 몰라도 되도록 서버에서 파괴 완료를 알린다.</summary>
         public event Action<Generator> ServerDestroyed;
 
-        /// <summary>파괴 진행도(0~1).</summary>
+        /// <summary>0~1.</summary>
         public float Progress => progress.Value;
 
-        /// <summary>파괴되었는지 여부. 파괴된 장치는 다시 상호작용할 수 없다.</summary>
+        /// <summary>파괴된 장치를 다시 부숴 목표 수가 올라가지 않도록 상호작용을 막는 데 쓴다.</summary>
         public bool IsDestroyed => isDestroyed.Value;
 
-        /// <summary>현재 참여 인원. (서버 전용)</summary>
+        /// <summary>서버 전용.</summary>
         public int ParticipantCount => participants.Count;
 
         public float InteractRange => GameTuning.InteractRange;
 
         /// <summary>
-        /// 거리 판정에 사용할 충돌체와 소음 구현을 캐시한다.
+        /// 장치 모양이 다양해서 중심 거리 대신 충돌체 표면 거리로 재려고 충돌체를 미리 찾아 둔다.
         /// </summary>
         private void Awake()
         {
@@ -50,7 +48,7 @@ namespace GuardVsMannequin.Objectives
         }
 
         /// <summary>
-        /// 조건을 확인하고 참여자로 등록한다.
+        /// 클라이언트 조건은 믿지 않고 서버에서 파괴 여부·상태·거리를 다시 확인한 뒤 참여자로 넣는다.
         /// </summary>
         [Server]
         public bool TryBeginInteract(IInteractor interactor)
@@ -63,7 +61,7 @@ namespace GuardVsMannequin.Objectives
         }
 
         /// <summary>
-        /// 참여자 목록에서 제거한다.
+        /// 손을 뗀 사람이 진행 속도에 계속 반영되지 않도록 뺀다.
         /// </summary>
         [Server]
         public void EndInteract(IInteractor interactor)
@@ -72,17 +70,15 @@ namespace GuardVsMannequin.Objectives
         }
 
         /// <summary>
-        /// 이 주체가 아직 참여자로 남아 있는지 확인한다.
+        /// 같은 클라이언트가 다시 스폰되면 ID는 같아도 다른 주체이므로 참조까지 같은지 확인한다.
         /// </summary>
         [Server]
         public bool IsInteracting(IInteractor interactor)
         {
-            return participants.TryGetValue(interactor.ClientId, out IInteractor current) && ReferenceEquals(current, interactor);
+            return participants.TryGetValue(interactor.ClientId, out IInteractor currentInteractor) && ReferenceEquals(currentInteractor, interactor);
         }
 
-        /// <summary>
-        /// 서버에서 참여자를 검증하고 진행도를 갱신한다.
-        /// </summary>
+        /// <summary>조작을 막도록 서버에서 참여자를 검증해 진행도를 올리고, 모두 손을 떼면 진행도를 비운다.</summary>
         private void Update()
         {
             if (!this.IsServerReady() || isDestroyed.Value)
@@ -90,35 +86,32 @@ namespace GuardVsMannequin.Objectives
 
             RemoveInvalidParticipants();
 
-            int count = participants.Count;
-            if (count == 0)
+            int participantCount = participants.Count;
+            if (participantCount == 0)
             {
-                // 모두 이탈하면 진행도 초기화
                 if (progress.Value != 0f)
                     progress.Value = 0f;
                 return;
             }
 
             float destroyTime = GameServices.CurrentSettingsOrDefault.generatorDestroyTime;
-            float speed = CalculateTotalSpeed(count);
-            float next = progress.Value + speed / destroyTime * Time.deltaTime;
+            float speed = CalculateTotalSpeed(participantCount);
+            float nextProgress = progress.Value + speed / destroyTime * Time.deltaTime;
 
-            if (next >= 1f)
+            if (nextProgress >= 1f)
                 CompleteDestruction();
             else
-                progress.Value = next;
+                progress.Value = nextProgress;
         }
 
-        /// <summary>
-        /// 참여 인원에 따른 총 파괴 속도(1인 = 1.0)를 계산한다.
-        /// </summary>
+        /// <summary>함께하면 빨라지되 인원수만큼 곱절이 되지는 않도록 지수로 늘린다.</summary>
         public static float CalculateTotalSpeed(int participantCount)
         {
             return participantCount <= 0 ? 0f : Mathf.Pow(GameTuning.CoopDestroySpeedBase, participantCount - 1);
         }
 
         /// <summary>
-        /// 제거되었거나, 상호작용할 수 없게 되었거나, 멀어진 참여자를 뺀다.
+        /// 죽거나 변신하거나 멀어진 참여자가 진행을 계속 올리지 않도록 매 프레임 걸러 낸다.
         /// </summary>
         private void RemoveInvalidParticipants()
         {
@@ -126,8 +119,9 @@ namespace GuardVsMannequin.Objectives
             foreach (KeyValuePair<int, IInteractor> pair in participants)
             {
                 IInteractor interactor = pair.Value;
-                bool destroyedObject = interactor is UnityEngine.Object unityObject && unityObject == null;
-                if (destroyedObject || !interactor.CanInteract || !IsInRange(interactor, RangeTolerance))
+                // 인터페이스로 들고 있으면 파괴된 Unity 오브젝트도 null 비교가 참이 안 되므로 따로 확인한다.
+                bool isDestroyedObject = interactor is UnityEngine.Object unityObject && unityObject == null;
+                if (isDestroyedObject || !interactor.CanInteract || !IsInRange(interactor, RangeTolerance))
                     removeBuffer.Add(pair.Key);
             }
 
@@ -136,17 +130,17 @@ namespace GuardVsMannequin.Objectives
         }
 
         /// <summary>
-        /// 참여자가 상호작용 거리 안에 있는지 확인한다. (충돌체 표면 기준)
+        /// 장치 모양이 다양해서 중심 거리 대신 충돌체 표면에서 가장 가까운 점까지 잰다.
         /// </summary>
         private bool IsInRange(IInteractor interactor, float tolerance)
         {
-            Vector3 closest = interactCollider.ClosestPoint(interactor.Position);
+            Vector3 closestPoint = interactCollider.ClosestPoint(interactor.Position);
             float range = InteractRange + tolerance;
-            return (closest - interactor.Position).sqrMagnitude <= range * range;
+            return (closestPoint - interactor.Position).sqrMagnitude <= range * range;
         }
 
         /// <summary>
-        /// 파괴를 완료하고, 파괴 소음을 낸 뒤 이벤트를 발생시킨다.
+        /// 가드가 파괴를 알아챌 수 있도록 소음을 낸 뒤, 목표 집계가 세도록 이벤트를 보낸다.
         /// </summary>
         private void CompleteDestruction()
         {

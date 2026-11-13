@@ -30,7 +30,6 @@ GameObject:
   - component: {fileID: 996527292708218019}
   - component: {fileID: 553451606137133066}
   - component: {fileID: 2646054283718179590}
-  - component: {fileID: 9040296370836314556}
   - component: {fileID: 3947446186194541744}
   - component: {fileID: 4579842159026776760}
   - component: {fileID: 3303560899435614600}
@@ -50,6 +49,7 @@ GameObject:
   - component: {fileID: 6158412093847502232}
   - component: {fileID: 6158412093847502233}
   - component: {fileID: 6158412093847502234}
+  - component: {fileID: 4607917961016258561}
   m_Layer: 0
   m_Name: Mannequin
   m_TagString: Untagged
@@ -284,7 +284,6 @@ MonoBehaviour:
   - {fileID: 996527292708218019}
   - {fileID: 553451606137133066}
   - {fileID: 2646054283718179590}
-  - {fileID: 9040296370836314556}
   - {fileID: 4571227541005378936}
   - {fileID: 4950935256107480423}
   - {fileID: 4475952393218537844}
@@ -340,7 +339,7 @@ MonoBehaviour:
     X: 0
     Y: 0
     Z: 0
-  _synchronizeScale: 1
+  _synchronizeScale: 0
   _scaleSensitivity: 0.001
   _scaleSnapping:
     X: 0
@@ -576,21 +575,6 @@ MonoBehaviour:
   _addedNetworkObject: {fileID: 5274660207253486401}
   _networkObjectCache: {fileID: 5274660207253486401}
   library: {fileID: 11400000, guid: ee319f26cc7916e48ba986d566c211df, type: 2}
---- !u!114 &9040296370836314556
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 569088088292649313}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: df0a4f55f3df7bf4181625aff8b714d9, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: GuardVsMannequin.Runtime::GuardVsMannequin.Player.Mannequin.DisguiseNoiseEmitter
-  _componentIndexCache: 9
-  _addedNetworkObject: {fileID: 5274660207253486401}
-  _networkObjectCache: {fileID: 5274660207253486401}
 --- !u!114 &3947446186194541744
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -644,7 +628,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: eac95c93db0195942b10f26ec47e99fa, type: 3}
   m_Name: 
   m_EditorClassIdentifier: GuardVsMannequin.Runtime::GuardVsMannequin.Player.Emotes.EmoteController
-  _componentIndexCache: 10
+  _componentIndexCache: 9
   _addedNetworkObject: {fileID: 5274660207253486401}
   _networkObjectCache: {fileID: 5274660207253486401}
 --- !u!114 &4950935256107480423
@@ -659,7 +643,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 1de4d5bc397794342bc7a1667a570810, type: 3}
   m_Name: 
   m_EditorClassIdentifier: GuardVsMannequin.Runtime::GuardVsMannequin.Player.Mannequin.MannequinHuntingMode
-  _componentIndexCache: 11
+  _componentIndexCache: 10
   _addedNetworkObject: {fileID: 5274660207253486401}
   _networkObjectCache: {fileID: 5274660207253486401}
   bodyRenderers:
@@ -691,7 +675,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 314b10d74dcfa7c408a7c79efee2567b, type: 3}
   m_Name: 
   m_EditorClassIdentifier: GuardVsMannequin.Runtime::GuardVsMannequin.Player.Mannequin.MannequinAttackTool
-  _componentIndexCache: 12
+  _componentIndexCache: 11
   _addedNetworkObject: {fileID: 5274660207253486401}
   _networkObjectCache: {fileID: 5274660207253486401}
 --- !u!114 &2825400833285518174
@@ -706,7 +690,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: fb8929cf2fcb73f408b2bbb3cd2428d1, type: 3}
   m_Name: 
   m_EditorClassIdentifier: GuardVsMannequin.Runtime::GuardVsMannequin.Player.PlayerViewSync
-  _componentIndexCache: 13
+  _componentIndexCache: 12
   _addedNetworkObject: {fileID: 5274660207253486401}
   _networkObjectCache: {fileID: 5274660207253486401}
   pitchPivot: {fileID: 0}
@@ -1347,3 +1331,22 @@ MonoBehaviour:
   stalkStride: 1.3
   crawlStride: 0.8
   crawlSpeed: 2.7
+--- !u!114 &4607917961016258561
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 569088088292649313}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 7028177c3c0e40bab780fa41ea7c1142, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: GuardVsMannequin.Movement.ECM2::GuardVsMannequin.Player.ClimbAbility
+  climbSpeedScale: 0.7
+  detectRadius: 0.8
+  standOff: {x: 0.25, y: 0.12}
+  holdGain: 8
+  reattachDelay: 0.4
+  exitLift: 0.35
+  jumpOffVelocity: {x: 2.5, y: 2}

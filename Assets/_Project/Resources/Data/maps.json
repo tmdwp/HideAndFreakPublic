@@ -1,10 +1,28 @@
 {
     "maps": [
         {
+            "id": "builtin.map_citystreet",
+            "scene": "Map_CityStreet",
+            "nameKey": "map.0",
+            "name": "City Street",
+            "minPlayers": 0,
+            "maxPlayers": 0,
+            "settings": []
+        },
+        {
             "id": "builtin.map_forest",
             "scene": "Map_Forest",
             "nameKey": "map.6",
             "name": "Forest",
+            "minPlayers": 0,
+            "maxPlayers": 0,
+            "settings": []
+        },
+        {
+            "id": "builtin.map_giantroom",
+            "scene": "Map_GiantRoom",
+            "nameKey": "map.1",
+            "name": "Giant Room",
             "minPlayers": 0,
             "maxPlayers": 0,
             "settings": []

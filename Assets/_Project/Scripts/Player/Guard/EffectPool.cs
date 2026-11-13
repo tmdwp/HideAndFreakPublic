@@ -3,21 +3,17 @@ using UnityEngine;
 
 namespace GuardVsMannequin.Player.Guard
 {
-    /// <summary>
-    /// 사격·폭발 이펙트를 다시 쓰는 풀. 쏠 때마다 만들고 지우던 비용(생성·파티클 초기화·가비지)을 없앤다.
-    /// 원본 프리팹별로 쉬는 이펙트를 쌓아 두고, 씬이 바뀌어도 남도록 DontDestroyOnLoad 보관함에 둔다.
-    /// 총구 화염처럼 다른 오브젝트에 붙인 이펙트는 그 오브젝트와 함께 지워질 수 있으므로, 꺼낼 때 지워진 것은 건너뛴다.
-    /// </summary>
+    /// <summary>쏠 때마다 만들고 지우는 비용을 없애도록 사격·폭발 이펙트를 다시 쓰는 풀.</summary>
     public static class EffectPool
     {
-        // 프리팹마다 쉬게 둘 최대 개수. 넘치면 지운다.
+        // 메모리를 계속 붙잡지 않도록 프리팹마다 쉬게 둘 최대 개수.
         private const int MaxIdlePerPrefab = 16;
 
         private static readonly Dictionary<GameObject, Stack<PooledEffect>> idle = new();
         private static Transform storage;
 
         /// <summary>
-        /// 플레이 모드에 들어갈 때 목록을 비운다. (도메인 재로드를 끈 경우 이전 플레이의 항목이 남지 않도록)
+        /// 도메인 재로드를 끈 경우 정적 필드가 남아 이전 플레이의 지워진 항목을 꺼내므로, 플레이 모드에 들어갈 때 비운다.
         /// </summary>
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
         private static void ResetOnPlay()
@@ -27,12 +23,9 @@ namespace GuardVsMannequin.Player.Guard
         }
 
         /// <summary>
-        /// 이펙트를 꺼내(없으면 만들어) 위치에 놓고 처음부터 재생한다.
+        /// 쉬는 이펙트가 있으면 다시 쓰고, 없을 때만 새로 만들어 생성 비용을 줄인다.
         /// </summary>
-        /// <param name="prefab">이펙트 원본 프리팹.</param>
-        /// <param name="position">월드 위치.</param>
-        /// <param name="rotation">월드 회전.</param>
-        /// <param name="parent">붙일 부모. 없으면 null.</param>
+        /// <param name="parent">따라 움직여야 하면 붙일 부모.</param>
         /// <param name="brightness">밝기 배율 (<see cref="EffectTuning"/>).</param>
         /// <param name="scale">크기 배율 (<see cref="EffectTuning"/>).</param>
         /// <param name="lifetime">이 시간(초)이 지나면 풀로 돌아간다.</param>
@@ -58,9 +51,7 @@ namespace GuardVsMannequin.Player.Guard
             return effect;
         }
 
-        /// <summary>
-        /// 이펙트를 끄고 풀로 돌려놓는다. 이미 충분히 쌓여 있으면 지운다.
-        /// </summary>
+        /// <summary>부모와 함께 지워지지 않도록 보관함으로 옮기고, 넘치면 메모리를 아끼려고 지운다.</summary>
         public static void Release(PooledEffect effect)
         {
             if (effect == null)
@@ -79,10 +70,7 @@ namespace GuardVsMannequin.Player.Guard
             stack.Push(effect);
         }
 
-        /// <summary>
-        /// 쉬고 있는 이펙트 중 같은 조정값으로 만든 것을 꺼낸다. 지워졌거나 조정값이 바뀐 것은 버린다.
-        /// (Play 중 인스펙터에서 밝기·크기를 바꾸면 다음 사격부터 새 값으로 만들어진다)
-        /// </summary>
+        /// <summary>조정은 곱해지는 방식이라 다른 조정값으로 만든 것은 다시 쓸 수 없어 버린다.</summary>
         private static PooledEffect TakeIdle(GameObject prefab, float brightness, float scale)
         {
             if (!idle.TryGetValue(prefab, out Stack<PooledEffect> stack))
@@ -101,15 +89,15 @@ namespace GuardVsMannequin.Player.Guard
         }
 
         /// <summary>
-        /// 쉬는 이펙트를 둘 보관함. 씬이 바뀌어도 남는다.
+        /// 씬이 바뀌어도 쉬는 이펙트가 지워지지 않도록 DontDestroyOnLoad 보관함을 처음 필요할 때 만든다.
         /// </summary>
         private static Transform GetStorage()
         {
             if (storage == null)
             {
-                var root = new GameObject("EffectPool");
-                Object.DontDestroyOnLoad(root);
-                storage = root.transform;
+                var storageRoot = new GameObject("EffectPool");
+                Object.DontDestroyOnLoad(storageRoot);
+                storage = storageRoot.transform;
             }
             return storage;
         }

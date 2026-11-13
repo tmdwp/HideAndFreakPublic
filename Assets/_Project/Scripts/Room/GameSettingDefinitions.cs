@@ -12,7 +12,7 @@ namespace GuardVsMannequin.Room
     public enum GameSettingId : byte
     {
         Map,
-        // 1번은 예전 PreparationTime(가드 대기 시간) 자리. 번호를 유지해 룸 UI의 기존 줄을 그대로 쓴다.
+        // 룸 UI의 기존 줄을 그대로 쓰도록 예전 항목 번호를 비워 둔다.
         HuntDelay,
         PlayTime,
         HuntTime,
@@ -29,19 +29,14 @@ namespace GuardVsMannequin.Room
         MannequinAttackRange,
         GuardMoveSpeed,
         MannequinMoveSpeed,
-        // 새 항목은 끝에 추가한다. (UI 프리팹이 번호로 저장하므로 중간에 넣으면 기존 줄이 어긋남) 표시 순서는 CSV가 정한다.
+        // UI 프리팹이 번호로 저장하므로 새 항목은 끝에 추가한다.
         GunDamage,
         MannequinAttackDamage,
         GunMagazineSize,
         GunReloadTime
     }
 
-    /// <summary>
-    /// 설정 항목의 조정 단위, 범위, 표시 순서와 GameSettings 읽기/쓰기를 정의한다.
-    /// 조정 단위·범위·순서는 Resources/Data/game_settings.csv에서, 이름·단위 문구는 strings.csv에서 읽는다.
-    /// 룸 UI(표시)와 RoomState(서버 조정)가 같은 정의를 사용한다.
-    /// 인원에 따라 달라지는 최종 범위는 <see cref="GameSettingsValidator"/>가 다시 보정한다.
-    /// </summary>
+    /// <summary>빌드 후에도 조정할 수 있도록 설정 항목의 단위·범위·순서를 CSV에서 읽어 GameSettings 읽기/쓰기와 함께 정의한다.</summary>
     public static class GameSettingDefinitions
     {
         private const string TablePath = "Data/game_settings";
@@ -57,7 +52,7 @@ namespace GuardVsMannequin.Room
             public readonly float max;
             public readonly string unitKey;
 
-            /// <summary>정의를 만든다.</summary>
+            /// <summary>CSV 한 줄이나 기본값에서 같은 형태로 만들 수 있도록 값을 묶는다.</summary>
             public Definition(GameSettingId id, float step, float min, float max, string unitKey)
             {
                 this.id = id;
@@ -67,11 +62,11 @@ namespace GuardVsMannequin.Room
                 this.unitKey = unitKey;
             }
 
-            /// <summary>현재 언어의 항목 이름.</summary>
+            /// <summary>언어를 바꾸면 바로 반영되도록 저장하지 않고 매번 문구를 찾는다.</summary>
             public string Label => Loc.Get("setting." + id);
         }
 
-        /// <summary>CSV를 읽지 못했거나 빠진 항목에 쓰는 기본 정의.</summary>
+        /// <summary>CSV를 읽지 못했거나 새 항목이 CSV에 아직 없어도 룸 UI가 비지 않도록 둔 기본 정의.</summary>
         private static readonly Definition[] fallbackDefinitions =
         {
             new(GameSettingId.Map, 1f, 0f, 4f, string.Empty),
@@ -96,9 +91,7 @@ namespace GuardVsMannequin.Room
             new(GameSettingId.GunReloadTime, 0.5f, 0.5f, 5f, "unit.seconds")
         };
 
-        /// <summary>
-        /// 룸 UI에 보이지 않고 호스트가 바꿀 수 없는 항목. 값은 default_game_settings.json(과 맵 기본값)으로만 정해진다.
-        /// </summary>
+        /// <summary>호스트가 바꾸면 균형이 쉽게 깨지는 항목이라 룸 UI에서 숨긴다.</summary>
         private static readonly HashSet<GameSettingId> hiddenInRoom = new()
         {
             GameSettingId.MannequinAttackRange,
@@ -109,14 +102,14 @@ namespace GuardVsMannequin.Room
         private static List<Definition> definitions;
 
         /// <summary>
-        /// 룸 UI에 표시하고 호스트가 조정할 수 있는 항목인지 여부.
+        /// 룸 UI와 서버 조정이 같은 기준으로 숨김 항목을 거르도록 한곳에서 판단한다.
         /// </summary>
         public static bool IsShownInRoom(GameSettingId id)
         {
             return !hiddenInRoom.Contains(id);
         }
 
-        /// <summary>표시 순서대로 나열한 모든 설정 항목. (처음 사용할 때 CSV를 읽음)</summary>
+        /// <summary>CSV를 매번 읽지 않도록 처음 쓸 때 한 번 읽어 표시 순서대로 둔다.</summary>
         public static IReadOnlyList<Definition> All
         {
             get
@@ -127,16 +120,14 @@ namespace GuardVsMannequin.Room
         }
 
         /// <summary>
-        /// 다음 사용 때 CSV를 다시 읽도록 캐시를 비운다. (에디터 도구가 CSV 수정 내용을 바로 반영할 때 사용)
+        /// 에디터 도구가 CSV 수정 내용을 바로 반영할 수 있도록 다음 사용 때 다시 읽게 한다.
         /// </summary>
         public static void ClearCache()
         {
             definitions = null;
         }
 
-        /// <summary>
-        /// 항목 정의를 찾는다. 맵 항목의 범위는 맵 목록(내장 맵 + 켜진 모드) 수에 맞춘다.
-        /// </summary>
+        /// <summary>맵 수는 켜진 모드에 따라 바뀌므로 맵 항목만 지금 맵 목록 수로 범위를 만든다.</summary>
         public static Definition Get(GameSettingId id)
         {
             if (id == GameSettingId.Map)
@@ -150,10 +141,7 @@ namespace GuardVsMannequin.Room
             return All[0];
         }
 
-        /// <summary>
-        /// 지금 고른 맵에서 쓰는 항목 정의. 게임 범위와 맵의 범위(map.json)가 겹치는 구간이다.
-        /// 맵이 범위를 정하지 않았거나 두 범위가 겹치지 않으면 게임 범위를 쓴다.
-        /// </summary>
+        /// <summary>맵마다 어울리는 범위가 달라 게임 범위와 맵 범위가 겹치는 구간을 쓰고, 겹치지 않으면 게임 범위를 쓴다.</summary>
         public static Definition GetEffective(GameSettingId id, GameSettings settings)
         {
             Definition definition = Get(id);
@@ -166,7 +154,7 @@ namespace GuardVsMannequin.Room
         }
 
         /// <summary>
-        /// 설정에서 항목 값을 읽는다.
+        /// UI가 항목마다 필드 이름을 알 필요 없도록 ID로 값을 읽는 창구를 둔다.
         /// </summary>
         public static float GetValue(GameSettings settings, GameSettingId id)
         {
@@ -197,7 +185,7 @@ namespace GuardVsMannequin.Room
         }
 
         /// <summary>
-        /// 항목 값을 한 단계 올리거나 내린 설정을 반환한다. (항목 범위로 제한)
+        /// 화살표 버튼 한 번에 정해진 단위만큼 움직이고, 맵 범위를 넘지 않도록 자른다.
         /// </summary>
         public static GameSettings Adjust(GameSettings settings, GameSettingId id, int direction)
         {
@@ -208,10 +196,7 @@ namespace GuardVsMannequin.Room
             return SetValue(settings, id, Mathf.Clamp(value, definition.min, definition.max));
         }
 
-        /// <summary>
-        /// 항목 값을 직접 지정한 설정을 반환한다. (항목 범위로 제한, 정수 항목은 반올림, 소수는 둘째 자리까지)
-        /// 키보드로 값을 입력할 때 사용한다.
-        /// </summary>
+        /// <summary>키보드로 아무 값이나 입력할 수 있어 범위로 자르고 소수 둘째 자리까지만 남긴다.</summary>
         public static GameSettings SetClamped(GameSettings settings, GameSettingId id, float value)
         {
             Definition definition = GetEffective(id, settings);
@@ -220,7 +205,7 @@ namespace GuardVsMannequin.Room
         }
 
         /// <summary>
-        /// 입력 칸에 보여줄 숫자만의 문자열. (단위 없이, 소수점은 항상 '.')
+        /// 입력 칸은 다시 읽혀야 하므로 단위 없이, 지역 설정과 관계없이 소수점 '.'로 숫자만 보여 준다.
         /// </summary>
         public static string FormatNumber(GameSettings settings, GameSettingId id)
         {
@@ -231,16 +216,14 @@ namespace GuardVsMannequin.Room
         }
 
         /// <summary>
-        /// 입력한 문자열을 숫자로 읽는다. 쉼표 소수점도 받아준다.
+        /// 쉼표 소수점을 쓰는 지역의 사용자도 그대로 입력할 수 있도록 쉼표를 '.'로 바꿔 읽는다.
         /// </summary>
         public static bool TryParseInput(string text, out float value)
         {
             return float.TryParse((text ?? string.Empty).Trim().Replace(',', '.'), NumberStyles.Float, CultureInfo.InvariantCulture, out value);
         }
 
-        /// <summary>
-        /// 화면에 표시할 값 문자열을 만든다. (단위 문구는 현재 언어)
-        /// </summary>
+        /// <summary>게스트마다 맵 목록이 달라 맵은 방 상태의 이름을 쓰고, 나머지는 단위 문구를 붙인다.</summary>
         public static string Format(GameSettings settings, GameSettingId id)
         {
             float value = GetValue(settings, id);
@@ -252,9 +235,7 @@ namespace GuardVsMannequin.Room
             return string.IsNullOrEmpty(definition.unitKey) ? number : Loc.Format(definition.unitKey, number);
         }
 
-        /// <summary>
-        /// 설정에 항목 값을 쓴 결과를 반환한다. (정수 항목은 반올림)
-        /// </summary>
+        /// <summary>정수 필드에 소수가 들어가지 않도록 정수 항목은 반올림해서 쓴다.</summary>
         private static GameSettings SetValue(GameSettings settings, GameSettingId id, float value)
         {
             int rounded = Mathf.RoundToInt(value);
@@ -284,19 +265,15 @@ namespace GuardVsMannequin.Room
             return settings;
         }
 
-        /// <summary>
-        /// CSV에서 항목 정의를 읽는다. 읽을 수 없는 줄은 건너뛰고, 빠진 항목은 기본 정의를 뒤에 붙인다.
-        /// </summary>
+        /// <summary>외부 CSV를 먼저 읽고, 빠진 항목이 UI에서 사라지지 않도록 기본 정의를 뒤에 붙인다.</summary>
         private static List<Definition> LoadDefinitions()
         {
-            // 빌드 폴더의 GameData/Data/game_settings.csv를 먼저 보고, 없거나 깨졌으면 내장 원본을 쓴다.
             if (!DataFiles.TryLoad<List<Definition>>(TablePath, ".csv", TryParseTable, out List<Definition> result))
             {
                 Debug.LogWarning($"[GameSettingDefinitions] {TablePath}.csv를 사용할 수 없어 기본 정의를 사용합니다.");
                 result = new List<Definition>();
             }
 
-            // 파일에서 빠진 항목은 기본 정의를 뒤에 붙인다.
             foreach (Definition fallback in fallbackDefinitions)
             {
                 if (!Contains(result, fallback.id))
@@ -306,13 +283,13 @@ namespace GuardVsMannequin.Room
         }
 
         /// <summary>
-        /// CSV를 항목 정의 목록으로 읽는다. 읽을 수 없는 줄은 건너뛰고, 읽은 줄이 하나도 없으면 깨진 파일로 본다.
+        /// 한 줄이 잘못돼도 나머지는 쓸 수 있도록 읽을 수 없는 줄만 건너뛰고, 하나도 못 읽었으면 깨진 파일로 보고 내장 원본으로 물러나게 한다.
         /// </summary>
         private static bool TryParseTable(string csv, out List<Definition> result)
         {
             result = new List<Definition>();
             List<string[]> rows = CsvParser.Parse(csv);
-            // 0번 행은 머리글(id,step,min,max,unit)
+            // 0번 행은 머리글이다.
             for (int rowIndex = 1; rowIndex < rows.Count; rowIndex++)
             {
                 if (TryParseRow(rows[rowIndex], out Definition definition) && !Contains(result, definition.id))
@@ -323,9 +300,7 @@ namespace GuardVsMannequin.Room
             return result.Count > 0;
         }
 
-        /// <summary>
-        /// CSV 한 줄을 정의로 바꾼다. (id, step, min, max, unit)
-        /// </summary>
+        /// <summary>단위가 0이거나 범위가 뒤집히면 값을 정할 수 없어 그런 줄은 거부한다.</summary>
         private static bool TryParseRow(string[] row, out Definition definition)
         {
             definition = default;
@@ -342,7 +317,7 @@ namespace GuardVsMannequin.Room
         }
 
         /// <summary>
-        /// 시스템 지역 설정과 관계없이 소수점(.)으로 숫자를 읽는다.
+        /// 데이터 파일은 '.' 소수점으로 적으므로, 쉼표 소수점 지역에서도 같은 값으로 읽히도록 InvariantCulture를 쓴다.
         /// </summary>
         private static bool TryParseFloat(string text, out float value)
         {
@@ -350,7 +325,7 @@ namespace GuardVsMannequin.Room
         }
 
         /// <summary>
-        /// 목록에 같은 항목이 이미 있는지 확인한다.
+        /// 같은 항목이 두 번 들어가면 UI에 줄이 중복되므로 넣기 전에 확인한다.
         /// </summary>
         private static bool Contains(List<Definition> list, GameSettingId id)
         {

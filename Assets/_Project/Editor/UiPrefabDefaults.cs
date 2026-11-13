@@ -4,20 +4,16 @@ using UnityEngine;
 
 namespace GuardVsMannequin.Editor
 {
-    /// <summary>
-    /// UI 프리팹의 초기화 기준본 저장소. (프로젝트 루트의 UiDefaults 폴더, Assets 밖이라 Unity가 불러오지 않음)
-    /// 기준본은 .prefab과 .meta를 함께 보관한다. 되돌릴 때 파일 내용을 그대로 덮어쓰므로 GUID·내부 ID가 같아 씬의 프리팹 인스턴스가 그대로 갱신된다.
-    /// </summary>
+    /// <summary>UI 프리팹을 GUID 그대로 되돌릴 수 있도록 .prefab과 .meta를 함께 보관하는 기준본 저장소.</summary>
     public static class UiPrefabDefaults
     {
-        /// <summary>초기화 기준본 폴더. (프로젝트 루트 기준)</summary>
+        /// <summary>기준본이 에셋으로 중복 등록되지 않도록 Assets 밖에 둔다.</summary>
         public const string Folder = "UiDefaults";
 
-        /// <summary>프로젝트 루트 폴더 (Assets의 부모).</summary>
         private static string ProjectRoot => Path.GetDirectoryName(Application.dataPath);
 
         /// <summary>
-        /// 프리팹의 기준본이 있는지 여부.
+        /// 메뉴가 "초기화" 항목을 켤지 정할 수 있도록 기준본이 있는지 알려 준다.
         /// </summary>
         public static bool Exists(string prefabPath)
         {
@@ -25,51 +21,49 @@ namespace GuardVsMannequin.Editor
         }
 
         /// <summary>
-        /// 지금 프리팹 파일(.prefab + .meta)을 기준본으로 복사한다.
+        /// GUID가 같아야 씬의 인스턴스가 끊기지 않으므로 .meta까지 함께 복사한다.
         /// </summary>
         /// <returns>프리팹이 있어 저장했으면 true.</returns>
         public static bool Save(string prefabPath)
         {
-            string source = Path.Combine(ProjectRoot, prefabPath);
-            if (!File.Exists(source))
+            string sourcePath = Path.Combine(ProjectRoot, prefabPath);
+            if (!File.Exists(sourcePath))
                 return false;
 
             Directory.CreateDirectory(Path.Combine(ProjectRoot, Folder));
-            File.Copy(source, GetDefaultPath(prefabPath), true);
-            File.Copy(source + ".meta", GetDefaultPath(prefabPath) + ".meta", true);
+            File.Copy(sourcePath, GetDefaultPath(prefabPath), true);
+            File.Copy(sourcePath + ".meta", GetDefaultPath(prefabPath) + ".meta", true);
             return true;
         }
 
-        /// <summary>
-        /// 기준본 내용으로 프리팹 파일을 덮어쓴다. .meta가 없을 때만 기준본의 .meta를 복사해 GUID를 원래대로 맞춘다.
-        /// </summary>
+        /// <summary>Unity가 쓰는 GUID와 어긋나지 않도록 .meta가 없을 때만 기준본의 것을 복사한다.</summary>
         /// <returns>기준본이 있어 복원했으면 true.</returns>
         public static bool Restore(string prefabPath)
         {
-            string source = GetDefaultPath(prefabPath);
-            if (!File.Exists(source))
+            string sourcePath = GetDefaultPath(prefabPath);
+            if (!File.Exists(sourcePath))
                 return false;
 
-            string target = Path.Combine(ProjectRoot, UiPrefabLibrary.EnsureFolder(prefabPath));
-            File.Copy(source, target, true);
-            if (!File.Exists(target + ".meta") && File.Exists(source + ".meta"))
-                File.Copy(source + ".meta", target + ".meta");
+            string targetPath = Path.Combine(ProjectRoot, UiPrefabLibrary.EnsureFolder(prefabPath));
+            File.Copy(sourcePath, targetPath, true);
+            if (!File.Exists(targetPath + ".meta") && File.Exists(sourcePath + ".meta"))
+                File.Copy(sourcePath + ".meta", targetPath + ".meta");
             AssetDatabase.ImportAsset(prefabPath, ImportAssetOptions.ForceUpdate);
             return true;
         }
 
         /// <summary>
-        /// 기준본을 모두 지운다.
+        /// 지금 모습을 새 기준으로 삼기 전에 낡은 기준본이 섞이지 않도록 통째로 지운다.
         /// </summary>
         public static void DeleteAll()
         {
-            string folder = Path.Combine(ProjectRoot, Folder);
-            if (Directory.Exists(folder))
-                Directory.Delete(folder, true);
+            string folderPath = Path.Combine(ProjectRoot, Folder);
+            if (Directory.Exists(folderPath))
+                Directory.Delete(folderPath, true);
         }
 
         /// <summary>
-        /// 프리팹 경로에 해당하는 기준본 파일 경로.
+        /// UI 프리팹은 이름이 겹치지 않으므로 하위 폴더 없이 파일 이름만으로 기준본을 둔다.
         /// </summary>
         private static string GetDefaultPath(string prefabPath)
         {

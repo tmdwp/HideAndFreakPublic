@@ -10,16 +10,10 @@ using UnityEngine;
 
 namespace GuardVsMannequin.Player.Mannequin
 {
-    /// <summary>
-    /// 마네킹의 변신 상태를 관리한다.
-    /// 우클릭으로 조준한 사물로 변신하거나 변신을 해제하며, 상태는 맵 사물 번호(<see cref="TransformableProp.Index"/>) 하나로 동기화된다.
-    /// 맡은 일은 입력 → 서버 검증 → 동기화뿐이고, 나머지는 나눠 맡긴다:
-    /// 조준한 사물 찾기 <see cref="PropTargetFinder"/>, 번호로 사물 찾기 <see cref="PropRegistry"/>,
-    /// 쿨타임 <see cref="ToolCooldown"/>, 외형 복사·적용 <see cref="PropDisguiseView"/>.
-    /// </summary>
+    /// <summary>변신 상태를 사물 번호 하나로 동기화하며 마네킹의 변신과 해제를 관리한다.</summary>
     public class MannequinTransformer : NetworkBehaviour, ICooldownGauge, IEmoteBlocker
     {
-        // 서버 거리 검증 여유(m). 클라이언트 조준 판정은 몸-명중 지점 거리, 서버는 몸-사물 경계 거리라 조금 다르다.
+        // 클라이언트와 서버가 재는 거리가 조금 달라 두는 서버 거리 검증 여유(m).
         private const float ServerRangeTolerance = 1.5f;
 
         private readonly SyncVar<int> currentPropIndex = new(TransformableProp.None);
@@ -29,16 +23,15 @@ namespace GuardVsMannequin.Player.Mannequin
         private IActionLock actionLock;
         private PropTargetFinder targetFinder;
 
-        /// <summary>변신 상태가 바뀌었을 때. 인자는 새 사물 번호(해제 시 <see cref="TransformableProp.None"/>). 각 피어에서 한 번씩 호출된다.</summary>
+        /// <summary>외형·충돌체·넉백이 변신을 따라가도록 피어마다 한 번씩 알린다.</summary>
         public event Action<int> DisguiseChanged;
 
-        /// <summary>현재 변신한 사물 번호. 변신하지 않았으면 <see cref="TransformableProp.None"/>.</summary>
+        /// <summary>재접속 때 같은 사물로 되돌리도록 노출하는 변신한 사물 번호.</summary>
         public int CurrentPropIndex => currentPropIndex.Value;
 
-        /// <summary>변신 중인지 여부.</summary>
         public bool IsDisguised => currentPropIndex.Value != TransformableProp.None;
 
-        /// <summary>변신 중에는 감정 표현을 할 수 없다.</summary>
+        /// <summary>사물 모습으로 감정 표현을 하면 바로 들키므로 변신 중에는 막는다.</summary>
         public bool IsEmoteBlocked => IsDisguised;
 
         public string DisplayName => Loc.Get("tool.disguise");
@@ -49,7 +42,7 @@ namespace GuardVsMannequin.Player.Mannequin
         public float CooldownProgress => cooldown.LocalProgress;
 
         /// <summary>
-        /// 입력·사물 찾기 구현을 만들고 동기화 콜백을 연결한다.
+        /// 외곽선 표시와 같은 판정을 쓰도록 사물 찾기 객체를 여기서 만들고, 변신 동기화를 이벤트로 연결한다.
         /// </summary>
         private void Awake()
         {
@@ -60,7 +53,7 @@ namespace GuardVsMannequin.Player.Mannequin
         }
 
         /// <summary>
-        /// 동기화 콜백을 해제한다.
+        /// 파괴된 뒤 동기화 콜백이 불리지 않도록 해제한다.
         /// </summary>
         private void OnDestroy()
         {
@@ -68,7 +61,7 @@ namespace GuardVsMannequin.Player.Mannequin
         }
 
         /// <summary>
-        /// 소유자만 우클릭 입력을 구독한다.
+        /// 남의 아바타가 내 우클릭에 반응하지 않도록 소유자만 입력을 듣는다.
         /// </summary>
         public override void OnStartClient()
         {
@@ -78,7 +71,7 @@ namespace GuardVsMannequin.Player.Mannequin
         }
 
         /// <summary>
-        /// 입력 구독을 해제한다.
+        /// 아바타가 사라진 뒤 입력 이벤트가 이 객체를 부르지 않도록 구독을 끊는다.
         /// </summary>
         public override void OnStopClient()
         {
@@ -87,9 +80,7 @@ namespace GuardVsMannequin.Player.Mannequin
                 playerInput.SecondaryPressed -= OnSecondaryPressed;
         }
 
-        /// <summary>
-        /// 변신 중이면 해제를, 아니면 조준한 사물로 변신을 요청한다.
-        /// </summary>
+        /// <summary>한 키로 변신과 해제를 함께 하므로 지금 상태에 따라 요청을 고르고, 해제 쿨타임은 먼저 시작한다.</summary>
         private void OnSecondaryPressed()
         {
             if (IsLocked)
@@ -110,8 +101,7 @@ namespace GuardVsMannequin.Player.Mannequin
         }
 
         /// <summary>
-        /// 지금 조준하고 있는 변신 가능 사물을 찾는다. (변신 사거리 안, 번호가 있고 너무 크지 않은 것만)
-        /// 외곽선 표시(<see cref="PropHighlighter"/>)도 같은 판정을 쓴다.
+        /// 외곽선 표시(<see cref="PropHighlighter"/>)가 변신 요청과 같은 판정을 쓰도록 사물 찾기를 밖에 연다.
         /// </summary>
         public bool TryGetAimedProp(out TransformableProp prop)
         {
@@ -119,7 +109,7 @@ namespace GuardVsMannequin.Player.Mannequin
         }
 
         /// <summary>
-        /// 서버에서 변신 요청을 검증하고 적용한다. (변신 가능한 사물인지, 사거리 안인지, 단계·쿨타임)
+        /// 클라이언트가 아무 번호나 보낼 수 있으므로 변신 가능 여부·사거리·단계·쿨타임을 서버에서 다시 확인한다.
         /// </summary>
         [ServerRpc]
         private void TransformServerRpc(int propIndex)
@@ -136,18 +126,15 @@ namespace GuardVsMannequin.Player.Mannequin
             currentPropIndex.Value = propIndex;
         }
 
-        /// <summary>
-        /// 몸에서 사물 경계까지의 거리가 변신 사거리(+여유) 안인지 확인한다. (먼 사물 번호를 보내는 조작 방지)
-        /// 경계는 사물의 지금 자리 기준이다. (판마다 섞기로 옮겨진 사물도 맞게 잰다)
-        /// </summary>
+        /// <summary>먼 사물 번호를 보내는 조작을 막도록 몸에서 사물의 지금 경계까지 거리를 잰다.</summary>
         private bool IsWithinRange(TransformableProp prop)
         {
-            float limit = GameTuning.TransformRange + ServerRangeTolerance;
-            return prop.CurrentWorldBounds.SqrDistance(transform.position) <= limit * limit;
+            float rangeLimit = GameTuning.TransformRange + ServerRangeTolerance;
+            return prop.CurrentWorldBounds.SqrDistance(transform.position) <= rangeLimit * rangeLimit;
         }
 
         /// <summary>
-        /// 서버에서 변신을 해제하고 해제 쿨타임을 시작한다.
+        /// 해제·재변신을 연타해 위치를 숨기지 못하도록 해제 쿨타임을 서버에서도 건다.
         /// </summary>
         [ServerRpc]
         private void UntransformServerRpc()
@@ -159,20 +146,24 @@ namespace GuardVsMannequin.Player.Mannequin
             cooldown.StartServer(GameTuning.UntransformCooldown);
         }
 
-        /// <summary>
-        /// 쿨타임 없이 강제로 변신을 해제한다. 사냥 시간 진입 시 사용하며, 이후 다시 변신할 수 있다.
-        /// </summary>
+        /// <summary>재접속한 사람이 같은 모습으로 돌아오도록 스폰 직전에 부르므로 [Server]를 붙이지 않는다.</summary>
+        public void ServerRestoreDisguise(int propIndex)
+        {
+            currentPropIndex.Value = propIndex;
+        }
+
+        /// <summary>사냥 시간에는 구울로 바뀌어야 하므로 진입할 때 쿨타임 없이 해제한다.</summary>
         [Server]
         public void ForceUntransform()
         {
             currentPropIndex.Value = TransformableProp.None;
         }
 
-        /// <summary>날아가는 중이라 변신·해제를 할 수 없는지. (<see cref="IActionLock"/>)</summary>
+        /// <summary>날아가는 중에 변신을 바꾸면 외형과 대리 물체가 어긋나므로 잠근다.</summary>
         private bool IsLocked => actionLock != null && actionLock.IsActionLocked;
 
         /// <summary>
-        /// 변신이 가능한 상태인지 확인한다. (탐색/사냥 시간만, 판 시작 준비 중에는 불가)
+        /// 카운트다운 중에 미리 변신해 두면 시작 전에 숨는 셈이므로 탐색·사냥 시간에만 허용한다.
         /// </summary>
         private static bool CanTransformIn(GameState state)
         {
@@ -180,14 +171,14 @@ namespace GuardVsMannequin.Player.Mannequin
         }
 
         /// <summary>
-        /// 사물 번호 변경을 피어마다 한 번만 알린다. (호스트는 클라이언트 콜백에서만 처리)
+        /// 호스트는 서버·클라이언트 콜백이 둘 다 오므로, 외형이 두 번 바뀌지 않게 클라이언트 쪽에서만 알린다.
         /// </summary>
-        private void OnPropIndexChanged(int prev, int next, bool asServer)
+        private void OnPropIndexChanged(int previousIndex, int nextIndex, bool asServer)
         {
             if (asServer && IsClientInitialized)
                 return;
 
-            DisguiseChanged?.Invoke(next);
+            DisguiseChanged?.Invoke(nextIndex);
         }
     }
 }

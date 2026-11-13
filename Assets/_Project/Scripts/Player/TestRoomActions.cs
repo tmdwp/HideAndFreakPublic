@@ -5,13 +5,7 @@ using GuardVsMannequin.Core;
 
 namespace GuardVsMannequin.Player
 {
-    /// <summary>
-    /// 테스트 방에서 호스트가 쓰는 게임 중 조작. (서버 전용)
-    /// - 가드 ↔ 마네킹: 호스트 아바타를 그 자리에서 다른 역할로 다시 스폰
-    /// - 마네킹 ↔ 구울: 사냥 시간을 켜고 끔. 끌 때는 마네킹을 다시 스폰해 사냥 모습(구울·1인칭·시야 제한)을 되돌림
-    /// - 게임 중 설정 변경
-    /// - 룸으로 돌아가기 (승패가 나지 않으므로 맵을 바꿀 때)
-    /// </summary>
+    /// <summary>테스트 방 호스트가 혼자 기능을 확인하도록 게임 중 역할·사냥 시간을 바꾼다.</summary>
     public sealed class TestRoomActions : ITestRoomActions
     {
         private readonly GameStateMachine stateMachine;
@@ -19,9 +13,7 @@ namespace GuardVsMannequin.Player
         private readonly ServerManager serverManager;
         private readonly ClientManager clientManager;
 
-        /// <summary>
-        /// 상태 머신과 재스폰 기능, 호스트 연결을 찾을 네트워크 관리자를 주입받는다.
-        /// </summary>
+        /// <summary>일반 클래스라 씬 참조를 직접 찾을 수 없어 필요한 것을 스포너에게서 받는다.</summary>
         public TestRoomActions(GameStateMachine stateMachine, IAvatarRespawner respawner, ServerManager serverManager, ClientManager clientManager)
         {
             this.stateMachine = stateMachine;
@@ -45,11 +37,11 @@ namespace GuardVsMannequin.Player
             if (!CanSwitch || !TryGetHostConnection(out NetworkConnection host))
                 return;
 
-            // 아바타가 없으면(죽어서 관전 중) 가드로 다시 시작한다.
-            PlayerRole next = respawner.TryGetRole(host, out PlayerRole current) && current == PlayerRole.Guard
+            // 죽어서 관전 중이면 바꿀 기준이 없으므로 가드로 다시 시작한다.
+            PlayerRole nextRole = respawner.TryGetRole(host, out PlayerRole currentRole) && currentRole == PlayerRole.Guard
                 ? PlayerRole.Mannequin
                 : PlayerRole.Guard;
-            respawner.Respawn(host, next);
+            respawner.Respawn(host, nextRole);
         }
 
         /// <inheritdoc />
@@ -76,20 +68,19 @@ namespace GuardVsMannequin.Player
         /// <inheritdoc />
         public void ReturnToRoom()
         {
-            // 대기 상태로 바꿔 아바타를 정리한 뒤(PlayerSpawner) 룸 씬으로 보낸다.
-            // MatchSessionBridge는 결과 화면(종료) 뒤의 대기만 룸 복귀로 처리하므로 여기서 직접 보낸다.
+            // 결과 화면 뒤의 대기만 룸 복귀로 처리되므로 아바타를 정리한 뒤 여기서 직접 룸 씬으로 보낸다.
             stateMachine.ChangeState(GameState.Waiting);
             GameServices.SceneFlow?.ReturnToRoom();
         }
 
         /// <summary>
-        /// 서버 쪽 호스트 연결을 찾는다.
+        /// 스폰은 서버 쪽 연결 객체로 해야 하는데 호스트가 아는 건 클라이언트 쪽 연결이라, 같은 ID로 서버 쪽 연결을 찾는다.
         /// </summary>
         private bool TryGetHostConnection(out NetworkConnection host)
         {
             host = null;
-            NetworkConnection local = clientManager.Connection;
-            return local != null && local.IsValid && serverManager.Clients.TryGetValue(local.ClientId, out host);
+            NetworkConnection localConnection = clientManager.Connection;
+            return localConnection != null && localConnection.IsValid && serverManager.Clients.TryGetValue(localConnection.ClientId, out host);
         }
     }
 }

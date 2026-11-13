@@ -5,11 +5,7 @@ using UnityEngine.UI;
 
 namespace GuardVsMannequin.UI
 {
-    /// <summary>
-    /// 조준점 둘레 원형 고리: 조준점 쿨타임 도구(<see cref="ICrosshairCooldown"/> — 구울 공격)의 쿨타임.
-    /// 총 탄 게이지(<see cref="HudAmmoDisplay"/>)와 같은 모양으로, 사용하면 비었다가 쿨타임 동안 반시계 방향으로 다시 찬다.
-    /// 다 찼어도 지금 쓸 수 없으면(사냥 시간 아님, 변신 중) 숨긴다.
-    /// </summary>
+    /// <summary>조준과 함께 쓰는 도구의 쿨타임을 조준점 둘레 고리로 보여 준다.</summary>
     public class HudCooldownRing : MonoBehaviour, IHudSection
     {
         [SerializeField] private GameObject ringPanel;
@@ -22,37 +18,41 @@ namespace GuardVsMannequin.UI
 
         private HudContext context;
 
-        /// <inheritdoc />
+        /// <summary>
+        /// 로컬 아바타가 바뀌어도 따라가도록 아바타 대신 추적기를 담은 공용 정보를 기억한다.
+        /// </summary>
         public void Bind(HudContext hudContext)
         {
             context = hudContext;
         }
 
-        /// <inheritdoc />
+        /// <summary>
+        /// 네트워크 준비 전에는 도구가 없으므로 숨긴다.
+        /// </summary>
         public void Hide()
         {
             ringPanel.SetActive(false);
         }
 
-        /// <inheritdoc />
+        /// <summary>
+        /// 쓸 수 없는 단계에 가득 찬 고리가 보이면 공격할 수 있다고 오해하므로, 차는 중이거나 지금 쓸 수 있을 때만 보인다.
+        /// </summary>
         public void Refresh(GameState state)
         {
             bool isInMatch = state is GameState.Preparation or GameState.Playing or GameState.Hunting;
             ICrosshairCooldown tool = FindTool(context.LocalPlayer.Tools);
-            float progress = tool != null ? tool.CooldownProgress : 1f;
-            bool isCharging = progress < 1f;
-            bool visible = isInMatch && tool != null && (isCharging || tool.IsReady);
-            ringPanel.SetActive(visible);
-            if (!visible)
+            float cooldownProgress = tool != null ? tool.CooldownProgress : 1f;
+            bool isCharging = cooldownProgress < 1f;
+            bool isVisible = isInMatch && tool != null && (isCharging || tool.IsReady);
+            ringPanel.SetActive(isVisible);
+            if (!isVisible)
                 return;
 
-            ringFill.fillAmount = progress;
+            ringFill.fillAmount = cooldownProgress;
             ringFill.color = isCharging ? chargingColor : readyColor;
         }
 
-        /// <summary>
-        /// 로컬 아바타의 조준점 쿨타임 도구를 찾는다. 없으면 null.
-        /// </summary>
+        /// <summary>역할마다 도구 구성이 달라 인터페이스로 찾고 첫 도구만 쓴다.</summary>
         private static ICrosshairCooldown FindTool(IReadOnlyList<ITool> tools)
         {
             foreach (ITool tool in tools)

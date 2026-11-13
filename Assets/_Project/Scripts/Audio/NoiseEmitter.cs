@@ -4,22 +4,18 @@ using UnityEngine;
 
 namespace GuardVsMannequin.Audio
 {
-    /// <summary>
-    /// 오브젝트 위치에서 3D 소음을 재생한다.
-    /// 서버가 <see cref="Emit"/>으로 모든 클라이언트에 재생을 지시하고,
-    /// 이미 RPC로 전달된 사건(사격 등)은 <see cref="PlayLocal"/>로 추가 전송 없이 재생한다.
-    /// </summary>
+    /// <summary>오브젝트 위치에서 3D 소음을 재생하며, 이미 RPC로 전달된 사건은 추가 전송 없이 재생한다.</summary>
     public class NoiseEmitter : NetworkBehaviour
     {
         [SerializeField] private NoiseLibrary library;
 
         private AudioSource audioSource;
 
-        /// <summary>소음 설정. (반복 재생하는 소리를 직접 관리하는 구성 요소가 클립·거리를 읽는다)</summary>
+        /// <summary>반복 재생하는 소리를 직접 관리하는 구성 요소가 같은 클립·거리를 쓰도록 연다.</summary>
         public NoiseLibrary Library => library;
 
         /// <summary>
-        /// 3D 오디오 소스를 준비한다.
+        /// 거리에 따라 크기가 줄어야 위치 단서가 되므로 3D 소스를 선형 감쇠로 준비한다.
         /// </summary>
         private void Awake()
         {
@@ -30,9 +26,7 @@ namespace GuardVsMannequin.Audio
             audioSource.minDistance = 1f;
         }
 
-        /// <summary>
-        /// 모든 클라이언트에서 소음을 재생한다. (서버 전용)
-        /// </summary>
+        /// <summary>서버에서만 일어나는 사건을 모든 클라이언트가 듣도록 재생을 지시한다.</summary>
         [Server]
         public void Emit(NoiseType type)
         {
@@ -40,7 +34,7 @@ namespace GuardVsMannequin.Audio
         }
 
         /// <summary>
-        /// 서버 지시를 받아 소음을 재생한다.
+        /// 실제 재생은 각 클라이언트가 하므로 받은 종류를 로컬로 재생한다.
         /// </summary>
         [ObserversRpc]
         private void EmitObserversRpc(NoiseType type)
@@ -49,9 +43,9 @@ namespace GuardVsMannequin.Audio
         }
 
         /// <summary>
-        /// 이 클라이언트에서만 소음을 재생한다.
+        /// 사격처럼 이미 RPC로 모두에게 알려진 사건은 소음을 따로 보낼 필요가 없어서 이 클라이언트에서만 재생한다.
         /// </summary>
-        /// <param name="volumeScale">설정 크기에 곱할 배율. (본인에게 들리는 자기 몸 소리를 줄일 때 등)</param>
+        /// <param name="volumeScale">본인에게 들리는 자기 몸 소리처럼 줄여야 할 때 곱할 배율.</param>
         public void PlayLocal(NoiseType type, float volumeScale = 1f)
         {
             if (library == null || audioSource == null)
@@ -62,10 +56,7 @@ namespace GuardVsMannequin.Audio
             audioSource.PlayOneShot(library.GetClip(type), entry.volume * volumeScale * AudioVolumes.Sfx);
         }
 
-        /// <summary>
-        /// 이 클라이언트에서만, 오브젝트가 아닌 지정한 위치에서 소음을 재생한다. (수류탄 폭발처럼 떨어진 곳의 소리)
-        /// 재생이 끝나면 임시 오디오 오브젝트를 지운다.
-        /// </summary>
+        /// <summary>오브젝트와 떨어진 곳의 소리가 그 위치에서 들리도록 같은 설정의 임시 오디오 오브젝트로 재생한다.</summary>
         public void PlayLocalAt(NoiseType type, Vector3 position)
         {
             if (library == null || audioSource == null)

@@ -5,12 +5,7 @@ using UnityEngine.SceneManagement;
 
 namespace GuardVsMannequin.Editor
 {
-    /// <summary>
-    /// 맵을 직접 만들 때 쓰는 도우미 창. 메뉴 GameSettingTools > 맵 제작 > 맵 제작 도우미.
-    /// 위에서부터 순서대로 진행하면 게임에서 쓸 수 있는 맵이 된다.
-    /// 1. 새 맵 만들기 → 2. Map/Environment에 모델 배치 → 3. 충돌체·변신 사물·조명 등록 → 4. 지점 배치
-    /// → 5. 경계 맞추기 → 6. 검사 → 7. 최적화 → 8. 맵 목록 갱신
-    /// </summary>
+    /// <summary>처음 맵을 만드는 사람도 단계를 따라 게임용 맵을 완성하도록 돕는 창.</summary>
     public class MapMakerWindow : EditorWindow
     {
         private string newMapName = "MyMap";
@@ -18,18 +13,14 @@ namespace GuardVsMannequin.Editor
         private bool validated;
         private Vector2 scroll;
 
-        /// <summary>
-        /// 창을 연다.
-        /// </summary>
+        /// <summary>단계 설명이 잘리지 않도록 최소 크기를 둔 채 연다.</summary>
         [MenuItem(EditorMenus.Root + "맵 제작/맵 제작 도우미")]
         private static void Open()
         {
             GetWindow<MapMakerWindow>("맵 제작 도우미").minSize = new Vector2(360f, 520f);
         }
 
-        /// <summary>
-        /// 단계별 버튼과 검사 결과를 그린다.
-        /// </summary>
+        /// <summary>순서대로 따라 할 수 있도록 단계별 버튼을 늘어놓고, 맵이 아닌 씬에서는 맵 전용 단계를 막는다.</summary>
         private void OnGUI()
         {
             scroll = EditorGUILayout.BeginScrollView(scroll);
@@ -63,8 +54,6 @@ namespace GuardVsMannequin.Editor
                 {
                     if (GUILayout.Button("변신 사물로 등록"))
                         Report("변신 사물", MapAuthoringTools.RegisterSelectedAsProps());
-                    if (GUILayout.Button("벽으로 등록"))
-                        Report("벽", MapAuthoringTools.RegisterSelectedAsWalls());
                     if (GUILayout.Button("등록 해제"))
                         Report("등록 해제", MapAuthoringTools.UnregisterSelected());
                 }
@@ -116,7 +105,7 @@ namespace GuardVsMannequin.Editor
         }
 
         /// <summary>
-        /// 단계 제목과 설명을 그린다.
+        /// 단계마다 같은 모양으로 보이도록 제목·설명 그리기를 한곳에 둔다.
         /// </summary>
         private static void Section(string title, string description)
         {
@@ -125,9 +114,7 @@ namespace GuardVsMannequin.Editor
             EditorGUILayout.LabelField(description, EditorStyles.wordWrappedMiniLabel);
         }
 
-        /// <summary>
-        /// 검사 결과를 오류·경고로 나눠 그린다. 관련 오브젝트가 있으면 "선택" 버튼으로 찾아간다.
-        /// </summary>
+        /// <summary>검사 전에는 "문제 없음"으로 오해하지 않도록 아무것도 그리지 않는다.</summary>
         private void DrawIssues()
         {
             if (!validated)
@@ -153,12 +140,10 @@ namespace GuardVsMannequin.Editor
             }
         }
 
-        /// <summary>
-        /// 작업 결과를 창 알림으로 보여준다.
-        /// </summary>
-        private void Report(string label, int count)
+        /// <summary>Console을 열지 않아도 결과를 알 수 있게 창 알림으로 보여 준다.</summary>
+        private void Report(string label, int changedCount)
         {
-            ShowNotification(new GUIContent($"{label} {count}개"));
+            ShowNotification(new GUIContent($"{label} {changedCount}개"));
             validated = false;
         }
     }

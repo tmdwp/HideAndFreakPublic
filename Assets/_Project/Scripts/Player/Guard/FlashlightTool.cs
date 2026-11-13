@@ -7,10 +7,7 @@ using UnityEngine;
 
 namespace GuardVsMannequin.Player.Guard
 {
-    /// <summary>
-    /// 가드의 손전등. 사냥 시간에만 E키로 켜고 끌 수 있고, 배터리는 무제한이다.
-    /// 켜짐 상태는 서버가 관리해 모든 플레이어에게 보이며, 사냥 시간이 끝나면 자동으로 꺼진다.
-    /// </summary>
+    /// <summary>모두에게 보이도록 서버가 켜짐을 관리하는 사냥 시간 전용 가드 손전등.</summary>
     public class FlashlightTool : NetworkBehaviour, ISwitchableTool
     {
         [Tooltip("카메라 피벗 아래에 둔 스포트라이트. 원격 가드는 PlayerViewSync로 상하 방향이 맞춰진다.")]
@@ -33,14 +30,11 @@ namespace GuardVsMannequin.Player.Guard
         /// <inheritdoc />
         public bool IsOn => isOn.Value;
 
-        /// <summary>
-        /// 구성 요소를 캐시하고, 켜짐 상태 변경을 조명에 반영하도록 연결한다.
-        /// </summary>
+        /// <summary>프리팹마다 맞추지 않도록 빛 수치는 조정 파일에서 넣는다.</summary>
         private void Awake()
         {
             playerInput = GetComponent<IPlayerInput>();
             noiseEmitter = GetComponent<NoiseEmitter>();
-            // 범위·퍼짐 각도·밝기는 조정 파일(game_tuning.csv)을 따른다.
             spotLight.range = GameTuning.FlashlightRange;
             spotLight.intensity = GameTuning.FlashlightIntensity;
             spotLight.spotAngle = GameTuning.FlashlightAngle;
@@ -50,17 +44,14 @@ namespace GuardVsMannequin.Player.Guard
         }
 
         /// <summary>
-        /// 동기화 콜백을 해제한다.
+        /// 파괴된 뒤 동기화 콜백이 불리지 않도록 해제한다.
         /// </summary>
         private void OnDestroy()
         {
             isOn.OnChange -= OnIsOnChanged;
         }
 
-        /// <summary>
-        /// 소유자만 손전등 키 입력을 구독한다.
-        /// 다른 가드의 손전등은 그림자를 끈다. (그림자 조명마다 그림자 맵을 따로 그려야 해서, 가드가 여럿이면 비용이 크다)
-        /// </summary>
+        /// <summary>그림자 비용을 줄이도록 다른 가드의 손전등은 그림자를 끄고, 입력은 소유자만 듣는다.</summary>
         public override void OnStartClient()
         {
             base.OnStartClient();
@@ -73,7 +64,7 @@ namespace GuardVsMannequin.Player.Guard
         }
 
         /// <summary>
-        /// 입력 구독을 해제한다.
+        /// 아바타가 사라진 뒤 입력 이벤트가 이 객체를 부르지 않도록 구독을 끊는다.
         /// </summary>
         public override void OnStopClient()
         {
@@ -83,7 +74,7 @@ namespace GuardVsMannequin.Player.Guard
         }
 
         /// <summary>
-        /// 서버에서 사냥 시간이 아니면 손전등을 끈다.
+        /// 사냥 시간이 끝나도 켜진 채 남으면 다음 탐색 단계에서 반칙이 되므로 서버가 끈다.
         /// </summary>
         private void Update()
         {
@@ -92,7 +83,7 @@ namespace GuardVsMannequin.Player.Guard
         }
 
         /// <summary>
-        /// 사냥 시간이고 쿨타임이 끝났으면 서버에 켜기/끄기를 요청한다.
+        /// 연타로 깜빡이지 않게 짧은 쿨타임을 소유자 화면에서 먼저 걸고 서버에 요청한다.
         /// </summary>
         private void OnFlashlightPressed()
         {
@@ -103,7 +94,7 @@ namespace GuardVsMannequin.Player.Guard
         }
 
         /// <summary>
-        /// 서버에서 사냥 시간·쿨타임을 확인하고 켜짐 상태를 뒤집는다.
+        /// 클라이언트는 조작할 수 있으므로 서버가 사냥 시간·쿨타임을 다시 확인한 뒤에 뒤집는다.
         /// </summary>
         [ServerRpc]
         private void ToggleServerRpc()
@@ -117,15 +108,14 @@ namespace GuardVsMannequin.Player.Guard
         }
 
         /// <summary>
-        /// 켜짐 상태를 조명에 반영하고 스위치 소리를 낸다.
+        /// 호스트는 서버/클라이언트 콜백이 모두 오므로, 소리가 두 번 나지 않게 클라이언트 쪽에서만 처리한다.
         /// </summary>
-        private void OnIsOnChanged(bool prev, bool next, bool asServer)
+        private void OnIsOnChanged(bool previousValue, bool nextValue, bool asServer)
         {
-            // 호스트는 서버/클라이언트 콜백이 모두 오므로 클라이언트 쪽에서만 처리한다.
             if (asServer && IsClientInitialized)
                 return;
 
-            spotLight.enabled = next;
+            spotLight.enabled = nextValue;
             if (noiseEmitter != null)
                 noiseEmitter.PlayLocal(NoiseType.FlashlightClick);
         }

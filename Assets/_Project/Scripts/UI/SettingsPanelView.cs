@@ -5,15 +5,7 @@ using UnityEngine.UI;
 
 namespace GuardVsMannequin.UI
 {
-    /// <summary>
-    /// 설정 화면의 틀: 탭 전환, 열기/닫기, "모두 기본값으로".
-    /// 실제 설정은 하위의 설정 묶음(<see cref="ISettingsSection"/>)이 각자 처리한다.
-    /// - 그래픽 탭: <see cref="DisplaySettingsSection"/>(화면 모드, 해상도), <see cref="LanguageSettingsSection"/>(언어)
-    /// - 사운드 탭: <see cref="SoundSettingsSection"/>
-    /// - 조작 키 탭: <see cref="ControlSettingsSection"/>
-    /// 새 설정을 추가할 때는 ISettingsSection 컴포넌트를 원하는 페이지 안에 두면 자동으로 연결된다.
-    /// 로비와 게임 중 ESC 메뉴에서 같은 화면을 쓴다.
-    /// </summary>
+    /// <summary>실제 설정은 하위 설정 묶음에 맡기고 탭 전환·열고 닫기·기본값 복원만 맡는 설정 화면 틀.</summary>
     public class SettingsPanelView : MonoBehaviour
     {
         [Header("탭 (버튼과 페이지는 같은 순서)")]
@@ -31,15 +23,12 @@ namespace GuardVsMannequin.UI
         private int currentPage;
         private bool isInitialized;
 
-        /// <summary>화면이 닫혔을 때.</summary>
+        /// <summary>설정 화면을 연 쪽이 원래 화면으로 돌아갈 수 있도록 닫힘을 알린다.</summary>
         public event Action Closed;
 
-        /// <summary>화면이 열려 있는지 여부.</summary>
         public bool IsOpen => gameObject.activeSelf;
 
-        /// <summary>
-        /// 처음 열릴 때 한 번 설정 묶음을 찾아 준비하고 버튼을 연결한다. (꺼진 페이지 안의 묶음도 포함)
-        /// </summary>
+        /// <summary>꺼진 화면은 Awake가 늦게 불리므로 처음 열릴 때 비활성 페이지까지 설정 묶음을 찾는다.</summary>
         private void Initialize()
         {
             if (isInitialized)
@@ -52,6 +41,7 @@ namespace GuardVsMannequin.UI
 
             for (int i = 0; i < tabButtons.Length; i++)
             {
+                // 람다가 반복 변수를 잡으면 모든 버튼이 마지막 값을 쓰므로 복사해 둔다.
                 int pageIndex = i;
                 tabButtons[i].onClick.AddListener(() => ShowPage(pageIndex));
             }
@@ -62,7 +52,7 @@ namespace GuardVsMannequin.UI
         }
 
         /// <summary>
-        /// 언어 변경 구독을 해제한다.
+        /// 파괴된 뒤 언어 변경이 이 객체를 부르지 않도록 끊는다.
         /// </summary>
         private void OnDestroy()
         {
@@ -70,7 +60,7 @@ namespace GuardVsMannequin.UI
         }
 
         /// <summary>
-        /// 화면을 열고 저장된 값을 표시한다. 마지막으로 본 페이지를 다시 연다.
+        /// 다른 곳에서 바뀐 값이 있을 수 있어 열 때마다 저장된 값을 다시 표시하고, 보던 페이지를 이어서 연다.
         /// </summary>
         public void Open()
         {
@@ -81,7 +71,7 @@ namespace GuardVsMannequin.UI
         }
 
         /// <summary>
-        /// 화면을 닫는다. (키 설정 중에는 닫지 않음)
+        /// 키 설정 중에 닫으면 입력 대기가 남으므로 그때는 닫지 않는다.
         /// </summary>
         public void Close()
         {
@@ -92,9 +82,7 @@ namespace GuardVsMannequin.UI
             Closed?.Invoke();
         }
 
-        /// <summary>
-        /// 페이지 하나만 보이게 하고 해당 탭을 강조한다. (키 설정 중에는 바꾸지 않음)
-        /// </summary>
+        /// <summary>키 설정 중 페이지를 바꾸면 입력 대기가 숨겨진 채 남으므로 그때는 바꾸지 않는다.</summary>
         private void ShowPage(int pageIndex)
         {
             if (RebindRowView.IsAnyRebinding || pages.Length == 0)
@@ -112,7 +100,7 @@ namespace GuardVsMannequin.UI
         }
 
         /// <summary>
-        /// 모든 설정 묶음이 저장된 값을 다시 표시한다.
+        /// 묶음마다 표시 방법이 달라서 각 묶음에 다시 그리기를 맡긴다.
         /// </summary>
         private void RefreshAll()
         {
@@ -121,7 +109,7 @@ namespace GuardVsMannequin.UI
         }
 
         /// <summary>
-        /// 모든 설정 묶음을 기본값으로 되돌린다. (언어·화면 설정은 각 묶음이 유지)
+        /// 언어·화면처럼 되돌리면 곤란한 설정은 각 묶음이 알아서 유지하므로, 여기서는 모든 묶음에 기본값을 요청하기만 한다.
         /// </summary>
         private void ResetAll()
         {
@@ -133,9 +121,7 @@ namespace GuardVsMannequin.UI
             RefreshAll();
         }
 
-        /// <summary>
-        /// 언어가 바뀌면 코드로 채운 문장(언어 이름, 화면 모드, 키 이름)을 다시 표시한다.
-        /// </summary>
+        /// <summary>코드로 채운 문장은 LocalizedText가 아니라 언어가 바뀌면 직접 다시 표시한다.</summary>
         private void OnLanguageChanged()
         {
             if (IsOpen)

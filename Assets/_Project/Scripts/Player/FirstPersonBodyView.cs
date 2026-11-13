@@ -4,15 +4,7 @@ using UnityEngine.Rendering;
 
 namespace GuardVsMannequin.Player
 {
-    /// <summary>
-    /// 1인칭 소유자 화면에서 몸 모델 중 팔다리만 보여준다. (몸통·머리는 카메라를 가리므로 뺀다)
-    /// - 가드: 로컬 플레이어가 되면 바로 켠다.
-    /// - 마네킹: 사냥 시간에 1인칭이 될 때 <see cref="Mannequin.MannequinHuntingMode"/>가 켠다. (구울이 휘두르는 팔이 보이도록)
-    /// 원본 몸은 소유자 구성(<see cref="PlayerOwnershipSetup"/>)대로 그림자만 그리고,
-    /// 팔다리 삼각형만 남긴 복제 메시(<see cref="LimbMeshFilter"/>)를 같은 뼈에 붙여 그림자 없이 그린다.
-    /// 그래서 화면에는 팔다리만 보이고, 바닥 그림자는 온몸 그대로 남는다. (본인 화면 전용 — 다른 플레이어에게는 온몸이 보인다)
-    /// 원본 몸이 숨겨지면(변신 등) 복제도 함께 숨긴다. 팔다리 뼈를 찾지 못하거나 모델의 Read/Write가 꺼져 있으면 아무것도 더하지 않는다.
-    /// </summary>
+    /// <summary>몸통·머리가 카메라를 가리지 않도록 1인칭 소유자 화면에 팔다리만 보여 준다.</summary>
     public class FirstPersonBodyView : MonoBehaviour, IPerspectiveListener
     {
         private const string LimbObjectName = "FirstPersonLimbs";
@@ -25,11 +17,11 @@ namespace GuardVsMannequin.Player
         private readonly List<SkinnedMeshRenderer> limbRenderers = new();
         private readonly List<Mesh> limbMeshes = new();
         private CharacterSkinView skinView;
-        private Animator builtFor;
+        private Animator builtForAnimator;
         private bool isActive;
 
         /// <summary>
-        /// 외형을 캐시하고 로컬 플레이어 등록을 구독한다.
+        /// 소유자 구성보다 먼저 구독해야 로컬 플레이어 등록을 놓치지 않으므로 Awake에서 구독한다.
         /// </summary>
         private void Awake()
         {
@@ -38,17 +30,17 @@ namespace GuardVsMannequin.Player
         }
 
         /// <summary>
-        /// 이미 로컬 플레이어로 등록된 뒤에 켜졌으면 바로 적용한다.
+        /// 이 컴포넌트가 늦게 켜져 등록 이벤트를 이미 놓쳤을 수 있으므로 현재 로컬 플레이어를 한 번 더 확인한다.
         /// </summary>
         private void Start()
         {
-            PlayerIdentity current = LocalPlayerEvents.Current;
-            if (showOnSpawn && current != null && current.gameObject == gameObject)
+            PlayerIdentity currentPlayer = LocalPlayerEvents.Current;
+            if (showOnSpawn && currentPlayer != null && currentPlayer.gameObject == gameObject)
                 SetActive(true);
         }
 
         /// <summary>
-        /// 1인칭 팔다리를 보인다. (마네킹: 사냥 시간 1인칭 전환 때)
+        /// 마네킹은 스폰 때가 아니라 사냥 시간 1인칭 전환 때 켜야 해서 밖에서 켤 수 있게 연다.
         /// </summary>
         public void Show()
         {
@@ -56,7 +48,7 @@ namespace GuardVsMannequin.Player
         }
 
         /// <summary>
-        /// 구독을 해제하고 만든 메시·오브젝트를 지운다.
+        /// 런타임에 만든 메시는 자동으로 해제되지 않으므로 직접 지운다.
         /// </summary>
         private void OnDestroy()
         {
@@ -65,7 +57,7 @@ namespace GuardVsMannequin.Player
         }
 
         /// <summary>
-        /// 이 아바타가 로컬 플레이어로 등록되면(소유자 구성 직후) 1인칭 팔다리 표시를 시작한다.
+        /// 다른 사람 화면에는 온몸이 보여야 하므로, 이 아바타가 내 것으로 등록될 때만 팔다리 표시를 시작한다.
         /// </summary>
         private void OnLocalPlayerSpawned(PlayerIdentity identity)
         {
@@ -74,21 +66,19 @@ namespace GuardVsMannequin.Player
         }
 
         /// <summary>
-        /// 테스트 방 시점 전환: 1인칭이면 팔다리를 보이고, 3인칭이면(온몸이 보이므로) 숨긴다.
+        /// 3인칭에서는 온몸이 이미 보이므로 복제 팔다리가 겹쳐 그려지지 않게 숨긴다.
         /// </summary>
         public void OnPerspectiveChanged(bool firstPerson)
         {
             SetActive(firstPerson);
         }
 
-        /// <summary>
-        /// 외형이 바뀌면(뼈가 달라짐) 팔다리 복제를 다시 만들고, 원본 몸이 숨겨졌는지(변신 등)에 맞춰 복제도 보이거나 숨긴다.
-        /// </summary>
+        /// <summary>애니메이션이 뼈를 움직인 뒤 확인하도록 LateUpdate에서 외형 교체와 숨김을 따라간다.</summary>
         private void LateUpdate()
         {
             if (!isActive)
                 return;
-            if (CurrentAnimator != builtFor)
+            if (CurrentAnimator != builtForAnimator)
                 Rebuild();
 
             for (int i = 0; i < limbRenderers.Count; i++)
@@ -99,28 +89,26 @@ namespace GuardVsMannequin.Player
         }
 
         /// <summary>
-        /// 팔다리 표시를 켜고 끈다. 처음 켤 때 복제를 만든다.
+        /// 쓰지 않는 아바타에서 메시를 만들지 않도록 처음 켤 때 복제를 만든다.
         /// </summary>
         private void SetActive(bool active)
         {
             isActive = active;
-            if (active && CurrentAnimator != builtFor)
+            if (active && CurrentAnimator != builtForAnimator)
                 Rebuild();
             foreach (GameObject limbObject in limbObjects)
                 limbObject.SetActive(active);
         }
 
-        /// <summary>지금 외형의 애니메이터. 없으면 null.</summary>
+        /// <summary>외형 교체를 알아내려고 기억하는 애니메이터.</summary>
         private Animator CurrentAnimator => skinView != null ? skinView.Animator : null;
 
-        /// <summary>
-        /// 지금 외형의 몸 렌더러마다 팔다리만 남긴 복제 렌더러를 만든다.
-        /// </summary>
+        /// <summary>외형마다 렌더러 구성이 달라 지금 외형의 렌더러마다 팔다리 복제를 새로 만든다.</summary>
         private void Rebuild()
         {
             ClearLimbs();
-            builtFor = CurrentAnimator;
-            HashSet<Transform> limbBones = LimbMeshFilter.CollectLimbBones(builtFor);
+            builtForAnimator = CurrentAnimator;
+            HashSet<Transform> limbBones = LimbMeshFilter.CollectLimbBones(builtForAnimator);
             if (limbBones.Count == 0)
                 return;
 
@@ -144,9 +132,7 @@ namespace GuardVsMannequin.Player
                 Debug.LogWarning($"[FirstPersonBodyView] '{name}' 외형 모델의 Read/Write가 꺼져 있어 1인칭 팔다리를 만들지 못한 부분이 있습니다. 모델 가져오기 설정에서 Read/Write를 켜세요.", this);
         }
 
-        /// <summary>
-        /// 원본과 같은 자리·뼈·재질로 팔다리 메시를 그리는 렌더러를 만든다. (그림자는 원본이 그린다)
-        /// </summary>
+        /// <summary>애니메이션을 그대로 따라가도록 원본과 같은 뼈를 쓰고, 그림자는 원본이 그리므로 끈다.</summary>
         private void CreateLimbRenderer(SkinnedMeshRenderer source, Mesh limbMesh)
         {
             var limbObject = new GameObject(LimbObjectName) { layer = source.gameObject.layer };
@@ -172,7 +158,7 @@ namespace GuardVsMannequin.Player
         }
 
         /// <summary>
-        /// 만든 복제 오브젝트와 메시를 지운다.
+        /// 다시 만들 때 이전 복제가 겹쳐 남지 않고 메시가 새지 않도록 모두 지운다.
         /// </summary>
         private void ClearLimbs()
         {
@@ -190,7 +176,7 @@ namespace GuardVsMannequin.Player
             limbSources.Clear();
             limbRenderers.Clear();
             limbMeshes.Clear();
-            builtFor = null;
+            builtForAnimator = null;
         }
     }
 }

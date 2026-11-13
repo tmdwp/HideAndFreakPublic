@@ -16,15 +16,14 @@
 
 | 에셋 | 제작 | 라이선스 | 위치 | 사용처 |
 |---|---|---|---|---|
-| Human Basic Motions FREE | Kevin Iglesias | Unity Asset Store EULA (확인 필요) | `Assets/Kevin Iglesias` | 마네킹 더미 외형, 휴머노이드 걷기·달리기 애니메이션 |
-| Low Poly Character Series 1 - SWAT | (확인 필요) | (확인 필요) | `Assets/Low Poly Character Series 1_SWAT` | 가드 외형, 가드 소총(Recon_M) |
+| Human Basic Motions FREE | Kevin Iglesias | Unity Asset Store EULA (확인 필요) | `Assets/Kevin Iglesias` | 휴머노이드 걷기·달리기 애니메이션 (데모 씬·더미 모델은 삭제) |
 | Modern Vending Machine | (확인 필요) | (확인 필요) | `Assets/Modern Vending Machine` | 환승역·연구소 맵 자판기 |
 | Master Stylized Projectiles | (확인 필요) | (확인 필요) | `Assets/MasterStylizedProjectiles` | 총알·명중·총구 화염 이펙트 (OrangeGunShot) |
 | Casual Game Sounds U6 | (확인 필요) | (확인 필요) | `Assets/Casual Game Sounds U6` | 게임 소음 (`NoiseLibrary`) |
 | Sci-Fi Weapons - Bullet Hell Sound Effects Pack | (확인 필요) | (확인 필요) | `Assets/Sci-Fi Weapons-Bullet Hell Sound Effects Pack` | 게임 소음 (`NoiseLibrary`) |
 | Horror SFX - 082918 | GWriterStudio (확인 필요) | (확인 필요) | `Assets/Horror SFX - 082918` | 게임 소음 (`NoiseLibrary`) |
 
-맵 구조물·소품은 Blender로 직접 만든 MapKit 모델(`Assets/_Project/Art/MapKit`)이고, 사냥 시간 Ghoul 외형은 `Assets/_Project/Art/Skins/Ghoul.fbx`입니다.
+맵 구조물·소품은 Blender로 직접 만든 MapKit 모델(`Assets/_Project/Art/MapKit`)이고, 마네킹·가드·구울·가드 소총도 Blender로 직접 만든 모델(`Assets/_Project/Art/Characters`)입니다.
 
 ## 사운드
 - 현재 게임 소음은 코드로 만든 **임시 합성음**(`ProceduralNoiseClips`)입니다. 사운드 팩의 클립을 `NoiseLibrary`에 지정하면 교체됩니다.

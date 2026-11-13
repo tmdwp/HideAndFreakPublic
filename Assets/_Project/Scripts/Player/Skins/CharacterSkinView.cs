@@ -6,16 +6,7 @@ using UnityEngine.Rendering;
 
 namespace GuardVsMannequin.Player
 {
-    /// <summary>
-    /// 캐릭터 외형(<see cref="CharacterSkin"/>)을 붙이고 애니메이터를 준비한다.
-    /// - 외형: 맵(<see cref="MapInfo.GetSkin"/>)이 역할별 외형을 지정하면 그것을, 아니면 기본 외형을 쓴다.
-    ///   외형이 없으면 기본 도형(fallbackRenderers)을 그대로 보여준다.
-    /// - 사냥 외형: <see cref="UseHuntSkin"/>을 부르면 맵(<see cref="MapInfo.GetHuntSkin"/>)의 사냥 외형, 없으면 기본 사냥 외형으로 바꾼다.
-    /// - 애니메이션: 이동 값은 <see cref="LocomotionAnimatorDriver"/>가 넣고, 파라미터 확인은 <see cref="AnimatorParameterSet"/>이 한다.
-    ///   애니메이터에 있는 파라미터만 설정한다. (이름 규칙: <see cref="CharacterAnimatorParameters"/>)
-    /// 몸체 렌더러는 <see cref="BodyRenderers"/>로 제공한다. (변신 숨김, 1인칭 그림자 처리에 사용)
-    /// 외형이 바뀌면 렌더러·애니메이터도 바뀌므로, 다른 컴포넌트는 값을 저장하지 말고 쓸 때마다 조회한다.
-    /// </summary>
+    /// <summary>맵마다 외형을 바꿀 수 있도록 캐릭터 외형을 붙이고 애니메이터를 준비한다.</summary>
     public class CharacterSkinView : MonoBehaviour
     {
         [Tooltip("맵에서 외형을 고를 때 사용할 역할.")]
@@ -42,7 +33,7 @@ namespace GuardVsMannequin.Player
         private GameObject activeModel;
         private bool isApplied;
 
-        /// <summary>현재 몸체 렌더러. (외형이 있으면 외형 렌더러, 없으면 기본 도형)</summary>
+        /// <summary>외형이 바뀌면 달라지므로 쓸 때마다 읽는 지금 몸 렌더러.</summary>
         public Renderer[] BodyRenderers
         {
             get
@@ -52,7 +43,7 @@ namespace GuardVsMannequin.Player
             }
         }
 
-        /// <summary>적용된 외형. 외형 없이 기본 도형을 쓰면 null.</summary>
+        /// <summary>외형 없이 기본 도형을 쓰면 null.</summary>
         public CharacterSkin ActiveSkin
         {
             get
@@ -62,10 +53,10 @@ namespace GuardVsMannequin.Player
             }
         }
 
-        /// <summary>공격 동작 시작부터 맞는 순간까지의 시간(초). 외형이 없으면 0.</summary>
+        /// <summary>서버가 맞는 순간에 판정하도록 외형마다 다른 공격 지연(초).</summary>
         public float AttackHitDelay => ActiveSkin != null ? ActiveSkin.attackHitDelay : 0f;
 
-        /// <summary>외형 모델의 애니메이터. 없으면 null.</summary>
+        /// <summary>외형이 바뀌면 달라지므로 쓸 때마다 읽는 애니메이터.</summary>
         public Animator Animator
         {
             get
@@ -76,7 +67,7 @@ namespace GuardVsMannequin.Player
         }
 
         /// <summary>
-        /// 외형을 적용한다.
+        /// 다른 컴포넌트가 Start에서 렌더러를 찾기 전에 외형이 붙어 있도록 Awake에서 적용한다.
         /// </summary>
         private void Awake()
         {
@@ -84,17 +75,14 @@ namespace GuardVsMannequin.Player
         }
 
         /// <summary>
-        /// 이동 속도를 애니메이터에 전달한다.
+        /// 이동 드라이버는 일반 클래스라 스스로 매 프레임 돌 수 없어서 여기서 대신 돌린다.
         /// </summary>
         private void Update()
         {
             locomotion?.Tick(Time.deltaTime);
         }
 
-        /// <summary>
-        /// 사냥 시간 외형으로 바꾼다. 맵의 사냥 외형을 우선하고, 없으면 기본 사냥 외형을 쓴다.
-        /// 둘 다 없거나 이미 그 외형이면 아무것도 하지 않는다. 지금의 표시 상태(변신 숨김·그림자)는 이어받는다.
-        /// </summary>
+        /// <summary>맵마다 다른 괴물을 쓸 수 있도록 맵의 사냥 외형을 우선해 바꾼다.</summary>
         public void UseHuntSkin()
         {
             EnsureApplied();
@@ -107,7 +95,7 @@ namespace GuardVsMannequin.Player
         }
 
         /// <summary>
-        /// 애니메이터에 해당 이름의 파라미터가 있는지 확인한다.
+        /// 외형마다 지원하는 동작이 달라서, 호출하는 쪽이 대체 방식을 고를 수 있도록 있는지 묻는다.
         /// </summary>
         public bool HasParameter(string parameterName)
         {
@@ -116,7 +104,7 @@ namespace GuardVsMannequin.Player
         }
 
         /// <summary>
-        /// 트리거가 있으면 발동하고 true, 없으면 아무것도 하지 않고 false. (애니메이션이 없는 외형은 건너뜀)
+        /// 애니메이션이 없는 외형도 있어서, 트리거가 없으면 경고 없이 false를 준다.
         /// </summary>
         public bool TryPlayTrigger(string triggerName)
         {
@@ -125,7 +113,7 @@ namespace GuardVsMannequin.Player
         }
 
         /// <summary>
-        /// 정수 파라미터가 있으면 설정하고 true.
+        /// 애니메이션이 없는 외형도 있어서, 파라미터가 없으면 경고 없이 false를 준다.
         /// </summary>
         public bool TrySetInteger(string parameterName, int value)
         {
@@ -134,7 +122,7 @@ namespace GuardVsMannequin.Player
         }
 
         /// <summary>
-        /// 논리 파라미터가 있으면 설정하고 true.
+        /// 애니메이션이 없는 외형도 있어서, 파라미터가 없으면 경고 없이 false를 준다.
         /// </summary>
         public bool TrySetBool(string parameterName, bool value)
         {
@@ -143,8 +131,7 @@ namespace GuardVsMannequin.Player
         }
 
         /// <summary>
-        /// 대상에 외형 컴포넌트가 있으면 그 몸체 렌더러를, 없으면 지정한 렌더러를 반환한다.
-        /// (외형 시스템 도입 전 프리팹과 호환하기 위함)
+        /// 외형 시스템 도입 전 프리팹과 호환하도록, 외형 컴포넌트가 없으면 지정한 렌더러를 대신 준다.
         /// </summary>
         public static Renderer[] ResolveBodyRenderers(Component owner, Renderer[] fallback)
         {
@@ -152,9 +139,7 @@ namespace GuardVsMannequin.Player
             return skinView != null ? skinView.BodyRenderers : fallback ?? new Renderer[0];
         }
 
-        /// <summary>
-        /// 조준 IK가 따라갈 방향(카메라 피벗)을 지정한다. 외형이 IK를 쓰지 않으면 무시된다.
-        /// </summary>
+        /// <summary>조준 IK는 외형 모델에 붙어 바깥에서 찾기 어려워 여기서 방향 기준을 넘긴다.</summary>
         public void SetAimSource(Transform aimSource)
         {
             EnsureApplied();
@@ -162,18 +147,14 @@ namespace GuardVsMannequin.Player
                 aimIK.AimSource = aimSource;
         }
 
-        /// <summary>
-        /// 조준 IK의 오른손 위치(조준 기준 좌표)를 지정한다. 외형이 IK를 쓰지 않으면 무시된다.
-        /// </summary>
+        /// <summary>외형마다 손 위치가 달라 총 쪽이 매 프레임 넘긴다.</summary>
         public void SetAimHandOffset(Vector3 handOffset)
         {
             if (aimIK != null)
                 aimIK.HandOffset = handOffset;
         }
 
-        /// <summary>
-        /// 조준 IK의 손 목표를 직접 정할 쪽(양손 총)을 지정한다. 외형이 IK를 쓰지 않으면 무시된다.
-        /// </summary>
+        /// <summary>양손 총이 IK 직전에 손 목표를 정할 수 있도록 연결한다.</summary>
         public void SetHandGoalSource(IHandIKGoalSource goalSource)
         {
             EnsureApplied();
@@ -182,7 +163,7 @@ namespace GuardVsMannequin.Player
         }
 
         /// <summary>
-        /// 외형을 한 번만 적용한다. 다른 컴포넌트가 Awake 순서와 관계없이 렌더러를 조회할 수 있게 한다.
+        /// 다른 컴포넌트의 Awake가 먼저 불려도 렌더러를 조회할 수 있도록, 처음 조회될 때 한 번만 적용한다.
         /// </summary>
         private void EnsureApplied()
         {
@@ -201,7 +182,7 @@ namespace GuardVsMannequin.Player
         }
 
         /// <summary>
-        /// 맵이 지정한 역할별 외형을 우선하고, 없으면 기본 외형을 쓴다.
+        /// 맵마다 분위기에 맞는 외형을 쓸 수 있도록 맵 지정 외형을 우선하고, 없으면 기본 외형을 쓴다.
         /// </summary>
         private CharacterSkin ChooseSkin()
         {
@@ -210,13 +191,13 @@ namespace GuardVsMannequin.Player
         }
 
         /// <summary>
-        /// 이전 모델을 제거하고 외형 모델을 붙인다. 이전 몸체의 표시 여부·그림자 설정은 새 몸체에 그대로 옮긴다.
+        /// 변신 중이거나 1인칭이라 숨겨 둔 상태에서 외형이 바뀌어도 그대로 숨겨져 있도록, 이전 몸체의 표시·그림자 설정을 새 몸체에 옮긴다.
         /// </summary>
         private void ApplySkin(CharacterSkin skin)
         {
-            Renderer previous = FirstRenderer(bodyRenderers);
-            bool visible = previous == null || previous.enabled;
-            ShadowCastingMode shadowMode = previous != null ? previous.shadowCastingMode : ShadowCastingMode.On;
+            Renderer previousRenderer = FirstRenderer(bodyRenderers);
+            bool isVisible = previousRenderer == null || previousRenderer.enabled;
+            ShadowCastingMode shadowMode = previousRenderer != null ? previousRenderer.shadowCastingMode : ShadowCastingMode.On;
             RemoveActiveModel();
 
             activeSkin = skin;
@@ -227,18 +208,18 @@ namespace GuardVsMannequin.Player
 
             activeModel.GetComponentsInChildren(true, skinRenderers);
             bodyRenderers = skinRenderers.ToArray();
-            foreach (Renderer fallback in fallbackRenderers ?? new Renderer[0])
+            foreach (Renderer fallbackRenderer in fallbackRenderers ?? new Renderer[0])
             {
-                if (fallback != null)
-                    fallback.enabled = false;
+                if (fallbackRenderer != null)
+                    fallbackRenderer.enabled = false;
             }
 
             // 첫 적용은 기본값(보임·그림자 켬)이므로 이전 상태를 옮길 것이 없다.
-            if (previous != null)
+            if (previousRenderer != null)
             {
                 foreach (Renderer body in bodyRenderers)
                 {
-                    body.enabled = visible;
+                    body.enabled = isVisible;
                     body.shadowCastingMode = shadowMode;
                 }
             }
@@ -247,7 +228,7 @@ namespace GuardVsMannequin.Player
         }
 
         /// <summary>
-        /// 붙어 있는 외형 모델을 즉시 숨기고 제거한다. 애니메이터 관련 참조도 비운다.
+        /// 이전 모델의 애니메이터를 계속 쓰지 않도록 관련 참조를 비우고 모델을 지운다.
         /// </summary>
         private void RemoveActiveModel()
         {
@@ -263,9 +244,7 @@ namespace GuardVsMannequin.Player
             activeModel = null;
         }
 
-        /// <summary>
-        /// 목록에서 처음으로 살아 있는 렌더러를 반환한다. 없으면 null.
-        /// </summary>
+        /// <summary>파괴된 렌더러가 목록 앞에 있을 수 있어 살아 있는 것을 고른다.</summary>
         private static Renderer FirstRenderer(Renderer[] renderers)
         {
             if (renderers == null)
@@ -279,7 +258,7 @@ namespace GuardVsMannequin.Player
         }
 
         /// <summary>
-        /// 애니메이터 컨트롤러를 지정하고, 루트 모션을 끄고, 필요하면 조준 IK를 붙인 뒤 이동 애니메이션 구동을 준비한다.
+        /// 이동은 캐릭터 이동 코드가 맡으므로 루트 모션을 끄고, 외형 설정에 따라 조준 IK·제자리 고정을 붙인다.
         /// </summary>
         private void SetupAnimator(GameObject model, CharacterSkin skin)
         {
@@ -291,7 +270,7 @@ namespace GuardVsMannequin.Player
                 animator.runtimeAnimatorController = skin.animatorController;
             animator.applyRootMotion = false;
 
-            // 에셋 팩 클립의 이벤트는 팩 스크립트(외형 생성 시 제거됨)를 부르므로 기본으로 끈다. ("has no receiver" 오류 방지)
+            // 에셋 팩 클립 이벤트는 제거된 스크립트를 부르므로 기본으로 끈다.
             animator.fireEvents = skin.fireAnimationEvents;
 
             parameters = new AnimatorParameterSet(animator);
@@ -300,7 +279,7 @@ namespace GuardVsMannequin.Player
             if (skin.useAimIK && animator.isHuman)
                 aimIK = animator.gameObject.AddComponent<HandAimIK>();
 
-            // 일반(Generic) 모델의 이동 클립은 뼈가 앞으로 나갔다 돌아오므로 제자리로 고정한다. (휴머노이드는 루트 모션을 끄면 이미 제자리)
+            // Generic 모델의 이동 클립은 뼈가 앞으로 나가므로 제자리로 고정한다.
             if (skin.keepRootBoneInPlace && !animator.isHuman)
                 animator.gameObject.AddComponent<RootBoneInPlaceLock>();
         }

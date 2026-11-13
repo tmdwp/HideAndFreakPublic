@@ -9,6 +9,7 @@ namespace GuardVsMannequin.Rendering
         public readonly Renderer[] Renderers;
         public readonly OutlineKind Kind;
 
+        /// <summary>렌더러 기능이 요청자를 몰라도 그릴 수 있도록 그릴 것만 묶는다.</summary>
         public OutlineEntry(Renderer[] renderers, OutlineKind kind)
         {
             Renderers = renderers;
@@ -16,26 +17,20 @@ namespace GuardVsMannequin.Rendering
         }
     }
 
-    /// <summary>
-    /// 지금 표시할 외곽선 목록을 제공한다. (<see cref="OutlineRendererFeature"/>가 매 프레임 읽음)
-    /// </summary>
+    /// <summary>렌더러 기능이 매 프레임 읽을 지금 표시할 외곽선 목록.</summary>
     public interface IOutlineSource
     {
-        /// <summary>표시 중인 외곽선들.</summary>
         IEnumerable<OutlineEntry> Entries { get; }
     }
 
-    /// <summary>
-    /// 외곽선 요청을 모아 두는 기본 구현. 게임 코드는 <see cref="IOutlineService"/>로, 렌더러 기능은 <see cref="IOutlineSource"/>로만 쓴다.
-    /// 렌더러를 직접 그리므로(DrawRenderer) 오클루전 컬링으로 가려진 대상도 그릴 수 있고, 렌더러 설정은 바꾸지 않는다.
-    /// 요청자가 사라지면(파괴) 다음 조회 때 자동으로 빠진다.
-    /// </summary>
+    /// <summary>게임 코드와 렌더러 기능이 서로 모르도록 외곽선 요청을 모아 두는 기본 구현.</summary>
     public sealed class OutlineRegistry : IOutlineService, IOutlineSource
     {
-        /// <summary>게임 전체에서 쓰는 하나의 목록. (씬·프리팹에서 렌더러 기능을 직렬화 참조할 수 없어 정적 접근을 쓴다)</summary>
+        /// <summary>씬·프리팹에서 렌더러 기능을 직렬화 참조할 수 없어서 게임 전체가 하나의 목록을 정적으로 공유한다.</summary>
         public static OutlineRegistry Instance { get; } = new();
 
         private readonly Dictionary<Object, OutlineEntry> entries = new();
+        // 반복 중에 사전을 고칠 수 없어서 지울 요청자를 모아 두는 버퍼
         private readonly List<Object> deadOwners = new();
 
         /// <inheritdoc />
@@ -43,6 +38,7 @@ namespace GuardVsMannequin.Rendering
         {
             if (owner == null)
                 return;
+            // 빈 대상으로 부르면 그릴 것이 없으므로 숨기는 것과 같게 처리한다.
             if (renderers == null || renderers.Length == 0)
             {
                 entries.Remove(owner);
@@ -69,7 +65,7 @@ namespace GuardVsMannequin.Rendering
         }
 
         /// <summary>
-        /// 파괴된 요청자의 외곽선을 지운다. (Hide를 부르지 못하고 사라진 경우)
+        /// Hide를 부르지 못하고 파괴된 요청자의 외곽선이 영원히 남지 않도록 조회할 때마다 정리한다.
         /// </summary>
         private void RemoveDestroyedOwners()
         {
@@ -84,7 +80,7 @@ namespace GuardVsMannequin.Rendering
         }
 
         /// <summary>
-        /// 플레이 모드에 들어갈 때 이전 플레이의 요청을 지운다. (도메인 재로드를 끈 경우)
+        /// 도메인 재로드를 끈 경우 정적 목록에 이전 플레이의 요청이 남으므로 플레이 모드에 들어갈 때 비운다.
         /// </summary>
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
         private static void ResetOnPlay()

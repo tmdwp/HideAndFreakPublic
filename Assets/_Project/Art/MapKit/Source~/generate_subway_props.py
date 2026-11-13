@@ -12,6 +12,7 @@ import os
 import sys
 
 import bpy
+from mathutils import Matrix
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from mapkit_common import MeshBuilder, configure, exportFbx, layoutGrid, renderPreview, resetScene, rotX, rotY, rotZ
@@ -221,7 +222,7 @@ def makeCleaningCart():
             b.box((0.04, 0.04, 0.6), (sx * 0.45, sy * 0.23, 0.38), "SafetyYellow")
             b.cylinder(0.04, 0.04, 0.03, (sx * 0.42, sy * 0.2, 0.04), "Rubber", segments=10, rot=rotX(90))
     b.box((0.4, 0.42, 0.5), (0.22, 0, 0.4), "PanelGray")
-    b.cylinder(0.14, 0.17, 0.28, (-0.25, 0, 0.8), "LineBlue", segments=16)
+    b.hollowCylinder(0.14, 0.17, 0.28, 0.01, (-0.25, 0, 0.8), "LineBlue", floor=0.015, segments=16)
     b.cylinder(0.015, 0.015, 0.9, (-0.1, 0.1, 1.0), "Steel", segments=8, rot=rotX(-10))
     b.box((0.04, 0.5, 0.04), (0.5, 0, 0.98), "SteelDark")
     for sy in (-1, 1):
@@ -269,11 +270,12 @@ def makeMonitor():
 
 
 def makeToilet():
-    """양변기(0.4 x 0.7 x 0.8): 흰 도기, 물탱크는 +Y."""
-    b = MeshBuilder("Sub_Toilet", "Subway", bevel=0.01)
-    b.cylinder(0.12, 0.15, 0.36, (0, -0.05, 0.18), "Ceramic", segments=18)
-    b.sphere(0.2, (0, -0.1, 0.38), "Ceramic", segments=18, scale=(0.95, 1.2, 0.35))
-    b.box((0.38, 0.4, 0.03), (0, -0.08, 0.43), "PanelWhite")
+    """양변기(0.4 x 0.7 x 0.8): 흰 도기, 물탱크는 +Y. 변기 그릇은 속이 비어 있고 위에 고리 모양 시트."""
+    b = MeshBuilder("Sub_Toilet", "Subway", bevel=0.004)
+    b.cylinder(0.12, 0.15, 0.3, (0, -0.05, 0.15), "Ceramic", segments=18)
+    oval = Matrix.Diagonal((1.0, 1.2, 1.0, 1.0))
+    b.hollowCylinder(0.13, 0.17, 0.16, 0.02, (0, -0.1, 0.34), "Ceramic", floor=0.03, segments=20, rot=oval)
+    b.hollowCylinder(0.18, 0.18, 0.025, 0.06, (0, -0.1, 0.4325), "PanelWhite", segments=20, rot=oval)
     b.box((0.38, 0.18, 0.4), (0, 0.24, 0.6), "Ceramic")
     b.box((0.4, 0.2, 0.03), (0, 0.24, 0.815), "Ceramic")
     b.box((0.06, 0.02, 0.03), (0.12, 0.14, 0.76), "Steel")
@@ -283,11 +285,15 @@ def makeToilet():
 def makeWashBasin():
     """세면대(1.2 x 0.55 x 0.85): 흰 상판 + 오목한 세면볼 2개 + 수도꼭지, 아래 회색 가림판. 벽은 +Y."""
     b = MeshBuilder("Sub_WashBasin", "Subway", bevel=0.006)
-    b.box((1.2, 0.55, 0.06), (0, 0, 0.82), "Ceramic")
+    # 상판: 세면볼 두 개 자리(0.34 x 0.3)를 비운 틀
     b.box((1.2, 0.04, 0.78), (0, 0.255, 0.39), "PanelGray")
     b.box((1.16, 0.02, 0.2), (0, -0.265, 0.68), "PanelGray")
+    b.box((1.2, 0.105, 0.06), (0, -0.2225, 0.82), "Ceramic")
+    b.box((1.2, 0.145, 0.06), (0, 0.2025, 0.82), "Ceramic")
+    for x0, x1 in ((-0.6, -0.47), (-0.13, 0.13), (0.47, 0.6)):
+        b.box((x1 - x0, 0.3, 0.06), ((x0 + x1) / 2, -0.02, 0.82), "Ceramic")
     for x in (-0.3, 0.3):
-        b.cylinder(0.17, 0.12, 0.12, (x, -0.02, 0.77), "PanelWhite", segments=18)
+        b.hollowBox((0.34, 0.3, 0.16), 0.015, (x, -0.02, 0.77), "PanelWhite")
         b.cylinder(0.02, 0.02, 0.12, (x, 0.18, 0.91), "Steel", segments=8)
         b.box((0.03, 0.12, 0.025), (x, 0.13, 0.96), "Steel")
     b.box((1.2, 0.02, 0.7), (0, 0.27, 1.3), "Steel")

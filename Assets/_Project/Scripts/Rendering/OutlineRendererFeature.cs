@@ -7,14 +7,7 @@ using UnityEngine.Rendering.Universal;
 
 namespace GuardVsMannequin.Rendering
 {
-    /// <summary>
-    /// 화면 공간 외곽선 (URP Renderer Feature, RenderGraph).
-    /// ① 마스크 패스: <see cref="IOutlineSource"/>의 렌더러를 깊이 검사 없이 마스크 텍스처에 그린다. (R = 조준, G = 수류탄 표시)
-    /// ② 합성 패스: 마스크 가장자리를 넓혀 화면에 외곽선 색을 덧그린다.
-    /// 메시 법선과 무관하게 같은 두께로 그려지고, 스킨 메시·오클루전 컬링으로 가려진 대상도 그릴 수 있다. (벽 너머 표시)
-    /// 깊이 사전 패스(Depth Priming)와도 무관하다. PC_Renderer·Mobile_Renderer(Assets/Settings)에 추가되어 있다.
-    /// 셰이더 두 개(OutlineMask, OutlineComposite)는 빌드에 포함되도록 설정에 직접 연결한다.
-    /// </summary>
+    /// <summary>오클루전과 상관없이 외곽선을 그리도록 마스크를 그린 뒤 가장자리를 합성하는 URP Renderer Feature.</summary>
     public class OutlineRendererFeature : ScriptableRendererFeature
     {
         /// <summary>인스펙터 설정.</summary>
@@ -42,9 +35,7 @@ namespace GuardVsMannequin.Rendering
         private Material revealMaskMaterial;
         private Material compositeMaterial;
 
-        /// <summary>
-        /// 머티리얼과 패스를 만든다.
-        /// </summary>
+        /// <summary>설정을 바꾸면 Unity가 다시 부르므로 이전 머티리얼을 먼저 해제한다.</summary>
         public override void Create()
         {
             ReleaseMaterials();
@@ -63,9 +54,7 @@ namespace GuardVsMannequin.Rendering
             };
         }
 
-        /// <summary>
-        /// 게임·씬 카메라에 외곽선 패스를 넣는다. 표시할 외곽선이 없으면 넣지 않는다.
-        /// </summary>
+        /// <summary>반사·미리보기 카메라에 그리는 낭비를 막도록 게임·씬 카메라에만 넣는다.</summary>
         public override void AddRenderPasses(ScriptableRenderer renderer, ref RenderingData renderingData)
         {
             if (pass == null)
@@ -82,16 +71,14 @@ namespace GuardVsMannequin.Rendering
         }
 
         /// <summary>
-        /// 머티리얼을 해제한다.
+        /// 엔진 머티리얼은 자동으로 해제되지 않으므로 기능이 사라질 때 지운다.
         /// </summary>
         protected override void Dispose(bool disposing)
         {
             ReleaseMaterials();
         }
 
-        /// <summary>
-        /// 만든 머티리얼을 지운다.
-        /// </summary>
+        /// <summary>Create와 Dispose가 같은 정리를 쓰도록 한곳에 둔다.</summary>
         private void ReleaseMaterials()
         {
             CoreUtils.Destroy(aimMaskMaterial);
@@ -117,7 +104,7 @@ namespace GuardVsMannequin.Rendering
             private readonly Material revealMask;
             private readonly Material composite;
 
-            /// <summary>마스크 패스 데이터.</summary>
+            /// <summary>RenderGraph의 정적 렌더 함수가 패스 객체를 붙잡지 않도록 필요한 값만 넘긴다.</summary>
             private class MaskPassData
             {
                 public IOutlineSource source;
@@ -125,7 +112,7 @@ namespace GuardVsMannequin.Rendering
                 public Material revealMask;
             }
 
-            /// <summary>합성 패스 데이터.</summary>
+            /// <summary>RenderGraph의 정적 렌더 함수가 패스 객체를 붙잡지 않도록 필요한 값만 넘긴다.</summary>
             private class CompositePassData
             {
                 public TextureHandle mask;
@@ -133,6 +120,7 @@ namespace GuardVsMannequin.Rendering
                 public Vector4 texelSize;
             }
 
+            /// <summary>패스가 외곽선 목록 구현을 몰라도 되도록 공급원 인터페이스로 받는다.</summary>
             public OutlinePass(IOutlineSource source, Material aimMask, Material revealMask, Material composite)
             {
                 this.source = source;
@@ -142,9 +130,7 @@ namespace GuardVsMannequin.Rendering
                 profilingSampler = new ProfilingSampler("Outline");
             }
 
-            /// <summary>
-            /// 마스크 텍스처를 만들고 두 패스를 기록한다.
-            /// </summary>
+            /// <summary>외곽선이 없는 프레임에 비용이 들지 않도록 그릴 것이 있을 때만 패스를 기록한다.</summary>
             public override void RecordRenderGraph(RenderGraph renderGraph, ContextContainer frameData)
             {
                 if (!HasAnyEntry())
@@ -171,6 +157,7 @@ namespace GuardVsMannequin.Rendering
                     maskData.aimMask = aimMask;
                     maskData.revealMask = revealMask;
                     builder.SetRenderAttachment(mask, 0, AccessFlags.Write);
+                    // 마스크를 읽는 합성 패스와 RenderGraph가 연결을 못 보면 이 패스를 지워 버리므로 막는다.
                     builder.AllowPassCulling(false);
                     builder.SetRenderFunc(static (MaskPassData data, RasterGraphContext context) => DrawMask(data, context.cmd));
                 }
@@ -191,7 +178,7 @@ namespace GuardVsMannequin.Rendering
             }
 
             /// <summary>
-            /// 표시할 외곽선이 하나라도 있는지 확인한다. (없으면 패스를 기록하지 않아 비용이 없음)
+            /// 목록 전체를 셀 필요 없이 하나라도 있는지만 보면 되어서 첫 항목에서 바로 돌아온다.
             /// </summary>
             private bool HasAnyEntry()
             {
@@ -200,35 +187,31 @@ namespace GuardVsMannequin.Rendering
                 return false;
             }
 
-            /// <summary>
-            /// 등록된 렌더러를 종류별 마스크 색으로 그린다. 꺼져 있거나 사라진 렌더러는 건너뛴다.
-            /// </summary>
+            /// <summary>합성 셰이더가 종류를 구분하도록 종류별 색으로 그리고, 꺼진 렌더러는 건너뛴다.</summary>
             private static void DrawMask(MaskPassData data, RasterCommandBuffer cmd)
             {
                 foreach (OutlineEntry entry in data.source.Entries)
                 {
                     Material material = entry.Kind == OutlineKind.Reveal ? data.revealMask : data.aimMask;
-                    foreach (Renderer renderer in entry.Renderers)
+                    foreach (Renderer targetRenderer in entry.Renderers)
                     {
-                        if (renderer == null || !renderer.enabled || !renderer.gameObject.activeInHierarchy)
+                        if (targetRenderer == null || !targetRenderer.enabled || !targetRenderer.gameObject.activeInHierarchy)
                             continue;
 
-                        int subMeshCount = GetSubMeshCount(renderer);
+                        int subMeshCount = GetSubMeshCount(targetRenderer);
                         for (int i = 0; i < subMeshCount; i++)
-                            cmd.DrawRenderer(renderer, material, i, 0);
+                            cmd.DrawRenderer(targetRenderer, material, i, 0);
                     }
                 }
             }
 
-            /// <summary>
-            /// 렌더러가 그리는 서브메시 수. (메시를 알 수 없으면 1)
-            /// </summary>
-            private static int GetSubMeshCount(Renderer renderer)
+            /// <summary>여러 재질로 된 사물 전체에 외곽선이 생기도록 서브메시 수를 센다.</summary>
+            private static int GetSubMeshCount(Renderer targetRenderer)
             {
-                Mesh mesh = renderer switch
+                Mesh mesh = targetRenderer switch
                 {
                     SkinnedMeshRenderer skinned => skinned.sharedMesh,
-                    MeshRenderer => renderer.TryGetComponent(out MeshFilter filter) ? filter.sharedMesh : null,
+                    MeshRenderer => targetRenderer.TryGetComponent(out MeshFilter filter) ? filter.sharedMesh : null,
                     _ => null
                 };
                 return mesh != null ? Mathf.Max(1, mesh.subMeshCount) : 1;

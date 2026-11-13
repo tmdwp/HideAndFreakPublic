@@ -6,23 +6,20 @@ using UnityEngine;
 
 namespace GuardVsMannequin.UI
 {
-    /// <summary>
-    /// 룸 ↔ 게임 씬 전환 중 화면 전체를 덮는 로딩 화면.
-    /// 게스트는 호스트가 맵을 다 불러온 뒤에야 로딩 지시를 받으므로, 시작 버튼이 눌린 순간부터 이 화면을 보여 준다.
-    /// 표시 여부는 <see cref="RoomState.IsSceneTransitionPending"/>만 보고 정하며, 씬과 무관하게 유지되도록 스스로 만들어진다.
-    /// 표시 중에는 <see cref="LoadingPerformanceBoost"/>로 로딩을 가속한다. 화면 모양은 <see cref="SceneLoadingOverlayView"/>가 맡는다.
-    /// </summary>
+    /// <summary>게스트는 로딩 지시가 늦게 오므로 시작 버튼이 눌린 순간부터 씬 전환 로딩 화면을 덮는다.</summary>
     public class SceneLoadingOverlay : MonoBehaviour
     {
         private SceneLoadingOverlayView view;
         private SceneManager subscribedSceneManager;
         private bool isVisible;
-        private bool loadStarted;
+        private bool hasLoadStarted;
         private float loadPercent;
         private float shownTime;
+        private bool hasShownTexts;
+        private (bool isInGame, bool isWaitingForHost, int percent, int elapsedSeconds, string language) shownTexts;
 
         /// <summary>
-        /// 게임 시작 시 로딩 화면 오브젝트를 하나 만든다. (씬이 바뀌어도 유지)
+        /// 씬 전환 도중에도 화면이 사라지지 않아야 하므로 어느 씬에도 속하지 않는 오브젝트로 한 번 만든다.
         /// </summary>
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
         private static void CreateInstance()
@@ -33,7 +30,7 @@ namespace GuardVsMannequin.UI
         }
 
         /// <summary>
-        /// 화면을 만든다. (처음에는 숨김)
+        /// 씬에 UI를 배치하지 않아도 되도록 화면을 코드로 만든다.
         /// </summary>
         private void Awake()
         {
@@ -41,7 +38,7 @@ namespace GuardVsMannequin.UI
         }
 
         /// <summary>
-        /// 구독과 로딩 가속을 정리한다.
+        /// 가속이 켜진 채 남으면 게임 프레임이 떨어지므로 파괴될 때도 되돌린다.
         /// </summary>
         private void OnDestroy()
         {
@@ -50,21 +47,21 @@ namespace GuardVsMannequin.UI
         }
 
         /// <summary>
-        /// 씬 전환 상태에 맞춰 화면을 켜고 끄고, 표시 중이면 문구를 갱신한다.
+        /// 전환 시작을 알리는 이벤트가 따로 없어서 매 프레임 룸 상태를 보고 켜고 끈다.
         /// </summary>
         private void Update()
         {
             RoomState room = RoomState.Instance;
-            bool pending = room != null && room.IsSceneTransitionPending;
-            if (pending != isVisible)
-                SetVisible(pending);
+            bool isPending = room != null && room.IsSceneTransitionPending;
+            if (isPending != isVisible)
+                SetVisible(isPending);
 
             if (isVisible)
                 RefreshTexts(room);
         }
 
         /// <summary>
-        /// 화면을 켜고 끈다. 켤 때 진행 상태를 초기화하고 FishNet 로딩 이벤트를 구독한다.
+        /// 이전 전환의 진행률이 남지 않도록 켤 때 초기화하고, 보이는 동안에만 로딩 이벤트와 가속을 유지한다.
         /// </summary>
         private void SetVisible(bool visible)
         {
@@ -73,7 +70,8 @@ namespace GuardVsMannequin.UI
 
             if (visible)
             {
-                loadStarted = false;
+                hasLoadStarted = false;
+                hasShownTexts = false;
                 loadPercent = 0f;
                 shownTime = Time.unscaledTime;
                 Subscribe();
@@ -87,23 +85,31 @@ namespace GuardVsMannequin.UI
         }
 
         /// <summary>
-        /// 제목(어디로 가는지)과 상세(호스트 대기 또는 진행률·경과 시간)를 갱신한다.
+        /// 게스트는 호스트를 기다리는 동안 진행률이 0이라 멈춘 것처럼 보이므로, 그때는 대기 중임을 따로 알린다.
         /// </summary>
         private void RefreshTexts(RoomState room)
         {
-            string title = Loc.Get(room.IsInGame ? "loading.toGame" : "loading.toRoom");
+            int elapsedSeconds = Mathf.FloorToInt(Time.unscaledTime - shownTime);
+            bool isWaitingForHost = !hasLoadStarted && !InstanceFinder.IsServerStarted;
+            int percent = Mathf.RoundToInt(loadPercent * 100f);
 
-            int elapsed = Mathf.FloorToInt(Time.unscaledTime - shownTime);
-            bool waitingForHost = !loadStarted && !InstanceFinder.IsServerStarted;
-            string detail = waitingForHost
-                ? Loc.Format("loading.waitingHost", elapsed)
-                : Loc.Format("loading.progress", Mathf.RoundToInt(loadPercent * 100f), elapsed);
+            // 로딩 중에 가비지 수집이 겹치면 더 끊기므로, 보이는 값이 바뀔 때만 문구를 새로 만든다.
+            var shown = (room.IsInGame, isWaitingForHost, percent, elapsedSeconds, Loc.CurrentLanguage);
+            if (hasShownTexts && shown.Equals(shownTexts))
+                return;
+            hasShownTexts = true;
+            shownTexts = shown;
+
+            string title = Loc.Get(room.IsInGame ? "loading.toGame" : "loading.toRoom");
+            string detail = isWaitingForHost
+                ? Loc.Format("loading.waitingHost", elapsedSeconds)
+                : Loc.Format("loading.progress", percent, elapsedSeconds);
 
             view.SetTexts(title, detail);
         }
 
         /// <summary>
-        /// 현재 NetworkManager의 씬 로딩 이벤트를 구독한다.
+        /// NetworkManager가 바뀌었을 수 있어 켤 때마다 지금 것을 다시 구독한다.
         /// </summary>
         private void Subscribe()
         {
@@ -116,7 +122,7 @@ namespace GuardVsMannequin.UI
         }
 
         /// <summary>
-        /// 씬 로딩 이벤트 구독을 해제한다.
+        /// 화면이 꺼진 뒤 이벤트가 이 객체를 부르지 않도록 끊는다.
         /// </summary>
         private void Unsubscribe()
         {
@@ -128,19 +134,19 @@ namespace GuardVsMannequin.UI
         }
 
         /// <summary>
-        /// 이 기기에서 씬 로딩이 시작됐다. (게스트는 호스트 대기가 끝난 시점)
+        /// 게스트의 호스트 대기 문구를 진행률 문구로 바꾸기 위해 로딩이 시작된 것을 기록한다.
         /// </summary>
         private void OnLoadStart(SceneLoadStartEventArgs args)
         {
-            loadStarted = true;
+            hasLoadStarted = true;
         }
 
         /// <summary>
-        /// 로딩 진행률(0~1)을 기록한다.
+        /// 여러 씬을 차례로 불러오면 진행률이 되돌아갈 수 있어 가장 큰 값만 남긴다.
         /// </summary>
         private void OnLoadPercentChange(SceneLoadPercentEventArgs args)
         {
-            loadStarted = true;
+            hasLoadStarted = true;
             loadPercent = Mathf.Max(loadPercent, args.Percent);
         }
     }

@@ -7,21 +7,7 @@ using UnityEngine.UI;
 
 namespace GuardVsMannequin.UI
 {
-    /// <summary>
-    /// 게임 HUD 관리 (uGUI). 게임 상태와 로컬 플레이어 정보(<see cref="HudContext"/>)를 영역들에 나눠 주고,
-    /// 조준점·대기 문구와 커서를 처리한다. 각 영역은 <see cref="IHudSection"/> 컴포넌트가 맡는다:
-    /// - <see cref="HudTopPanel"/>(상단 중앙): 단계 | 남은 시간, 남은 마네킹 / 전체 마네킹
-    /// - <see cref="HudControlsPanel"/>(중앙 좌측): 조작 키 안내
-    /// - <see cref="HudObjectivePanel"/>(중앙 우측): 역할별 목표와 남은 수
-    /// - <see cref="HudHealthBar"/>·<see cref="HudStaminaBar"/>(하단 중앙): 체력 게이지와 그 아래 스태미나 막대
-    /// - <see cref="HudRevealIndicator"/>(체력 바 위): 수류탄에 맞아 위치가 드러난 동안의 아이콘
-    /// - <see cref="HudSwitchToolIndicator"/>(체력 바 옆): 손전등 단축키
-    /// - <see cref="HudAmmoDisplay"/>·<see cref="HudCooldownRing"/>(조준점 둘레): 총 탄·장전 게이지, 구울 공격 쿨타임 고리
-    /// - <see cref="HudCooldownBars"/>(조준점 왼쪽): 수류탄·변신 쿨타임 세로 바
-    /// - <see cref="HudBottomPanel"/>(하단): 사망·미참가 시 관전 정보
-    /// - <see cref="HudResultPanel"/>: 결과 화면
-    /// 다른 플레이어의 체력과 킬 로그는 기획에 따라 표시하지 않는다.
-    /// </summary>
+    /// <summary>영역들이 따로 상태를 읽지 않도록 게임 정보를 나눠 주고 조준점·커서를 처리하는 HUD 관리자.</summary>
     public class GameHud : MonoBehaviour
     {
         [Header("게임 상태 (씬에서 연결)")]
@@ -40,9 +26,7 @@ namespace GuardVsMannequin.UI
         private IHudSection[] sections;
         private GameState previousState = GameState.Waiting;
 
-        /// <summary>
-        /// 공용 정보를 만들어 영역들에 넘기고 모두 숨긴다.
-        /// </summary>
+        /// <summary>영역을 추가해도 고치지 않도록 하위 영역을 모두 찾고, 아바타가 바로 스폰될 수 있어 추적을 먼저 시작한다.</summary>
         private void Awake()
         {
             localPlayer.Attach();
@@ -56,16 +40,14 @@ namespace GuardVsMannequin.UI
         }
 
         /// <summary>
-        /// 이벤트 구독을 해제한다.
+        /// 추적기는 정적 이벤트를 구독하므로 끊지 않으면 파괴된 HUD가 계속 불린다.
         /// </summary>
         private void OnDestroy()
         {
             localPlayer.Detach();
         }
 
-        /// <summary>
-        /// 상태에 맞게 HUD 요소를 켜고 영역들을 갱신한다.
-        /// </summary>
+        /// <summary>영역마다 상태를 따로 읽지 않도록 한 번 읽은 상태를 나눠 주고, 대기 중에는 역할을 지운다.</summary>
         private void Update()
         {
             // 네트워크 초기화 전에는 FishNet 상태를 읽을 수 없다.
@@ -89,7 +71,7 @@ namespace GuardVsMannequin.UI
         }
 
         /// <summary>
-        /// 모든 HUD 요소를 숨긴다.
+        /// 네트워크 준비 전에는 읽을 정보가 없어 빈 HUD가 보이지 않도록 한꺼번에 숨긴다.
         /// </summary>
         private void SetAllHidden()
         {

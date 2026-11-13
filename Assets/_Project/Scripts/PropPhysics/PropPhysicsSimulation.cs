@@ -5,17 +5,14 @@ using UnityEngine;
 
 namespace GuardVsMannequin.PropPhysics
 {
-    /// <summary>
-    /// 서버의 사물 물리 진행: 깨우기, 동시에 움직이는 수 상한, 멈춤 판정, 맵 밖 추락 복귀. (네트워크와 무관한 순수 진행 규칙)
-    /// 멈춘 사물은 다시 키네마틱이 되어 새 자리에 남는다.
-    /// </summary>
+    /// <summary>네트워크 없이 시험할 수 있도록 서버의 사물 물리 진행 규칙만 맡는다.</summary>
     public sealed class PropPhysicsSimulation
     {
-        // 이보다 오래 움직이면 멈춤 판정과 관계없이 멈춘다(초). (계속 굴러다니는 사물 방지)
+        // 계속 굴러다니지 않도록 이보다 오래 움직이면 멈추는 시간(초).
         private const float MaxActiveSeconds = 10f;
 
         /// <summary>
-        /// 움직이는 사물 하나와 진행 상태.
+        /// 멈춤·시간 초과를 판단하려면 깨운 시각과 느려진 시간이 필요해서 사물과 함께 기억한다.
         /// </summary>
         private sealed class Active
         {
@@ -24,15 +21,12 @@ namespace GuardVsMannequin.PropPhysics
             public float slowTime;
         }
 
+        // 가장 오래된 것을 먼저 멈추려고 깨운 순서대로 둔다.
         private readonly List<Active> active = new();
 
-        /// <summary>지금 움직이는 사물 수.</summary>
         public int ActiveCount => active.Count;
 
-        /// <summary>
-        /// 사물을 깨워 충격을 준다. 이미 움직이면 충격만 더한다.
-        /// 상한을 넘으면 가장 오래 움직인 사물을 그 자리에서 멈추고 <paramref name="settled"/>에 넣는다.
-        /// </summary>
+        /// <summary>서버 물리와 동기화 비용을 줄이도록 상한을 넘으면 가장 오래 움직인 사물을 멈춘다.</summary>
         public void Activate(PropBody body, Vector3 point, Vector3 impulse, float now, List<PropBody> settled)
         {
             Active entry = Find(body);
@@ -40,10 +34,10 @@ namespace GuardVsMannequin.PropPhysics
             {
                 if (active.Count >= GameTuning.PropPhysicsMaxActive)
                 {
-                    Active oldest = active[0];
+                    Active oldestEntry = active[0];
                     active.RemoveAt(0);
-                    oldest.body.SetDynamic(false);
-                    settled.Add(oldest.body);
+                    oldestEntry.body.SetDynamic(false);
+                    settled.Add(oldestEntry.body);
                 }
 
                 body.SetDynamic(true);
@@ -56,7 +50,8 @@ namespace GuardVsMannequin.PropPhysics
         }
 
         /// <summary>
-        /// 물리 한 단계 뒤의 상태를 정리한다. 계속 움직이는 사물은 <paramref name="moving"/>, 이번에 멈춘 사물은 <paramref name="settled"/>에 넣는다.
+        /// <summary>동기화하는 쪽이 보낼 것을 고르도록 움직이는 사물과 이번에 멈춘 사물을 나눠 담는다.</summary>
+        /// 맵 밖으로 떨어진 사물은 판에서 사라지지 않게 시작 자리로 되돌린다.
         /// </summary>
         public void Step(float now, float deltaTime, List<PropBody> moving, List<PropBody> settled)
         {
@@ -94,7 +89,7 @@ namespace GuardVsMannequin.PropPhysics
         }
 
         /// <summary>
-        /// 모든 사물을 그 자리에서 멈춘다. (판 종료, 서버 종료)
+        /// 판이 끝나거나 서버가 멈춘 뒤에도 사물이 계속 움직이지 않도록 모두 그 자리에서 멈춘다.
         /// </summary>
         public void Clear()
         {
@@ -107,16 +102,14 @@ namespace GuardVsMannequin.PropPhysics
         }
 
         /// <summary>
-        /// 시작 자리보다 <see cref="GameTuning.PropKillDepth"/> 넘게 아래로 떨어졌는지. (맵 밖 추락)
+        /// 맵마다 바닥 높이가 달라서 절대 높이 대신 시작 자리 기준으로 <see cref="GameTuning.PropKillDepth"/> 넘게 떨어졌는지 본다.
         /// </summary>
         private static bool HasFallenOut(PropBody body)
         {
             return body.transform.position.y < body.StartPose.position.y - GameTuning.PropKillDepth;
         }
 
-        /// <summary>
-        /// 움직이는 목록에서 사물을 찾는다. 없으면 null.
-        /// </summary>
+        /// <summary>이미 움직이는 사물을 다시 깨우지 않으려고 목록에서 찾는다.</summary>
         private Active Find(PropBody body)
         {
             foreach (Active entry in active)

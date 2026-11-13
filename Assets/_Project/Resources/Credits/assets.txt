@@ -4,7 +4,6 @@ Steamworks.NET  —  Riley Labrecque  (MIT License)
 Easy Character Movement 2  —  Oscar Gracián  (Unity Asset Store EULA)
 Universal Render Pipeline, Input System, AI Navigation  —  Unity Technologies  (Unity Companion License)
 Human Basic Motions FREE  —  Kevin Iglesias
-Low Poly Character Series 1 - SWAT
 Modern Vending Machine
 Master Stylized Projectiles
 Casual Game Sounds U6

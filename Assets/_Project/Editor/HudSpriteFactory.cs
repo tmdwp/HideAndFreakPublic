@@ -5,10 +5,7 @@ using UnityEngine;
 
 namespace GuardVsMannequin.Editor
 {
-    /// <summary>
-    /// HUD 아이콘 스프라이트(조준점 게이지 고리, 손전등, 발각 눈)를 흰색 모양으로 그려 저장한다. 색은 HUD가 칠한다.
-    /// 파일이 이미 있으면 그대로 두고 가져오기 설정만 스프라이트로 맞춘다. 직접 그린 그림으로 바꿔도 된다.
-    /// </summary>
+    /// <summary>HUD가 색을 칠할 수 있도록 아이콘 스프라이트를 흰색 모양으로 그려 저장한다.</summary>
     public static class HudSpriteFactory
     {
         public const string AmmoGaugePath = "Assets/_Project/Art/UI/Hud_AmmoGauge.png";
@@ -20,64 +17,56 @@ namespace GuardVsMannequin.Editor
         // 가장자리를 부드럽게 하려고 한 픽셀을 나눠 보는 수.
         private const int SuperSample = 4;
 
-        /// <summary>
-        /// 탄 게이지용 원형 고리(96px, 두께 8px).
-        /// </summary>
+        /// <summary>시선을 옮기지 않고 탄을 볼 수 있도록 조준점 둘레의 가는 원형 고리로 만든다.</summary>
         public static Sprite GetAmmoGauge()
         {
-            const float outer = 46f;
-            const float inner = outer - 8f;
+            const float outerRadius = 46f;
+            const float innerRadius = outerRadius - 8f;
             return GetOrCreate(AmmoGaugePath, 96, (x, y) =>
             {
                 float distance = Mathf.Sqrt(x * x + y * y);
-                return distance <= outer && distance > inner;
+                return distance <= outerRadius && distance > innerRadius;
             });
         }
 
-        /// <summary>
-        /// 오른쪽을 비추는 손전등(64px): 손잡이, 스위치, 넓어지는 머리, 렌즈.
-        /// </summary>
+        /// <summary>작은 크기에서도 손전등으로 알아보도록 손잡이·머리·렌즈로 실루엣을 만든다.</summary>
         public static Sprite GetFlashlight()
         {
             return GetOrCreate(FlashlightPath, 64, (x, y) =>
             {
-                bool body = x >= -26f && x <= 2f && Mathf.Abs(y) <= 6f;
-                bool button = x >= -14f && x <= -6f && y > 6f && y <= 9f;
-                float headT = Mathf.InverseLerp(2f, 20f, x);
-                bool head = x > 2f && x <= 20f && Mathf.Abs(y) <= Mathf.Lerp(7f, 14f, headT);
-                bool lens = x > 20f && x <= 25f && Mathf.Abs(y) <= 14f;
-                return body || button || head || lens;
+                bool isBody = x >= -26f && x <= 2f && Mathf.Abs(y) <= 6f;
+                bool isButton = x >= -14f && x <= -6f && y > 6f && y <= 9f;
+                float headProgress = Mathf.InverseLerp(2f, 20f, x);
+                bool isHead = x > 2f && x <= 20f && Mathf.Abs(y) <= Mathf.Lerp(7f, 14f, headProgress);
+                bool isLens = x > 20f && x <= 25f && Mathf.Abs(y) <= 14f;
+                return isBody || isButton || isHead || isLens;
             });
         }
 
-        /// <summary>
-        /// 발각 표시용 눈(64px): 아몬드 모양 테두리와 눈동자.
-        /// </summary>
+        /// <summary>"보이고 있다"는 뜻이 바로 전달되도록 눈 모양을 만든다.</summary>
         public static Sprite GetRevealed()
         {
             return GetOrCreate(RevealedPath, 64, (x, y) =>
             {
-                bool outer = IsInsideAlmond(x, y, 29f, 18f);
-                bool inner = IsInsideAlmond(x, y, 23f, 12f);
-                bool pupil = x * x + y * y <= 8.5f * 8.5f;
-                return (outer && !inner) || pupil;
+                bool isInsideOuter = IsInsideAlmond(x, y, 29f, 18f);
+                bool isInsideInner = IsInsideAlmond(x, y, 23f, 12f);
+                bool isPupil = x * x + y * y <= 8.5f * 8.5f;
+                return (isInsideOuter && !isInsideInner) || isPupil;
             });
         }
 
         /// <summary>
-        /// 두 원호를 맞댄 아몬드(눈) 모양 안인지. 가로 반폭 halfWidth, 가운데 반높이 halfHeight.
+        /// 눈 모양은 양 끝이 뾰족해야 하므로 가운데에서 끝으로 갈수록 높이가 제곱으로 줄어드는 곡선을 쓴다.
         /// </summary>
         private static bool IsInsideAlmond(float x, float y, float halfWidth, float halfHeight)
         {
             if (Mathf.Abs(x) > halfWidth)
                 return false;
-            float t = x / halfWidth;
-            return Mathf.Abs(y) <= halfHeight * (1f - t * t);
+            float normalizedX = x / halfWidth;
+            return Mathf.Abs(y) <= halfHeight * (1f - normalizedX * normalizedX);
         }
 
-        /// <summary>
-        /// 스프라이트를 가져온다. 없으면 정사각형 크기로 모양을 그려 저장한다.
-        /// </summary>
+        /// <summary>사용자가 직접 그린 그림으로 바꿨을 수 있어 파일이 있으면 덮어쓰지 않는다.</summary>
         /// <param name="isInside">중심 기준 좌표(픽셀)가 모양 안인지.</param>
         private static Sprite GetOrCreate(string path, int size, Func<float, float, bool> isInside)
         {
@@ -93,9 +82,7 @@ namespace GuardVsMannequin.Editor
             return AssetDatabase.LoadAssetAtPath<Sprite>(path);
         }
 
-        /// <summary>
-        /// 가져오기 설정을 UI 스프라이트(밉맵 없음, 투명 유지)로 맞춘다.
-        /// </summary>
+        /// <summary>기본 텍스처 설정이면 Image에 넣을 수 없고 밉맵이 작은 아이콘을 흐리게 하므로 UI 스프라이트 설정으로 맞춘다.</summary>
         private static void EnsureSpriteImport(string path)
         {
             if (!(AssetImporter.GetAtPath(path) is TextureImporter importer))
@@ -111,30 +98,28 @@ namespace GuardVsMannequin.Editor
             importer.SaveAndReimport();
         }
 
-        /// <summary>
-        /// 모양 안을 흰색으로 칠한다. 한 픽셀을 여러 점으로 나눠 덮인 비율을 투명도로 쓴다.
-        /// </summary>
+        /// <summary>가장자리가 계단처럼 보이지 않도록 픽셀을 여러 점으로 나눠 덮인 비율을 투명도로 쓴다.</summary>
         private static Texture2D Draw(int size, Func<float, float, bool> isInside)
         {
             var texture = new Texture2D(size, size, TextureFormat.RGBA32, false);
             var pixels = new Color[size * size];
-            float half = size * 0.5f;
+            float halfSize = size * 0.5f;
             for (int y = 0; y < size; y++)
             {
                 for (int x = 0; x < size; x++)
                 {
-                    int covered = 0;
-                    for (int sy = 0; sy < SuperSample; sy++)
+                    int coveredSamples = 0;
+                    for (int sampleY = 0; sampleY < SuperSample; sampleY++)
                     {
-                        for (int sx = 0; sx < SuperSample; sx++)
+                        for (int sampleX = 0; sampleX < SuperSample; sampleX++)
                         {
-                            float px = x + (sx + 0.5f) / SuperSample - half;
-                            float py = y + (sy + 0.5f) / SuperSample - half;
-                            if (isInside(px, py))
-                                covered++;
+                            float pointX = x + (sampleX + 0.5f) / SuperSample - halfSize;
+                            float pointY = y + (sampleY + 0.5f) / SuperSample - halfSize;
+                            if (isInside(pointX, pointY))
+                                coveredSamples++;
                         }
                     }
-                    pixels[y * size + x] = new Color(1f, 1f, 1f, covered / (float)(SuperSample * SuperSample));
+                    pixels[y * size + x] = new Color(1f, 1f, 1f, coveredSamples / (float)(SuperSample * SuperSample));
                 }
             }
 

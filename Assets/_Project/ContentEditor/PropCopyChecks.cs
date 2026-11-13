@@ -5,17 +5,19 @@ using UnityEngine;
 
 namespace GuardVsMannequin.Editor
 {
-    /// <summary>
-    /// 변신 사물이 게임에서 그대로 복사될 수 있는지 검사한다. (게임의 맵 검사와 모드 SDK의 맵 검사 <see cref="ModMapValidator"/>가 함께 쓴다)
-    /// 오류: 조준하거나 변신할 수 없음 / 경고: 변신은 되지만 원래 모습과 달라 보이거나 변신이 막힘.
-    /// </summary>
+    /// <summary>게임과 모드 SDK가 같은 기준으로 변신 사물이 그대로 복사될 수 있는지 검사한다.</summary>
     public static class PropCopyChecks
     {
-        /// <summary>
-        /// 가장 중요한 문제 하나를 찾는다. 문제가 없으면 false.
-        /// </summary>
+        /// <summary>사물이 많은 맵에서 Console이 넘치지 않도록 가장 중요한 문제 하나만 알린다.</summary>
         public static bool TryFindProblem(TransformableProp prop, out string message, out bool isError)
         {
+            isError = false;
+            if (prop.IsWall)
+            {
+                message = "예전에 벽으로 등록된 사물입니다. 벽은 변신 대상이 아니라 게임에서 무시됩니다. 등록을 해제하세요.";
+                return true;
+            }
+
             isError = true;
             if (prop.GetComponentInChildren<Collider>(true) == null)
             {
@@ -31,9 +33,9 @@ namespace GuardVsMannequin.Editor
             }
 
             isError = false;
-            if (!prop.IsWall && appearance.LargestSize > GameTuning.DisguiseMaxSize)
+            if (appearance.LargestSize > GameTuning.DisguiseMaxSize)
             {
-                message = $"너무 커서({appearance.LargestSize:F1}m > {GameTuning.DisguiseMaxSize}m) 변신할 수 없습니다. 벽으로 지정하거나 등록을 해제하세요.";
+                message = $"너무 커서({appearance.LargestSize:F1}m > {GameTuning.DisguiseMaxSize}m) 변신할 수 없습니다. 등록을 해제하세요.";
                 return true;
             }
             if (HasUncopiedParts(prop))
@@ -56,23 +58,19 @@ namespace GuardVsMannequin.Editor
             return false;
         }
 
-        /// <summary>
-        /// 이 사물에 속한 자식 중 메시가 아닌 표시 요소(파티클·조명·스킨 메시)가 있는지 확인한다.
-        /// </summary>
+        /// <summary>외형 복사는 MeshRenderer만 다루므로 다른 표시 요소가 있으면 변신 모습이 달라짐을 알린다.</summary>
         private static bool HasUncopiedParts(TransformableProp prop)
         {
             foreach (Component part in prop.GetComponentsInChildren<Component>(true))
             {
-                bool uncopied = part is ParticleSystem || part is Light || part is SkinnedMeshRenderer;
-                if (uncopied && part.GetComponentInParent<TransformableProp>(true) == prop)
+                bool isUncopied = part is ParticleSystem || part is Light || part is SkinnedMeshRenderer;
+                if (isUncopied && part.GetComponentInParent<TransformableProp>(true) == prop)
                     return true;
             }
             return false;
         }
 
-        /// <summary>
-        /// 이 사물의 충돌체(트리거 제외)가 모두 움직이는 물체에 쓸 수 있는 모양인지 확인한다.
-        /// </summary>
+        /// <summary>하나라도 볼록하지 않으면 튕겨나가지 않으므로 트리거를 뺀 모든 충돌체를 확인한다.</summary>
         private static bool HasSimulatableColliders(TransformableProp prop)
         {
             foreach (Collider collider in prop.GetComponentsInChildren<Collider>(true))
@@ -84,7 +82,7 @@ namespace GuardVsMannequin.Editor
         }
 
         /// <summary>
-        /// 이 사물의 메시 조각 중 정적 배칭 플래그가 켜진 것이 있는지 확인한다.
+        /// 실행 중에는 이미 배칭된 결과만 보여 원인을 알 수 없으므로, 에디터에서 정적 배칭 플래그를 미리 찾는다.
         /// </summary>
         private static bool HasBatchedPart(TransformableProp prop)
         {

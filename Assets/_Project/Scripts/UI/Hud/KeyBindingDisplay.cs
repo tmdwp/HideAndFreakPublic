@@ -4,18 +4,13 @@ using UnityEngine.InputSystem;
 
 namespace GuardVsMannequin.UI
 {
-    /// <summary>
-    /// 입력 액션에 지금 묶인 키를 화면 표시용 이름으로 바꾼다. (키 설정을 바꾸면 HUD 안내도 따라 바뀜)
-    /// 마우스 버튼처럼 Input System 기본 이름이 영어 약어인 키는 strings.csv의 "input.장치.컨트롤" 문구가 있으면 그것을 쓴다.
-    /// </summary>
+    /// <summary>키 설정을 바꾸면 HUD 안내도 따라 바뀌도록 지금 묶인 키를 표시용 이름으로 바꾼다.</summary>
     public static class KeyBindingDisplay
     {
-        // 복합 입력 부분의 표시 순서. (WASD처럼 보이도록 위-왼쪽-아래-오른쪽)
+        // WASD처럼 보이도록 하는 복합 입력 부분의 표시 순서.
         private static readonly string[] PartOrder = { "up", "left", "down", "right", "negative", "positive" };
 
-        /// <summary>
-        /// 액션의 키 이름. 복합 입력(WASD 등)은 부분 키를 이어 붙인다. 액션이 없으면 "-".
-        /// </summary>
+        /// <summary>HUD 안내에는 대표 키 하나면 되므로 첫 바인딩만 쓴다.</summary>
         public static string Get(InputActionAsset actions, string actionName)
         {
             InputAction action = actions != null ? actions.FindAction(actionName) : null;
@@ -33,59 +28,55 @@ namespace GuardVsMannequin.UI
             return "-";
         }
 
-        /// <summary>
-        /// 복합 입력의 부분 키를 정해진 순서로 이어 붙인다. 모두 한 글자면 붙여 쓰고(WASD), 아니면 "/"로 나눈다.
-        /// </summary>
+        /// <summary>저장 순서는 읽는 순서와 달라 정해진 순서로 다시 놓는다.</summary>
         private static string GetCompositeDisplay(InputAction action, int compositeIndex)
         {
             var builder = new StringBuilder();
-            bool allSingleCharacter = true;
-            var parts = new string[PartOrder.Length];
+            bool isAllSingleCharacter = true;
+            var partNames = new string[PartOrder.Length];
 
             for (int i = compositeIndex + 1; i < action.bindings.Count && action.bindings[i].isPartOfComposite; i++)
             {
                 int order = System.Array.IndexOf(PartOrder, action.bindings[i].name);
                 if (order < 0)
                     continue;
-                parts[order] = GetSingleDisplay(action, i);
-                allSingleCharacter &= parts[order].Length == 1;
+                partNames[order] = GetSingleDisplay(action, i);
+                isAllSingleCharacter &= partNames[order].Length == 1;
             }
 
-            foreach (string part in parts)
+            foreach (string partName in partNames)
             {
-                if (string.IsNullOrEmpty(part))
+                if (string.IsNullOrEmpty(partName))
                     continue;
-                if (builder.Length > 0 && !allSingleCharacter)
+                if (builder.Length > 0 && !isAllSingleCharacter)
                     builder.Append('/');
-                builder.Append(part);
+                builder.Append(partName);
             }
             return builder.Length > 0 ? builder.ToString() : "-";
         }
 
         /// <summary>
-        /// 바인딩 하나의 표시 이름. 번역 문구가 있으면 그것을 쓴다.
+        /// 기본 이름("LMB" 등)은 영어 약어라 알아보기 어려우므로 번역 문구가 있으면 그것을 쓴다.
         /// </summary>
         private static string GetSingleDisplay(InputAction action, int bindingIndex)
         {
-            string key = GetLocalizationKey(action.bindings[bindingIndex].effectivePath);
-            return key != null && Loc.HasKey(key) ? Loc.Get(key) : action.GetBindingDisplayString(bindingIndex);
+            string localizationKey = GetLocalizationKey(action.bindings[bindingIndex].effectivePath);
+            return localizationKey != null && Loc.HasKey(localizationKey) ? Loc.Get(localizationKey) : action.GetBindingDisplayString(bindingIndex);
         }
 
-        /// <summary>
-        /// "&lt;Mouse&gt;/leftButton" → "input.mouse.leftButton". 형식이 다르면 null.
-        /// </summary>
+        /// <summary>키마다 문구를 따로 등록하지 않도록 바인딩 경로에서 문구 key를 만든다.</summary>
         private static string GetLocalizationKey(string path)
         {
             if (string.IsNullOrEmpty(path) || path[0] != '<')
                 return null;
 
-            int deviceEnd = path.IndexOf('>');
-            int slash = path.IndexOf('/', deviceEnd + 1);
-            if (deviceEnd < 0 || slash < 0)
+            int deviceEndIndex = path.IndexOf('>');
+            int slashIndex = path.IndexOf('/', deviceEndIndex + 1);
+            if (deviceEndIndex < 0 || slashIndex < 0)
                 return null;
 
-            string device = path.Substring(1, deviceEnd - 1).ToLowerInvariant();
-            return $"input.{device}.{path.Substring(slash + 1)}";
+            string deviceName = path.Substring(1, deviceEndIndex - 1).ToLowerInvariant();
+            return $"input.{deviceName}.{path.Substring(slashIndex + 1)}";
         }
     }
 }

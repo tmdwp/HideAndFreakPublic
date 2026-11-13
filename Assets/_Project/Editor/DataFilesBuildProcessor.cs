@@ -7,11 +7,7 @@ using UnityEngine;
 
 namespace GuardVsMannequin.Editor
 {
-    /// <summary>
-    /// 빌드가 끝나면 편집용 데이터 파일(문장, 크레딧, 게임 설정)을 빌드 폴더의
-    /// &lt;게임&gt;_Data/StreamingAssets/GameData 로 복사한다. 사용자는 이 파일을 고친 뒤 게임을 다시 켜면 된다.
-    /// 원본은 Assets/_Project/Resources에 있으며 게임 안에도 내장되어, 복사본이 없거나 깨지면 내장 원본을 쓴다.
-    /// </summary>
+    /// <summary>빌드 후에도 사용자가 문장·설정을 고칠 수 있도록 데이터 파일을 빌드 폴더로 복사한다.</summary>
     public class DataFilesBuildProcessor : IPostprocessBuildWithReport
     {
         private const string ResourcesRoot = "Assets/_Project/Resources";
@@ -19,16 +15,14 @@ namespace GuardVsMannequin.Editor
 
         public int callbackOrder => 0;
 
-        /// <summary>
-        /// Windows/Linux 독립 실행 빌드에서만 복사한다.
-        /// </summary>
+        /// <summary>외부 데이터 폴더 구조는 독립 실행 빌드에만 있으므로 그때만 복사한다.</summary>
         public void OnPostprocessBuild(BuildReport report)
         {
-            BuildTarget target = report.summary.platform;
-            if (target != BuildTarget.StandaloneWindows && target != BuildTarget.StandaloneWindows64
-                && target != BuildTarget.StandaloneLinux64)
+            BuildTarget buildTarget = report.summary.platform;
+            if (buildTarget != BuildTarget.StandaloneWindows && buildTarget != BuildTarget.StandaloneWindows64
+                && buildTarget != BuildTarget.StandaloneLinux64)
             {
-                Debug.LogWarning($"[DataFilesBuildProcessor] {target} 빌드는 데이터 파일 복사를 지원하지 않습니다. 내장 원본만 사용됩니다.");
+                Debug.LogWarning($"[DataFilesBuildProcessor] {buildTarget} 빌드는 데이터 파일 복사를 지원하지 않습니다. 내장 원본만 사용됩니다.");
                 return;
             }
 
@@ -36,40 +30,38 @@ namespace GuardVsMannequin.Editor
             string dataFolder = Path.Combine(Path.GetDirectoryName(outputPath), Path.GetFileNameWithoutExtension(outputPath) + "_Data");
             string destinationRoot = Path.Combine(dataFolder, "StreamingAssets", DataFiles.ExternalFolderName);
 
-            int copied = 0;
-            foreach (string folder in DataFiles.EditableFolders)
-                copied += CopyFolder(Path.Combine(ResourcesRoot, folder), Path.Combine(destinationRoot, folder));
+            int copiedCount = 0;
+            foreach (string folderName in DataFiles.EditableFolders)
+                copiedCount += CopyFolder(Path.Combine(ResourcesRoot, folderName), Path.Combine(destinationRoot, folderName));
 
             WriteReadme(destinationRoot);
-            Debug.Log($"[DataFilesBuildProcessor] 데이터 파일 {copied}개를 복사했습니다: {destinationRoot}");
+            Debug.Log($"[DataFilesBuildProcessor] 데이터 파일 {copiedCount}개를 복사했습니다: {destinationRoot}");
         }
 
         /// <summary>
-        /// 폴더의 데이터 파일(.meta 제외)을 복사한다. 하위 폴더도 포함한다.
+        /// 사용자가 편집할 파일만 남기려고 Unity 전용 .meta는 빼고, 폴더 구조는 Resources 경로와 같게 유지한다.
         /// </summary>
-        private static int CopyFolder(string source, string destination)
+        private static int CopyFolder(string sourceFolder, string destinationFolder)
         {
-            if (!Directory.Exists(source))
+            if (!Directory.Exists(sourceFolder))
                 return 0;
 
-            int count = 0;
-            foreach (string file in Directory.GetFiles(source, "*", SearchOption.AllDirectories))
+            int copiedCount = 0;
+            foreach (string sourceFile in Directory.GetFiles(sourceFolder, "*", SearchOption.AllDirectories))
             {
-                if (file.EndsWith(".meta"))
+                if (sourceFile.EndsWith(".meta"))
                     continue;
 
-                string relative = file.Substring(source.Length).TrimStart('/', '\\');
-                string target = Path.Combine(destination, relative);
-                Directory.CreateDirectory(Path.GetDirectoryName(target));
-                File.Copy(file, target, overwrite: true);
-                count++;
+                string relativePath = sourceFile.Substring(sourceFolder.Length).TrimStart('/', '\\');
+                string targetPath = Path.Combine(destinationFolder, relativePath);
+                Directory.CreateDirectory(Path.GetDirectoryName(targetPath));
+                File.Copy(sourceFile, targetPath, overwrite: true);
+                copiedCount++;
             }
-            return count;
+            return copiedCount;
         }
 
-        /// <summary>
-        /// 데이터 폴더에 편집 안내문을 쓴다.
-        /// </summary>
+        /// <summary>저장 형식을 모르고 고치면 반영되지 않으므로 안내문을 함께 둔다.</summary>
         private static void WriteReadme(string destinationRoot)
         {
             const string readme =

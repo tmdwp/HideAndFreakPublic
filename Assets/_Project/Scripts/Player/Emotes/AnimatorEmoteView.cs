@@ -2,19 +2,14 @@ using UnityEngine;
 
 namespace GuardVsMannequin.Player.Emotes
 {
-    /// <summary>
-    /// 외형 애니메이터로 감정 표현을 재생한다. (파라미터 규칙: <see cref="CharacterAnimatorParameters"/>)
-    /// 1. 번호별 트리거(Emote1 ~ Emote6)가 있으면 그것을 발동한다.
-    /// 2. 없으면 Emote 트리거 + EmoteId 정수가 있을 때 번호를 넣고 발동한다.
-    /// 3. 둘 다 없으면 false를 반환한다. (감정 표현 애니메이션이 없는 외형은 아무 동작도 하지 않음)
-    /// </summary>
+    /// <summary>외형 애니메이터의 감정 표현 트리거로 감정 표현을 재생한다.</summary>
     [RequireComponent(typeof(CharacterSkinView))]
     public class AnimatorEmoteView : MonoBehaviour, IEmoteView
     {
         private CharacterSkinView skinView;
 
         /// <summary>
-        /// 외형 컴포넌트를 캐시한다.
+        /// 재생마다 GetComponent를 부르지 않도록 미리 찾아 둔다.
         /// </summary>
         private void Awake()
         {
@@ -22,7 +17,7 @@ namespace GuardVsMannequin.Player.Emotes
         }
 
         /// <summary>
-        /// 애니메이터에 감정 표현이 있으면 재생한다.
+        /// 외형마다 컨트롤러 구성이 달라서 번호별 트리거 방식과 번호+공통 트리거 방식을 차례로 시도한다.
         /// </summary>
         public bool TryPlay(int emoteId)
         {

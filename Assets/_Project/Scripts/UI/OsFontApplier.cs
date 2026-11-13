@@ -3,11 +3,7 @@ using UnityEngine.UI;
 
 namespace GuardVsMannequin.UI
 {
-    /// <summary>
-    /// 하위 uGUI Text 중 Unity 기본 폰트(LegacyRuntime)를 쓰는 것에만 게임 UI 폰트(<see cref="UiFont"/>)를 적용한다.
-    /// 기본 폰트는 한글 글리프가 없어 네모로 보이기 때문이다.
-    /// 직접 지정한 폰트(UI 에셋의 폰트 등)는 바꾸지 않는다. 모든 Text에 폰트를 지정했다면 이 컴포넌트는 지워도 된다.
-    /// </summary>
+    /// <summary>Unity 기본 폰트는 한글이 없어 기본 폰트를 쓰는 Text에만 게임 UI 폰트를 적용한다.</summary>
     public class OsFontApplier : MonoBehaviour
     {
         private const string BuiltInFontName = "LegacyRuntime";
@@ -16,7 +12,7 @@ namespace GuardVsMannequin.UI
         [SerializeField] private Font replacementFont;
 
         /// <summary>
-        /// 하위 Text(비활성 포함) 중 기본 폰트를 쓰는 것만 바꾼다.
+        /// 나중에 켜지는 패널도 한글이 깨지지 않도록 비활성 Text까지 처음에 한꺼번에 바꾼다.
         /// </summary>
         private void Awake()
         {

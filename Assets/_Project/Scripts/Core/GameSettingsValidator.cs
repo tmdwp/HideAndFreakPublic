@@ -2,13 +2,10 @@ using UnityEngine;
 
 namespace GuardVsMannequin.Core
 {
-    /// <summary>
-    /// 게임 설정값을 허용 범위로 보정한다.
-    /// 설정값의 유효성 규칙만 담당한다(SRP).
-    /// </summary>
+    /// <summary>설정값 유효성 규칙만 맡아 허용 범위로 보정한다.</summary>
     public static class GameSettingsValidator
     {
-        // 최후의 안전선. 룸에서 고를 수 있는 범위는 game_settings.csv에서 정하며, 이 값보다 넓힐 수 없다.
+        // CSV 범위를 넓혀도 넘을 수 없는 최후의 안전선.
         public const float MinHuntDelay = 5f;
         public const float MaxHuntDelay = 300f;
         public const float MinPlayTime = 120f;
@@ -18,10 +15,8 @@ namespace GuardVsMannequin.Core
         public const float MaxMoveSpeed = 20f;
 
         /// <summary>
-        /// 현재 참가 인원을 기준으로 설정값을 보정한 결과를 반환한다.
+        /// 가드 수·목표 수처럼 인원에 따라 허용 범위가 달라지는 값이 있어서, 시작 시점 인원으로 보정한다.
         /// </summary>
-        /// <param name="settings">보정할 설정.</param>
-        /// <param name="playerCount">현재 참가 인원.</param>
         public static GameSettings Validate(GameSettings settings, int playerCount)
         {
             settings.huntDelay = Mathf.Clamp(settings.huntDelay, MinHuntDelay, MaxHuntDelay);
@@ -33,7 +28,7 @@ namespace GuardVsMannequin.Core
             int mannequinCount = Mathf.Max(1, playerCount - settings.guardCount);
             settings.objectiveCount = Mathf.Clamp(settings.objectiveCount, 0, mannequinCount + 2);
 
-            // 전원 장치는 목표 수보다 반드시 많아야 한다.
+            // 마네킹이 고를 여지가 있어야 하므로 전원 장치는 목표 수보다 하나 이상 많게 둔다.
             settings.generatorCount = Mathf.Max(settings.generatorCount, settings.objectiveCount + 1);
             settings.generatorDestroyTime = Mathf.Max(0.1f, settings.generatorDestroyTime);
 
@@ -52,16 +47,14 @@ namespace GuardVsMannequin.Core
             return settings;
         }
 
-        /// <summary>
-        /// 참가 인원에 따른 최대 가드 수(인원의 절반, 최소 1)를 반환한다.
-        /// </summary>
+        /// <summary>가드가 마네킹보다 많아지지 않도록 인원의 절반으로 묶는다.</summary>
         public static int GetMaxGuardCount(int playerCount)
         {
             return Mathf.Max(1, playerCount / 2);
         }
 
         /// <summary>
-        /// 게임을 시작할 수 있는 인원인지 확인한다.
+        /// 룸 UI와 서버 시작 검사가 같은 인원 기준을 쓰도록 한곳에 둔다.
         /// </summary>
         public static bool CanStart(int playerCount)
         {

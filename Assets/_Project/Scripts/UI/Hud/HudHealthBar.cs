@@ -5,10 +5,7 @@ using UnityEngine.UI;
 
 namespace GuardVsMannequin.UI
 {
-    /// <summary>
-    /// HUD 하단 중앙: 내 체력 게이지(글자 없음). 채움 막대의 오른쪽 앵커를 남은 체력 비율로 줄인다.
-    /// 바로 아래에는 스태미나 막대(<see cref="HudStaminaBar"/>)가 놓인다. 값이 바뀔 때만 다시 그린다.
-    /// </summary>
+    /// <summary>스프라이트 없이 앵커로 남은 체력을 보여 주는 게이지.</summary>
     public class HudHealthBar : MonoBehaviour, IHudSection
     {
         [SerializeField] private GameObject healthPanel;
@@ -26,43 +23,47 @@ namespace GuardVsMannequin.UI
 
         private HudContext context;
         private int shownHealth = -1;
-        private int shownMax = -1;
+        private int shownMaxHealth = -1;
 
-        /// <inheritdoc />
+        /// <summary>
+        /// 로컬 아바타가 바뀌어도 따라가도록 아바타 대신 추적기를 담은 공용 정보를 기억한다.
+        /// </summary>
         public void Bind(HudContext hudContext)
         {
             context = hudContext;
         }
 
-        /// <inheritdoc />
+        /// <summary>
+        /// 네트워크 준비 전에는 체력 정보가 없으므로 빈 막대가 보이지 않게 숨긴다.
+        /// </summary>
         public void Hide()
         {
             healthPanel.SetActive(false);
         }
 
-        /// <inheritdoc />
+        /// <summary>체력은 맞을 때만 바뀌므로 값이 같으면 다시 그리지 않는다.</summary>
         public void Refresh(GameState state)
         {
             bool isInMatch = state is GameState.Preparation or GameState.Playing or GameState.Hunting;
             PlayerHealth health = context.LocalPlayer.Health;
-            bool visible = isInMatch && health != null;
-            healthPanel.SetActive(visible);
-            if (!visible)
+            bool isVisible = isInMatch && health != null;
+            healthPanel.SetActive(isVisible);
+            if (!isVisible)
                 return;
 
-            int current = health.CurrentHealth;
-            int max = Mathf.Max(1, health.MaxHealth);
-            if (current == shownHealth && max == shownMax)
+            int currentHealth = health.CurrentHealth;
+            int maxHealth = Mathf.Max(1, health.MaxHealth);
+            if (currentHealth == shownHealth && maxHealth == shownMaxHealth)
                 return;
 
-            float ratio = Mathf.Clamp01((float)current / max);
+            float healthRatio = Mathf.Clamp01((float)currentHealth / maxHealth);
             fill.anchorMin = new Vector2(0f, fill.anchorMin.y);
-            fill.anchorMax = new Vector2(ratio, fill.anchorMax.y);
+            fill.anchorMax = new Vector2(healthRatio, fill.anchorMax.y);
             if (fillGraphic != null)
-                fillGraphic.color = ratio <= lowThreshold ? lowColor : normalColor;
+                fillGraphic.color = healthRatio <= lowThreshold ? lowColor : normalColor;
 
-            shownHealth = current;
-            shownMax = max;
+            shownHealth = currentHealth;
+            shownMaxHealth = maxHealth;
         }
     }
 }

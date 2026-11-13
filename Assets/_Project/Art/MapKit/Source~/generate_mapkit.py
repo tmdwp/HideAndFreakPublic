@@ -362,10 +362,10 @@ def makeFileCabinet():
 
 
 def makeTrashBin():
-    """철제 휴지통."""
+    """철제 휴지통. 위가 열려 속이 비어 있다(안쪽 바닥 2cm)."""
     b = MeshBuilder("TrashBin", "Prop", bevel=0.003)
-    b.cylinder(0.21, 0.24, 0.65, (0, 0, 0.325), "MetalDark", segments=18)
-    b.cylinder(0.255, 0.255, 0.03, (0, 0, 0.645), "Metal", segments=18)
+    b.hollowCylinder(0.21, 0.24, 0.65, 0.012, (0, 0, 0.325), "MetalDark", floor=0.02, segments=18)
+    b.hollowCylinder(0.255, 0.255, 0.03, 0.025, (0, 0, 0.645), "Metal", segments=18)
     return b.build()
 
 
@@ -385,10 +385,10 @@ def makeTrafficCone():
 
 
 def makeBucket():
-    """플라스틱 양동이."""
+    """플라스틱 양동이. 위가 열려 속이 비어 있다. 테두리는 바깥으로 둘린 고리."""
     b = MeshBuilder("Bucket", "Prop", bevel=0.003)
-    b.cylinder(0.12, 0.15, 0.3, (0, 0, 0.15), "Yellow", segments=16)
-    b.cylinder(0.155, 0.155, 0.02, (0, 0, 0.295), "Yellow", segments=16)
+    b.hollowCylinder(0.12, 0.15, 0.3, 0.01, (0, 0, 0.15), "Yellow", floor=0.015, segments=16)
+    b.hollowCylinder(0.158, 0.158, 0.02, 0.012, (0, 0, 0.29), "Yellow", segments=16)
     return b.build()
 
 
@@ -424,7 +424,8 @@ def makeCeilingLamp():
     b = MeshBuilder("Lamp_Ceiling", "Prop", bevel=0.002)
     b.cylinder(0.07, 0.07, 0.03, (0, 0, -0.015), "MetalDark", segments=14)
     b.cylinder(0.006, 0.006, 0.6, (0, 0, -0.33), "Rubber", segments=6)
-    b.cylinder(0.25, 0.06, 0.2, (0, 0, -0.7), "MetalDark", segments=20)
+    b.hollowCylinder(0.25, 0.06, 0.2, 0.008, (0, 0, -0.7), "MetalDark", segments=20)
+    b.cylinder(0.06, 0.06, 0.01, (0, 0, -0.605), "MetalDark", segments=20)
     b.sphere(0.06, (0, 0, -0.79), "Light")
     return b.build()
 
@@ -442,14 +443,16 @@ def makeSandbags():
 
 
 builders = [
-    lambda: makeFloor(4), lambda: makeFloor(2),
-    lambda: makeWall(4), lambda: makeWall(2), lambda: makeWall(1),
+    # 크기만 다른 같은 물체는 하나만 만든다. (Floor_2x2·Wall_2m/1m·Crate_06m은 Unity 프리팹에서 크기만 줄여 쓴다)
+    lambda: makeFloor(4),
+    lambda: makeWall(4),
     makeWallDoor, makeWallWindow, makeWallHalf, makeDoor,
     makePillarSquare, makePillarRound, makeStairs, makeRamp, makePlatform,
     makeRailing, makeBeam, makeContainer,
-    lambda: makeCrate(1.0, "Crate_1m"), lambda: makeCrate(0.6, "Crate_06m"),
-    makeBarrel, makePallet, makeCardboardBox, makeCardboardStack,
-    makeShelf, makeTable, makeChair, makeStool, makeLocker, makeLockerRow,
+    lambda: makeCrate(1.0, "Crate_1m"),
+    # 골판지 상자 더미·사물함 3칸은 Unity에서 상자·사물함 프리팹을 겹쳐 만든 묶음 프리팹으로 쓴다.
+    makeBarrel, makePallet, makeCardboardBox,
+    makeShelf, makeTable, makeChair, makeStool, makeLocker,
     makeHospitalBed, makeFileCabinet, makeTrashBin, makeTrafficCone, makeBucket,
     makePipeStraight, makePipeElbow, makeDuct, makeCeilingLamp, makeSandbags,
 ]

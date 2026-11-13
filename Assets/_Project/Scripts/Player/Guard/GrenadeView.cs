@@ -5,11 +5,7 @@ using UnityEngine.Rendering;
 
 namespace GuardVsMannequin.Player.Guard
 {
-    /// <summary>
-    /// 수류탄 연출: 날아가는 모델, 폭발(번쩍임 + 퍼지는 구 + 폭발음).
-    /// 모델·폭발 이펙트 프리팹을 넣으면 그것을 쓰고, 비어 있으면 임시 도형으로 대신한다. (에셋이 준비되면 인스펙터에서 교체)
-    /// 판정은 서버(<see cref="GrenadeTool"/>)가 하고, 이 컴포넌트는 모든 클라이언트에서 같은 궤적을 보여주기만 한다.
-    /// </summary>
+    /// <summary>에셋이 없어도 보이도록 비어 있으면 임시 도형으로 대신하는 수류탄 연출.</summary>
     public class GrenadeView : MonoBehaviour
     {
         [Tooltip("날아가는 수류탄 모델. 비우면 작은 구를 쓴다.")]
@@ -33,7 +29,7 @@ namespace GuardVsMannequin.Player.Guard
         private NoiseEmitter noiseEmitter;
 
         /// <summary>
-        /// 폭발음을 낼 소음 컴포넌트를 찾는다.
+        /// 폭발마다 GetComponent를 부르지 않도록 소음 컴포넌트를 미리 찾아 둔다.
         /// </summary>
         private void Awake()
         {
@@ -41,16 +37,19 @@ namespace GuardVsMannequin.Player.Guard
         }
 
         /// <summary>
-        /// 수류탄을 궤적대로 날리고, 도착하면 폭발 연출을 재생한다.
+        /// 던진 가드가 날아가는 도중에 죽어도 연출이 끝까지 재생되도록, 아바타와 떨어진 별도 오브젝트로 날린다.
         /// </summary>
-        public void Play(Vector3 start, Vector3 velocity, float flightTime)
+        public void Play(GrenadeSegment[] segments, float fuseTime)
         {
+            if (segments == null || segments.Length == 0)
+                return;
+
             GameObject grenade = grenadeModel != null ? Instantiate(grenadeModel) : CreateFallbackGrenade();
-            grenade.AddComponent<GrenadeFlight>().Launch(start, velocity, flightTime, PlayExplosion);
+            grenade.AddComponent<GrenadeFlight>().Launch(segments, fuseTime, PlayExplosion);
         }
 
         /// <summary>
-        /// 폭발 지점에서 이펙트와 소리를 재생한다.
+        /// 폭발 이펙트 에셋이 없어도 위치와 반경이 보이도록 빛과 퍼지는 구로 대신한다.
         /// </summary>
         private void PlayExplosion(Vector3 position)
         {
@@ -69,6 +68,7 @@ namespace GuardVsMannequin.Player.Guard
             flash.type = LightType.Point;
             flash.color = flashColor;
             flash.range = GameTuning.GrenadeRadius * 4f;
+            // 순간적인 섬광이라 그림자 비용을 쓸 가치가 없다.
             flash.shadows = LightShadows.None;
 
             GameObject sphere = CreatePrimitiveWithoutCollider(PrimitiveType.Sphere, blastMaterial);
@@ -77,7 +77,7 @@ namespace GuardVsMannequin.Player.Guard
         }
 
         /// <summary>
-        /// 모델이 없을 때 쓸 작은 구를 만든다.
+        /// 모델 에셋이 아직 없어도 날아가는 것이 보이도록 작은 구로 대신한다.
         /// </summary>
         private GameObject CreateFallbackGrenade()
         {
@@ -88,16 +88,16 @@ namespace GuardVsMannequin.Player.Guard
         }
 
         /// <summary>
-        /// 충돌체 없는 기본 도형을 만든다. (연출 전용)
+        /// 연출용 도형이 플레이어나 판정 광선에 걸리지 않도록 기본 충돌체를 없앤다.
         /// </summary>
         private static GameObject CreatePrimitiveWithoutCollider(PrimitiveType type, Material material)
         {
             GameObject primitive = GameObject.CreatePrimitive(type);
             Destroy(primitive.GetComponent<Collider>());
-            Renderer renderer = primitive.GetComponent<Renderer>();
-            renderer.shadowCastingMode = ShadowCastingMode.Off;
+            Renderer primitiveRenderer = primitive.GetComponent<Renderer>();
+            primitiveRenderer.shadowCastingMode = ShadowCastingMode.Off;
             if (material != null)
-                renderer.sharedMaterial = material;
+                primitiveRenderer.sharedMaterial = material;
             return primitive;
         }
 

@@ -4,36 +4,32 @@ using GuardVsMannequin.Player;
 
 namespace GuardVsMannequin.UI
 {
-    /// <summary>
-    /// 로컬 플레이어의 아바타(체력, 도구, 스태미나)와 이번 판 역할을 이벤트로 추적한다.
-    /// </summary>
+    /// <summary>HUD가 아바타를 직접 찾지 않도록 로컬 플레이어의 아바타와 역할을 이벤트로 추적한다.</summary>
     public sealed class LocalPlayerTracker
     {
         private static readonly ITool[] NoTools = new ITool[0];
 
-        /// <summary>살아 있는 로컬 아바타. 사망·미참가면 null.</summary>
+        /// <summary>사망·미참가면 null이므로 HUD는 이 값으로 표시 여부를 정한다.</summary>
         public PlayerIdentity Player { get; private set; }
 
-        /// <summary>로컬 아바타의 체력. 없으면 null.</summary>
         public PlayerHealth Health { get; private set; }
 
-        /// <summary>로컬 아바타의 스태미나. 없으면 null.</summary>
         public IStaminaSource Stamina { get; private set; }
 
-        /// <summary>로컬 아바타의 일시 효과(수류탄 등). 없으면 null.</summary>
+        /// <summary>수류탄 같은 일시 효과.</summary>
         public IStatusEffects StatusEffects { get; private set; }
 
-        /// <summary>로컬 아바타의 도구 목록.</summary>
+        /// <summary>아바타가 없을 때도 반복문이 null 검사 없이 돌도록 빈 목록을 쓴다.</summary>
         public IReadOnlyList<ITool> Tools { get; private set; } = NoTools;
 
-        /// <summary>로컬 아바타의 탄창 있는 도구(가드 총). 없으면 null.</summary>
+        /// <summary>탄창이 있는 도구.</summary>
         public IAmmoSource Ammo { get; private set; }
 
-        /// <summary>이번 판의 로컬 역할. 사망 후 안내·결과에 쓰려고 아바타가 사라져도 유지한다.</summary>
+        /// <summary>사망 후 안내·결과에 쓰려고 아바타가 사라져도 이번 판 역할을 유지한다.</summary>
         public PlayerRole LastRole { get; private set; } = PlayerRole.None;
 
         /// <summary>
-        /// 로컬 플레이어 이벤트를 구독한다.
+        /// HUD가 켜져 있는 동안만 추적하도록 바깥에서 구독 시점을 정한다.
         /// </summary>
         public void Attach()
         {
@@ -42,7 +38,7 @@ namespace GuardVsMannequin.UI
         }
 
         /// <summary>
-        /// 이벤트 구독을 해제한다.
+        /// 정적 이벤트라 끊지 않으면 파괴된 HUD가 계속 불린다.
         /// </summary>
         public void Detach()
         {
@@ -51,7 +47,7 @@ namespace GuardVsMannequin.UI
         }
 
         /// <summary>
-        /// 판이 끝나 대기 상태가 되면 지난 판의 역할을 지운다.
+        /// 다음 판 시작 전 대기 화면에 지난 판 역할 안내가 남지 않도록 지운다.
         /// </summary>
         public void ResetRole()
         {
@@ -59,7 +55,7 @@ namespace GuardVsMannequin.UI
         }
 
         /// <summary>
-        /// 로컬 아바타의 체력, 스태미나, 도구를 캐시한다.
+        /// HUD 영역들이 매 프레임 GetComponent를 부르지 않도록 스폰할 때 한 번 찾아 둔다.
         /// </summary>
         private void OnSpawned(PlayerIdentity identity)
         {
@@ -72,9 +68,7 @@ namespace GuardVsMannequin.UI
             LastRole = identity.Role;
         }
 
-        /// <summary>
-        /// 로컬 아바타 참조를 비운다. 역할은 사망 후 안내를 위해 유지한다.
-        /// </summary>
+        /// <summary>역할 전환 중 새 아바타가 먼저 스폰될 수 있어 지금 추적 중인 아바타일 때만 비운다.</summary>
         private void OnDespawned(PlayerIdentity identity)
         {
             if (Player != identity)

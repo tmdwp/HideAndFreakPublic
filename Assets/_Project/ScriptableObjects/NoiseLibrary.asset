@@ -17,10 +17,6 @@ MonoBehaviour:
     clip: {fileID: 8300000, guid: 4830db4c565789b41bb216c4210c24bf, type: 3}
     volume: 1
     maxDistance: 60
-  - type: 3
-    clip: {fileID: 8300000, guid: 7fb0a6eec3b0324448acf387fedee8af, type: 3}
-    volume: 0.8
-    maxDistance: 18
   - type: 4
     clip: {fileID: 8300000, guid: 3a97d050be35fc14bad25dc4122e7a96, type: 3}
     volume: 1

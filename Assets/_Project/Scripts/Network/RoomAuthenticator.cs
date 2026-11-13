@@ -11,17 +11,7 @@ using UnityEngine;
 
 namespace GuardVsMannequin.Network
 {
-    /// <summary>
-    /// 접속을 검증한다. 통과하지 못한 연결은 거부 이유를 알린 뒤 FishNet이 끊는다.
-    /// - 클라이언트: 접속하자마자 게임 버전(<see cref="GameVersion"/>)과 입력한 방 암호를 서버에 보낸다.
-    /// - 서버:
-    ///   1. 버전이 호스트와 다르거나, 정해진 시간 안에 버전을 보내지 않으면(옛 빌드) 거부. 방 암호가 있으면 암호도 확인 (여러 번 틀리면 잠시 막음)
-    ///      모드는 입장 때 확인하지 않는다. 고른 맵의 모드는 게임을 시작할 때 RoomState가 확인한다.
-    ///   2. Steam 방: Steam 접속은 로비 멤버만, IP 접속은 호스트 자신(루프백)만 허용
-    ///   3. 판이 진행 중이면 거부 (Steam 로비의 참가 차단을 우회한 접속 방지)
-    ///   4. 인원이 가득 찼으면 거부
-    /// 거부 이유(<see cref="ConnectionRejectedBroadcast"/>)는 SessionService가 받아 로비에 안내한다.
-    /// </summary>
+    /// <summary>아무나 들어오지 못하도록 버전·암호·추방·방 상태로 접속을 검증한다.</summary>
     public class RoomAuthenticator : Authenticator
     {
         // 참가자는 로비에 들어간 뒤 접속하지만, 호스트의 로비 멤버 목록 갱신이 늦을 수 있어 잠시 기다린다.
@@ -31,6 +21,9 @@ namespace GuardVsMannequin.Network
         // 클라이언트가 버전을 보낼 때까지 기다리는 시간
         private const float VersionWaitSeconds = 10f;
 
+        // 같은 사람의 이전 연결이 정리되기를 기다리는 시간
+        private const float PreviousConnectionWaitSeconds = 3f;
+
         private readonly Dictionary<int, JoinRequestBroadcast> receivedRequests = new();
         private readonly PasswordAttemptLimiter passwordAttempts = new();
         private ISessionService session;
@@ -39,7 +32,7 @@ namespace GuardVsMannequin.Network
         public override event Action<NetworkConnection, bool> OnAuthenticationResult;
 
         /// <summary>
-        /// 판정에 필요한 서비스를 연결한다.
+        /// FishNet이 검증기를 만드는 시점과 세션이 준비되는 시점이 달라서, 판정에 필요한 서비스를 나중에 연결한다.
         /// </summary>
         public void Configure(ISessionService sessionService, SteamLobbyService lobbyService)
         {
@@ -48,7 +41,7 @@ namespace GuardVsMannequin.Network
         }
 
         /// <summary>
-        /// 참가 요청 메시지를 등록한다. (서버: 인증 전 메시지 수신 허용, 클라이언트: 접속 시 버전·암호 전송)
+        /// 버전·암호는 인증 전에 받아야 하므로 서버는 인증 없이 받을 수 있게 등록하고, 클라이언트는 접속하자마자 보내도록 연결 상태를 듣는다.
         /// </summary>
         public override void InitializeOnce(NetworkManager networkManager)
         {
@@ -59,7 +52,7 @@ namespace GuardVsMannequin.Network
         }
 
         /// <summary>
-        /// 등록을 해제한다.
+        /// 파괴된 뒤 메시지·연결 콜백이 이 객체를 부르지 않도록 해제한다.
         /// </summary>
         private void OnDestroy()
         {
@@ -70,9 +63,7 @@ namespace GuardVsMannequin.Network
             NetworkManager.ClientManager.OnClientConnectionState -= OnClientConnectionState;
         }
 
-        /// <summary>
-        /// 클라이언트: 서버에 접속되면 곧바로 버전과 입력한 암호를 보낸다. (호스트 자신은 방 암호를 보낸다)
-        /// </summary>
+        /// <summary>서버의 버전 대기 시간 안에 도착하도록 접속되자마자 참가 요청을 보낸다.</summary>
         private void OnClientConnectionState(ClientConnectionStateArgs args)
         {
             if (args.ConnectionState == LocalConnectionState.Started)
@@ -80,20 +71,19 @@ namespace GuardVsMannequin.Network
         }
 
         /// <summary>
-        /// 클라이언트: 버전·암호를 담은 참가 요청을 보낸다.
+        /// 재접속한 사람을 알아보도록 이번 실행의 토큰도 함께 보낸다.
         /// </summary>
         private void SendJoinRequest()
         {
             NetworkManager.ClientManager.Broadcast(new JoinRequestBroadcast
             {
                 version = GameVersion.Current,
-                password = session?.JoinPassword ?? string.Empty
+                password = session?.JoinPassword ?? string.Empty,
+                clientToken = session?.ClientToken ?? string.Empty
             });
         }
 
-        /// <summary>
-        /// 서버: 클라이언트가 보낸 참가 요청을 기억한다. (검증 코루틴이 읽어 간다)
-        /// </summary>
+        /// <summary>검증 코루틴이 기다리고 있으므로 받은 요청을 기억해 두기만 한다.</summary>
         private void OnJoinRequest(NetworkConnection connection, JoinRequestBroadcast message, Channel channel)
         {
             if (!connection.IsAuthenticated)
@@ -101,7 +91,7 @@ namespace GuardVsMannequin.Network
         }
 
         /// <summary>
-        /// 서버: 끊긴 연결의 기록을 지운다.
+        /// 끊긴 연결의 요청이 남아 같은 ID로 새로 접속한 사람에게 잘못 쓰이지 않도록 지운다.
         /// </summary>
         private void OnRemoteConnectionState(NetworkConnection connection, RemoteConnectionStateArgs args)
         {
@@ -109,20 +99,16 @@ namespace GuardVsMannequin.Network
                 receivedRequests.Remove(connection.ClientId);
         }
 
-        /// <summary>
-        /// 접속 직후(FishNet 버전 확인 후) 호출된다. 검증은 코루틴으로 진행한다.
-        /// </summary>
+        /// <summary>요청 도착과 로비 멤버 갱신을 기다려야 해서 검증을 코루틴으로 진행한다.</summary>
         public override void OnRemoteConnection(NetworkConnection connection)
         {
             StartCoroutine(Authenticate(connection));
         }
 
-        /// <summary>
-        /// 버전 → 접속 경로 → 방 상태(진행 중/인원) 순서로 검증하고 결과를 알린다.
-        /// </summary>
+        /// <summary>버전이 다르면 다른 검사가 의미 없으므로 버전부터 정해진 순서로 검증한다.</summary>
         private IEnumerator Authenticate(NetworkConnection connection)
         {
-            // 1. 버전 확인
+            // 버전 확인.
             float versionWaitEnd = Time.unscaledTime + VersionWaitSeconds;
             while (connection.IsActive && !receivedRequests.ContainsKey(connection.ClientId) && Time.unscaledTime < versionWaitEnd)
                 yield return new WaitForSecondsRealtime(PollInterval);
@@ -140,7 +126,15 @@ namespace GuardVsMannequin.Network
                 yield break;
             }
 
-            // 1-1. 암호 확인 (암호를 정한 방만)
+            RoomMembership membership = session?.Membership;
+            string playerKey = PlayerKey.Resolve(connection.GetAddress(), request.clientToken, connection.ClientId);
+            if (membership != null && membership.IsBanned(playerKey))
+            {
+                Reject(connection, ConnectionRejectReason.Banned, $"추방된 사람의 접속 ({playerKey})");
+                yield break;
+            }
+
+            // 무작위 대입을 막도록 여러 번 틀린 주소는 잠시 막으며 암호를 확인한다.
             string roomPassword = session?.RoomPassword ?? string.Empty;
             if (roomPassword.Length > 0)
             {
@@ -159,7 +153,7 @@ namespace GuardVsMannequin.Network
                 passwordAttempts.Clear(attemptKey);
             }
 
-            // 2. 접속 경로 확인 (Steam 방)
+            // 접속 경로 확인.
             string address = connection.GetAddress();
             if (session != null && session.IsSteamRoom)
             {
@@ -191,29 +185,56 @@ namespace GuardVsMannequin.Network
                 }
             }
 
-            // 기다리는 동안 연결이 끊겼으면 결과를 알리지 않는다.
             if (!connection.IsActive)
                 yield break;
 
-            // 3~4. 방 상태 확인
+            // 끊긴 것을 서버가 아직 모르는 경우: 이전 연결을 먼저 끊어 대기 자리를 만들게 한다.
+            yield return DisconnectPreviousConnection(membership, playerKey, connection);
+            if (!connection.IsActive)
+                yield break;
+
+            // 방 상태 확인.
+            bool isRejoin = false;
             if (GameServices.Room != null && GameServices.Room.IsInGame)
             {
-                Reject(connection, ConnectionRejectReason.InGame, "게임 진행 중 접속");
-                yield break;
+                isRejoin = membership != null && membership.TryClaim(playerKey, connection.ClientId, Time.unscaledTime);
+                if (!isRejoin)
+                {
+                    Reject(connection, ConnectionRejectReason.InGame, "게임 진행 중 접속");
+                    yield break;
+                }
             }
 
-            if (CountAuthenticatedClients() >= GameConstants.MaxPlayers)
+            if (!isRejoin && CountAuthenticatedClients() >= GameConstants.MaxPlayers)
             {
                 Reject(connection, ConnectionRejectReason.RoomFull, "방 인원 초과");
                 yield break;
             }
 
+            membership?.Bind(connection.ClientId, playerKey);
             receivedRequests.Remove(connection.ClientId);
             OnAuthenticationResult?.Invoke(connection, true);
         }
 
         /// <summary>
-        /// Steam 로비 멤버인지 확인한다.
+        /// 같은 사람의 옛 연결이 남아 있으면 재접속 대기 자리가 만들어지지 않으므로 먼저 끊고, 정리될 때까지 잠시 기다린다.
+        /// </summary>
+        private IEnumerator DisconnectPreviousConnection(RoomMembership membership, string playerKey, NetworkConnection connection)
+        {
+            if (membership == null || !membership.TryGetClient(playerKey, out int previousId) || previousId == connection.ClientId)
+                yield break;
+            if (!NetworkManager.ServerManager.Clients.TryGetValue(previousId, out NetworkConnection previousConnection) || !previousConnection.IsActive)
+                yield break;
+
+            Debug.Log($"[RoomAuthenticator] 같은 사람의 이전 연결을 끊습니다: 연결 {previousId}");
+            previousConnection.Disconnect(true);
+            float waitEnd = Time.unscaledTime + PreviousConnectionWaitSeconds;
+            while (NetworkManager.ServerManager.Clients.ContainsKey(previousId) && Time.unscaledTime < waitEnd)
+                yield return new WaitForSecondsRealtime(PollInterval);
+        }
+
+        /// <summary>
+        /// 직접 방처럼 Steam 로비가 없으면 멤버일 수 없으므로 false가 된다.
         /// </summary>
         private bool IsLobbyMember(ulong steamId)
         {
@@ -221,7 +242,7 @@ namespace GuardVsMannequin.Network
         }
 
         /// <summary>
-        /// 루프백 주소인지 확인한다. (IPv4를 매핑한 IPv6 주소 포함)
+        /// IPv6 소켓에서는 IPv4 루프백이 매핑된 형태로 오므로 풀어서 확인한다.
         /// </summary>
         private static bool IsLoopback(IPAddress ip)
         {
@@ -231,7 +252,7 @@ namespace GuardVsMannequin.Network
         }
 
         /// <summary>
-        /// 인증을 마친 연결 수를 센다.
+        /// 검증 중인 연결까지 세면 동시에 들어온 사람들이 서로를 막으므로 인증을 마친 연결만 센다.
         /// </summary>
         private int CountAuthenticatedClients()
         {
@@ -245,8 +266,7 @@ namespace GuardVsMannequin.Network
         }
 
         /// <summary>
-        /// 거부 이유를 클라이언트에 알린 뒤 접속을 거부한다.
-        /// (메시지가 먼저 전달되도록 결과 알림보다 앞서 보낸다. FishNet은 보낼 메시지를 내보낸 뒤 연결을 끊는다)
+        /// FishNet은 보낼 메시지를 내보낸 뒤 연결을 끊으므로, 클라이언트가 이유를 알 수 있게 결과 알림보다 먼저 거부 이유를 보낸다.
         /// </summary>
         private void Reject(NetworkConnection connection, ConnectionRejectReason reason, string logDetail)
         {

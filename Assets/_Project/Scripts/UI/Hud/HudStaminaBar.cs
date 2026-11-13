@@ -5,10 +5,7 @@ using UnityEngine.UI;
 
 namespace GuardVsMannequin.UI
 {
-    /// <summary>
-    /// HUD 하단 중앙: 남은 스태미나 막대. 채움 막대의 오른쪽 앵커를 남은 비율로 줄인다. (스프라이트 없이 동작)
-    /// 스태미나를 다 써서 다시 달릴 수 없는 동안에는 색을 바꾼다.
-    /// </summary>
+    /// <summary>스프라이트 없이 앵커로 남은 스태미나를 보여 주고, 다시 달릴 수 없는 동안은 색을 바꾼다.</summary>
     public class HudStaminaBar : MonoBehaviour, IHudSection
     {
         [SerializeField] private GameObject staminaPanel;
@@ -22,26 +19,30 @@ namespace GuardVsMannequin.UI
 
         private HudContext context;
 
-        /// <inheritdoc />
+        /// <summary>
+        /// 로컬 아바타가 바뀌어도 따라가도록 아바타 대신 추적기를 담은 공용 정보를 기억한다.
+        /// </summary>
         public void Bind(HudContext hudContext)
         {
             context = hudContext;
         }
 
-        /// <inheritdoc />
+        /// <summary>
+        /// 네트워크 준비 전에는 스태미나가 없으므로 빈 막대가 보이지 않게 숨긴다.
+        /// </summary>
         public void Hide()
         {
             staminaPanel.SetActive(false);
         }
 
-        /// <inheritdoc />
+        /// <summary>판 진행 중이고 스태미나가 있을 때만 보인다.</summary>
         public void Refresh(GameState state)
         {
             bool isInMatch = state is GameState.Preparation or GameState.Playing or GameState.Hunting;
             IStaminaSource stamina = context.LocalPlayer.Stamina;
-            bool visible = isInMatch && stamina != null;
-            staminaPanel.SetActive(visible);
-            if (!visible)
+            bool isVisible = isInMatch && stamina != null;
+            staminaPanel.SetActive(isVisible);
+            if (!isVisible)
                 return;
 
             fill.anchorMin = new Vector2(0f, fill.anchorMin.y);

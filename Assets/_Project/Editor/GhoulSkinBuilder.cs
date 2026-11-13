@@ -7,14 +7,7 @@ using UnityEngine;
 
 namespace GuardVsMannequin.Editor
 {
-    /// <summary>
-    /// 사냥 시간 마네킹 외형 구울(Blender로 만든 SK_Ghoul.fbx, Generic 리그)의 임포트 설정과 애니메이터를 준비한다. (Phase 11-4·11-5)
-    /// - 임포트: Generic + 자체 Avatar, 클립 이름을 짧게(Armature|Ghoul_Idle → Ghoul_Idle), 공격·비명 외 클립은 반복
-    /// - 머티리얼: 눈(M_Char_GhoulEye)만 어둠에서도 빛나는 URP 발광 머티리얼로 바꿔 끼운다. 나머지는 모델 색 그대로.
-    /// - 애니메이터: Speed에 따라 대기 → 다가가기 → 기어가기, Attack·Shriek 트리거, 덧입히는 경련 레이어
-    /// 외형 프리팹·<see cref="CharacterSkin"/> 저장은 <see cref="CharacterAssetBuilder"/>가 한다.
-    /// 클립 길이·맞는 프레임은 Art/Characters/Source~/generate_ghoul.py와 맞춘다.
-    /// </summary>
+    /// <summary>사냥 시간 구울 외형의 임포트 설정과 전용 애니메이터를 준비한다.</summary>
     public static class GhoulSkinBuilder
     {
         public const string SourcePath = LowPolyCharacterCheck.ModelFolder + "/SK_Ghoul.fbx";
@@ -28,14 +21,14 @@ namespace GuardVsMannequin.Editor
         private const string ShriekClip = "Ghoul_Shriek";
         private const string TwitchClip = "Ghoul_Twitch";
 
-        // 한 번만 재생하는 클립. 나머지는 반복한다.
+        // 한 번만 재생하는 클립(나머지는 반복).
         private static readonly HashSet<string> OneShotClips = new() { AttackClip, ShriekClip };
 
-        // generate_ghoul.py의 FPS와 ATTACK_HIT_FRAME (손이 앞으로 내려와 맞는 프레임)
+        // 공격 지연을 맞추려고 generate_ghoul.py의 FPS와 맞는 프레임을 옮겨 둔다.
         private const float ClipFps = 24f;
         private const int AttackHitFrame = 11;
 
-        // 이동 속도(m/s) 기준. 구울 걷기 약 2.1, 달리기 약 3.4 (game_tuning.csv)
+        // 이동 속도(m/s) 기준.
         private const float StalkSpeed = 0.3f;
         private const float CrawlSpeed = 2.7f;
         private const float CrawlExitSpeed = 2.5f;
@@ -50,21 +43,17 @@ namespace GuardVsMannequin.Editor
         private const float OneShotExitTime = 0.92f;
         private const float OneShotExitDuration = 0.12f;
 
-        // 눈 발광 (어두운 사냥 시간에도 눈만 보이게)
+        // 어두운 사냥 시간에도 눈만 보이게 하는 발광.
         private static readonly Color EyeColor = new(1f, 0.28f, 0.12f);
         private const float EyeEmission = 4f;
 
-        /// <summary>
-        /// 공격 동작 시작부터 맞는 순간까지의 시간(초). (전환 시간 + 맞는 프레임)
-        /// </summary>
+        /// <summary>피해 판정이 손이 닿는 순간과 맞도록 맞는 프레임으로 공격 지연을 정한다.</summary>
         public static float DefaultAttackHitDelay()
         {
             return AttackEnterDuration + AttackHitFrame / ClipFps;
         }
 
-        /// <summary>
-        /// 임포트 설정·눈 머티리얼을 맞추고 애니메이터 컨트롤러를 만들어 반환한다. 원본이나 클립이 없으면 null.
-        /// </summary>
+        /// <summary>모델을 다시 만들면 임포트 설정이 초기화될 수 있어 매번 맞춘 뒤 컨트롤러를 만든다.</summary>
         public static AnimatorController Prepare()
         {
             if (AssetImporter.GetAtPath(SourcePath) is not ModelImporter importer)
@@ -78,99 +67,89 @@ namespace GuardVsMannequin.Editor
             return CreateController();
         }
 
-        /// <summary>
-        /// Generic 리그와 자체 Avatar로 임포트하고, 클립 이름·반복 여부를 정한다. 바뀐 것이 있을 때만 다시 임포트한다.
-        /// </summary>
+        /// <summary>사람 뼈 구조가 아니라 Generic으로 임포트하고, 코드가 테이크 이름에 의존하지 않도록 클립 이름을 짧게 바꾼다.</summary>
         private static void ConfigureImport(ModelImporter importer)
         {
-            bool changed = false;
+            bool isChanged = false;
             if (importer.animationType != ModelImporterAnimationType.Generic)
             {
                 importer.animationType = ModelImporterAnimationType.Generic;
-                changed = true;
+                isChanged = true;
             }
             if (importer.avatarSetup != ModelImporterAvatarSetup.CreateFromThisModel)
             {
                 importer.avatarSetup = ModelImporterAvatarSetup.CreateFromThisModel;
-                changed = true;
+                isChanged = true;
             }
             if (!importer.importAnimation)
             {
                 importer.importAnimation = true;
-                changed = true;
+                isChanged = true;
             }
-            // 1인칭에서 휘두르는 팔만 남긴 복제 메시를 만들려면 실행 중 메시를 읽을 수 있어야 한다. (FirstPersonBodyView)
+            // 1인칭 팔 복제 메시를 만들려면 실행 중 메시를 읽을 수 있어야 한다.
             if (!importer.isReadable)
             {
                 importer.isReadable = true;
-                changed = true;
+                isChanged = true;
             }
-            if (changed)
+            if (isChanged)
                 importer.SaveAndReimport();
 
             ModelImporterClipAnimation[] clips = importer.clipAnimations;
             if (clips.Length == 0)
                 clips = importer.defaultClipAnimations;
 
-            bool clipsChanged = false;
+            bool isClipChanged = false;
             foreach (ModelImporterClipAnimation clip in clips)
             {
                 string shortName = ShortName(clip.takeName);
-                bool loop = !OneShotClips.Contains(shortName);
-                if (clip.name == shortName && clip.loopTime == loop)
+                bool isLooping = !OneShotClips.Contains(shortName);
+                if (clip.name == shortName && clip.loopTime == isLooping)
                     continue;
                 clip.name = shortName;
-                clip.loopTime = loop;
-                clipsChanged = true;
+                clip.loopTime = isLooping;
+                isClipChanged = true;
             }
-            if (!clipsChanged)
+            if (!isClipChanged)
                 return;
 
             importer.clipAnimations = clips;
             importer.SaveAndReimport();
         }
 
-        /// <summary>
-        /// "Armature|Ghoul_Idle"처럼 아마추어 이름이 붙은 테이크 이름에서 클립 이름만 남긴다.
-        /// </summary>
+        /// <summary>아마추어 이름이 바뀌어도 클립 이름이 같도록 "Armature|" 뒷부분만 남긴다.</summary>
         private static string ShortName(string takeName)
         {
-            int separator = takeName.LastIndexOf('|');
-            return separator >= 0 ? takeName.Substring(separator + 1) : takeName;
+            int separatorIndex = takeName.LastIndexOf('|');
+            return separatorIndex >= 0 ? takeName.Substring(separatorIndex + 1) : takeName;
         }
 
-        /// <summary>
-        /// 눈 머티리얼을 URP 발광 머티리얼(Art/Skins/M_GhoulEye)로 바꿔 끼운다. 바뀐 연결이 있을 때만 다시 임포트한다.
-        /// </summary>
+        /// <summary>어두운 사냥 시간에 눈만 보여야 공포감이 살아서 눈 머티리얼만 발광 머티리얼로 바꿔 끼운다.</summary>
         private static void RemapEyeMaterial(ModelImporter importer)
         {
-            Material eye = new MapMaterialFactory(CharacterAssetBuilder.SkinFolder)
+            Material eyeMaterial = new MapMaterialFactory(CharacterAssetBuilder.SkinFolder)
                 .Emissive("M_GhoulEye", EyeColor, EyeColor * EyeEmission);
-            var identifier = new AssetImporter.SourceAssetIdentifier(typeof(Material), EyeSourceMaterial);
-            Dictionary<AssetImporter.SourceAssetIdentifier, Object> current = importer.GetExternalObjectMap();
-            if (current.TryGetValue(identifier, out Object mapped) && mapped == eye)
+            var sourceIdentifier = new AssetImporter.SourceAssetIdentifier(typeof(Material), EyeSourceMaterial);
+            Dictionary<AssetImporter.SourceAssetIdentifier, Object> currentMap = importer.GetExternalObjectMap();
+            if (currentMap.TryGetValue(sourceIdentifier, out Object mappedObject) && mappedObject == eyeMaterial)
                 return;
-            importer.AddRemap(identifier, eye);
+            importer.AddRemap(sourceIdentifier, eyeMaterial);
             importer.SaveAndReimport();
         }
 
-        /// <summary>
-        /// 구울 애니메이터를 만든다. 같은 경로에 있으면 지우고 새로 만든다.
-        /// - 기본 레이어: 대기(기본) ↔ 다가가기 ↔ 기어가기(Speed), 어디서든 Attack·Shriek 트리거 → 끝나면 대기
-        /// - 경련 레이어: 덧입히기(Additive)로 경련 클립을 계속 반복
-        /// </summary>
+        /// <summary>손으로 고친 전환이 코드 설정과 섞이지 않도록 컨트롤러를 지우고 새로 만든다.</summary>
         private static AnimatorController CreateController()
         {
             var clips = new Dictionary<string, AnimationClip>();
-            foreach (string name in new[] { IdleClip, StalkClip, CrawlClip, AttackClip, ShriekClip, TwitchClip })
+            foreach (string clipName in new[] { IdleClip, StalkClip, CrawlClip, AttackClip, ShriekClip, TwitchClip })
             {
-                AnimationClip clip = FindClip(name);
+                AnimationClip clip = FindClip(clipName);
                 if (clip == null)
                 {
-                    Debug.LogError($"[GhoulSkinBuilder] 클립을 찾을 수 없습니다: {name} ({SourcePath})");
+                    Debug.LogError($"[GhoulSkinBuilder] 클립을 찾을 수 없습니다: {clipName} ({SourcePath})");
                     return null;
                 }
-                clips[name] = clip;
+                clips[clipName] = clip;
             }
 
             AssetDatabase.DeleteAsset(ControllerPath);
@@ -179,24 +158,24 @@ namespace GuardVsMannequin.Editor
             controller.AddParameter(CharacterAnimatorParameters.Attack, AnimatorControllerParameterType.Trigger);
             controller.AddParameter(CharacterAnimatorParameters.Shriek, AnimatorControllerParameterType.Trigger);
 
-            AnimatorStateMachine machine = controller.layers[0].stateMachine;
-            AnimatorState idle = machine.AddState("Idle");
-            idle.motion = clips[IdleClip];
-            AnimatorState stalk = machine.AddState("Stalk");
-            stalk.motion = clips[StalkClip];
-            AnimatorState crawl = machine.AddState("Crawl");
-            crawl.motion = clips[CrawlClip];
-            machine.defaultState = idle;
+            AnimatorStateMachine stateMachine = controller.layers[0].stateMachine;
+            AnimatorState idleState = stateMachine.AddState("Idle");
+            idleState.motion = clips[IdleClip];
+            AnimatorState stalkState = stateMachine.AddState("Stalk");
+            stalkState.motion = clips[StalkClip];
+            AnimatorState crawlState = stateMachine.AddState("Crawl");
+            crawlState.motion = clips[CrawlClip];
+            stateMachine.defaultState = idleState;
 
-            AddSpeedTransition(idle, stalk, AnimatorConditionMode.Greater, StalkSpeed, StartDuration);
-            AddSpeedTransition(idle, crawl, AnimatorConditionMode.Greater, CrawlSpeed, GaitChangeDuration);
-            AddSpeedTransition(stalk, idle, AnimatorConditionMode.Less, StalkSpeed, StopDuration);
-            AddSpeedTransition(stalk, crawl, AnimatorConditionMode.Greater, CrawlSpeed, GaitChangeDuration);
-            AddSpeedTransition(crawl, stalk, AnimatorConditionMode.Less, CrawlExitSpeed, GaitChangeDuration);
-            AddSpeedTransition(crawl, idle, AnimatorConditionMode.Less, StalkSpeed, StopDuration);
+            AddSpeedTransition(idleState, stalkState, AnimatorConditionMode.Greater, StalkSpeed, StartDuration);
+            AddSpeedTransition(idleState, crawlState, AnimatorConditionMode.Greater, CrawlSpeed, GaitChangeDuration);
+            AddSpeedTransition(stalkState, idleState, AnimatorConditionMode.Less, StalkSpeed, StopDuration);
+            AddSpeedTransition(stalkState, crawlState, AnimatorConditionMode.Greater, CrawlSpeed, GaitChangeDuration);
+            AddSpeedTransition(crawlState, stalkState, AnimatorConditionMode.Less, CrawlExitSpeed, GaitChangeDuration);
+            AddSpeedTransition(crawlState, idleState, AnimatorConditionMode.Less, StalkSpeed, StopDuration);
 
-            AddOneShot(machine, idle, "Attack", clips[AttackClip], CharacterAnimatorParameters.Attack);
-            AddOneShot(machine, idle, "Shriek", clips[ShriekClip], CharacterAnimatorParameters.Shriek);
+            AddOneShot(stateMachine, idleState, "Attack", clips[AttackClip], CharacterAnimatorParameters.Attack);
+            AddOneShot(stateMachine, idleState, "Shriek", clips[ShriekClip], CharacterAnimatorParameters.Shriek);
 
             AddTwitchLayer(controller, clips[TwitchClip]);
             EditorUtility.SetDirty(controller);
@@ -204,54 +183,50 @@ namespace GuardVsMannequin.Editor
         }
 
         /// <summary>
-        /// Speed 조건 하나로 넘어가는 전환을 만든다. (기다리지 않고 바로)
+        /// 걸음 전환이 클립 끝을 기다리면 반응이 늦어 보이므로 종료 시간 없이 Speed 조건만으로 바로 넘어가게 한다.
         /// </summary>
-        private static void AddSpeedTransition(AnimatorState from, AnimatorState to, AnimatorConditionMode mode, float threshold, float duration)
+        private static void AddSpeedTransition(AnimatorState fromState, AnimatorState toState, AnimatorConditionMode mode, float threshold, float duration)
         {
-            AnimatorStateTransition transition = from.AddTransition(to);
+            AnimatorStateTransition transition = fromState.AddTransition(toState);
             transition.AddCondition(mode, threshold, CharacterAnimatorParameters.Speed);
             transition.hasExitTime = false;
             transition.duration = duration;
         }
 
-        /// <summary>
-        /// 어느 상태에서든 트리거로 들어가 한 번 재생하고 대기로 돌아가는 상태를 만든다.
-        /// </summary>
-        private static void AddOneShot(AnimatorStateMachine machine, AnimatorState idle, string stateName, AnimationClip clip, string trigger)
+        /// <summary>공격은 걷든 기든 바로 나가도록 Any State에서 들어가고, 연타해도 처음부터 다시 시작하지 않게 한다.</summary>
+        private static void AddOneShot(AnimatorStateMachine stateMachine, AnimatorState idleState, string stateName, AnimationClip clip, string trigger)
         {
-            AnimatorState state = machine.AddState(stateName);
-            state.motion = clip;
+            AnimatorState oneShotState = stateMachine.AddState(stateName);
+            oneShotState.motion = clip;
 
-            AnimatorStateTransition enter = machine.AddAnyStateTransition(state);
-            enter.AddCondition(AnimatorConditionMode.If, 0f, trigger);
-            enter.hasExitTime = false;
-            enter.duration = AttackEnterDuration;
-            enter.canTransitionToSelf = false;
+            AnimatorStateTransition enterTransition = stateMachine.AddAnyStateTransition(oneShotState);
+            enterTransition.AddCondition(AnimatorConditionMode.If, 0f, trigger);
+            enterTransition.hasExitTime = false;
+            enterTransition.duration = AttackEnterDuration;
+            enterTransition.canTransitionToSelf = false;
 
-            AnimatorStateTransition exit = state.AddTransition(idle);
-            exit.hasExitTime = true;
-            exit.exitTime = OneShotExitTime;
-            exit.duration = OneShotExitDuration;
+            AnimatorStateTransition exitTransition = oneShotState.AddTransition(idleState);
+            exitTransition.hasExitTime = true;
+            exitTransition.exitTime = OneShotExitTime;
+            exitTransition.duration = OneShotExitDuration;
         }
 
-        /// <summary>
-        /// 경련 클립을 계속 반복하는 덧입히기 레이어를 더한다. (클립 첫 프레임이 기준이라 평소에는 아무 변화가 없다)
-        /// </summary>
-        private static void AddTwitchLayer(AnimatorController controller, AnimationClip twitch)
+        /// <summary>어떤 동작 중에도 경련이 섞여 보이도록 덧입히기 레이어로 계속 반복한다.</summary>
+        private static void AddTwitchLayer(AnimatorController controller, AnimationClip twitchClip)
         {
             controller.AddLayer("Twitch");
             AnimatorControllerLayer[] layers = controller.layers;
-            AnimatorControllerLayer layer = layers[layers.Length - 1];
-            layer.blendingMode = AnimatorLayerBlendingMode.Additive;
-            layer.defaultWeight = 1f;
-            AnimatorState state = layer.stateMachine.AddState("Twitch");
-            state.motion = twitch;
-            layer.stateMachine.defaultState = state;
+            AnimatorControllerLayer twitchLayer = layers[layers.Length - 1];
+            twitchLayer.blendingMode = AnimatorLayerBlendingMode.Additive;
+            twitchLayer.defaultWeight = 1f;
+            AnimatorState twitchState = twitchLayer.stateMachine.AddState("Twitch");
+            twitchState.motion = twitchClip;
+            twitchLayer.stateMachine.defaultState = twitchState;
             controller.layers = layers;
         }
 
         /// <summary>
-        /// 원본 모델에서 이름이 일치하는 클립을 찾는다.
+        /// FBX 안에는 클립 외에도 미리보기용 클립 등이 섞여 있어 이름이 정확히 같은 것만 고른다.
         /// </summary>
         private static AnimationClip FindClip(string clipName)
         {

@@ -8,15 +8,7 @@ using UnityEngine.Rendering.Universal;
 
 namespace GuardVsMannequin.Player.Guard
 {
-    /// <summary>
-    /// 사냥 시간 가드 본인 화면의 공포 연출. (로컬 가드에게만, 네트워크 전송 없음)
-    /// - 가까운 구울: <see cref="GameTuning.GhoulDreadRange"/> 안의 구울이 화면 안에 있고 벽에 가려지지 않으면
-    ///   가까울수록 화면에 노이즈·색 번짐이 끼고 색이 빠지며, 심장 소리가 커지고 빨라진다.
-    ///   시야 밖·벽 뒤의 구울은 알려 주지 않는다. (위치 정보를 주지 않기 위함)
-    /// - 사냥 시간 시작: 화면이 잠깐 흔들리고 노이즈가 번쩍인다.
-    /// 저체력 화면(LowHealthVignette)과 겹치지 않도록 비네트·노출은 건드리지 않는다.
-    /// 카메라 회전은 이동 구현이 매 프레임 정하므로, 흔들림은 그 뒤(LateUpdate 실행 순서)에 더한다.
-    /// </summary>
+    /// <summary>위치 정보를 새지 않도록 네트워크 없이 로컬 가드 화면에서만 구울 공포 연출을 한다.</summary>
     [DefaultExecutionOrder(500)]
     [RequireComponent(typeof(NoiseEmitter))]
     public class GuardDreadEffect : MonoBehaviour
@@ -38,6 +30,7 @@ namespace GuardVsMannequin.Player.Guard
         [Tooltip("흔들림 최대 각도(도).")]
         [SerializeField] private float shakeAngle = 2.5f;
 
+        // 발밑이 아니라 몸통을 기준으로 봐야 화면 안·가려짐 판정이 실제 보이는 것과 맞는다.
         private const float TargetHeightOffset = 1f;
 
         private NoiseEmitter noiseEmitter;
@@ -48,7 +41,7 @@ namespace GuardVsMannequin.Player.Guard
         private VolumeProfile profile;
         private FilmGrain grain;
         private ChromaticAberration chromatic;
-        private ColorAdjustments color;
+        private ColorAdjustments colorAdjustments;
         private float intensity;
         private float shakeRemaining;
         private Quaternion appliedShake = Quaternion.identity;
@@ -57,7 +50,7 @@ namespace GuardVsMannequin.Player.Guard
         private readonly RaycastHit[] sightHits = new RaycastHit[8];
 
         /// <summary>
-        /// 구성 요소를 캐시한다. (화면 효과·오디오는 로컬 가드가 되었을 때 만든다)
+        /// 원격 가드에는 필요 없으므로 화면 효과·오디오는 여기서 만들지 않고, 구성 요소만 찾아 둔다.
         /// </summary>
         private void Awake()
         {
@@ -67,7 +60,7 @@ namespace GuardVsMannequin.Player.Guard
         }
 
         /// <summary>
-        /// 만든 화면 효과를 정리한다.
+        /// 런타임에 만든 프로필은 자동으로 해제되지 않으므로 볼륨과 함께 직접 지운다.
         /// </summary>
         private void OnDestroy()
         {
@@ -77,9 +70,7 @@ namespace GuardVsMannequin.Player.Guard
                 Destroy(profile);
         }
 
-        /// <summary>
-        /// 로컬 가드이면 연출 세기를 계산해 화면·심장 소리에 적용한다.
-        /// </summary>
+        /// <summary>보이는 구울과의 거리로 연출 세기를 정하고, 갑자기 튀지 않게 천천히 따라간다.</summary>
         private void Update()
         {
             if (!IsLocalPlayer())
@@ -92,72 +83,64 @@ namespace GuardVsMannequin.Player.Guard
             lastState = state;
 
             bool canFeel = state == GameState.Hunting && (health == null || health.IsAlive);
-            float target = canFeel ? NearestVisibleGhoulCloseness() : 0f;
-            intensity = Mathf.MoveTowards(intensity, target, blendSpeed * Time.deltaTime);
+            float targetIntensity = canFeel ? NearestVisibleGhoulCloseness() : 0f;
+            intensity = Mathf.MoveTowards(intensity, targetIntensity, blendSpeed * Time.deltaTime);
 
             float flash = shakeRemaining > 0f ? shakeRemaining / shakeDuration : 0f;
-            float screen = Mathf.Max(intensity, flash * 0.8f);
-            grain.intensity.value = screen * maxGrain;
-            chromatic.intensity.value = screen * maxChromatic;
-            color.saturation.value = intensity * maxDesaturate;
+            float screenIntensity = Mathf.Max(intensity, flash * 0.8f);
+            grain.intensity.value = screenIntensity * maxGrain;
+            chromatic.intensity.value = screenIntensity * maxChromatic;
+            colorAdjustments.saturation.value = intensity * maxDesaturate;
             UpdateHeartbeat();
         }
 
-        /// <summary>
-        /// 사냥 시간 시작 직후 카메라를 잠깐 흔든다. (이동 구현이 카메라 회전을 정한 뒤에 더함)
-        /// 1인칭 카메라는 피벗의 자식이라 이동 구현이 카메라 자체 회전을 다시 맞추지 않으므로,
-        /// 매 프레임 지난 프레임의 흔들림을 되돌린 뒤 새 흔들림을 더하고, 끝나면 완전히 되돌린다. (기울어진 채 남지 않게)
-        /// </summary>
+        /// <summary>이동 구현이 카메라 회전을 정한 뒤에 더해야 덮어쓰이지 않으므로 LateUpdate에서 흔든다.</summary>
         private void LateUpdate()
         {
-            Transform view = motor?.ViewTransform;
-            if (view == null)
+            Transform viewTransform = motor?.ViewTransform;
+            if (viewTransform == null)
                 return;
 
-            UndoShake(view);
+            UndoShake(viewTransform);
             if (shakeRemaining <= 0f || !IsLocalPlayer())
                 return;
             shakeRemaining -= Time.deltaTime;
             if (shakeRemaining <= 0f)
                 return;
 
-            float amount = shakeAngle * Mathf.Clamp01(shakeRemaining / shakeDuration);
-            appliedShake = Quaternion.Euler(Random.Range(-amount, amount), Random.Range(-amount, amount), Random.Range(-amount, amount) * 0.5f);
-            view.localRotation *= appliedShake;
-            shakenLocalRotation = view.localRotation;
+            float shakeAmount = shakeAngle * Mathf.Clamp01(shakeRemaining / shakeDuration);
+            appliedShake = Quaternion.Euler(Random.Range(-shakeAmount, shakeAmount), Random.Range(-shakeAmount, shakeAmount), Random.Range(-shakeAmount, shakeAmount) * 0.5f);
+            viewTransform.localRotation *= appliedShake;
+            shakenLocalRotation = viewTransform.localRotation;
         }
 
-        /// <summary>
-        /// 지난 프레임에 더한 흔들림을 뺀다. 그사이 다른 코드가 카메라 회전을 새로 정했으면(3인칭 등) 이미 지워진 것이므로 그대로 둔다.
-        /// </summary>
-        private void UndoShake(Transform view)
+        /// <summary>흔들림이 쌓여 카메라가 기울어진 채 남지 않도록 지난 프레임 몫을 뺀다.</summary>
+        private void UndoShake(Transform viewTransform)
         {
             if (appliedShake == Quaternion.identity)
                 return;
-            if (Quaternion.Angle(view.localRotation, shakenLocalRotation) < 0.01f)
-                view.localRotation *= Quaternion.Inverse(appliedShake);
+            if (Quaternion.Angle(viewTransform.localRotation, shakenLocalRotation) < 0.01f)
+                viewTransform.localRotation *= Quaternion.Inverse(appliedShake);
             appliedShake = Quaternion.identity;
         }
 
-        /// <summary>이 아바타가 이 클라이언트의 로컬 플레이어인지.</summary>
+        /// <summary>네트워크 소유 여부보다 확실하게, 이 클라이언트의 로컬 플레이어로 등록된 아바타인지로 판단한다.</summary>
         private bool IsLocalPlayer()
         {
-            PlayerIdentity local = LocalPlayerEvents.Current;
-            return local != null && local.gameObject == gameObject;
+            PlayerIdentity localPlayer = LocalPlayerEvents.Current;
+            return localPlayer != null && localPlayer.gameObject == gameObject;
         }
 
-        /// <summary>
-        /// 가장 가까운 "보이는" 구울과의 가까움(0~1)을 구한다. 범위 밖·화면 밖·가려짐·변신 중이면 0.
-        /// </summary>
+        /// <summary>보이지 않는 구울까지 알려 주면 위치 정보가 되므로 화면 안에 보이는 구울만 센다.</summary>
         private float NearestVisibleGhoulCloseness()
         {
-            Transform view = motor?.ViewTransform;
-            Camera camera = view != null ? view.GetComponent<Camera>() : null;
-            if (camera == null)
+            Transform viewTransform = motor?.ViewTransform;
+            Camera viewCamera = viewTransform != null ? viewTransform.GetComponent<Camera>() : null;
+            if (viewCamera == null)
                 return 0f;
 
             float range = Mathf.Max(0.1f, GameTuning.GhoulDreadRange);
-            float best = 0f;
+            float bestCloseness = 0f;
             foreach (PlayerIdentity player in ClientPlayerList.Players)
             {
                 if (player == null || player.Role != PlayerRole.Mannequin)
@@ -165,24 +148,24 @@ namespace GuardVsMannequin.Player.Guard
                 if (player.TryGetComponent(out MannequinTransformer transformer) && transformer.IsDisguised)
                     continue;
 
-                Vector3 target = player.transform.position + Vector3.up * TargetHeightOffset;
-                float distance = Vector3.Distance(view.position, target);
+                Vector3 targetPosition = player.transform.position + Vector3.up * TargetHeightOffset;
+                float distance = Vector3.Distance(viewTransform.position, targetPosition);
                 if (distance > range)
                     continue;
 
-                Vector3 viewport = camera.WorldToViewportPoint(target);
+                Vector3 viewport = viewCamera.WorldToViewportPoint(targetPosition);
                 if (viewport.z <= 0f || viewport.x < 0f || viewport.x > 1f || viewport.y < 0f || viewport.y > 1f)
                     continue;
-                if (IsBlocked(view.position, target, player.transform))
+                if (IsBlocked(viewTransform.position, targetPosition, player.transform))
                     continue;
 
-                best = Mathf.Max(best, 1f - distance / range);
+                bestCloseness = Mathf.Max(bestCloseness, 1f - distance / range);
             }
-            return best;
+            return bestCloseness;
         }
 
         /// <summary>
-        /// 눈에서 대상까지 환경이 막는지 확인한다. 자기 몸·대상 몸·트리거는 무시한다.
+        /// 자기 몸이나 대상 몸에 맞은 것을 가려진 것으로 보면 항상 막히므로, 둘을 빼고 환경만 막는 것으로 본다.
         /// </summary>
         private bool IsBlocked(Vector3 from, Vector3 to, Transform target)
         {
@@ -191,16 +174,14 @@ namespace GuardVsMannequin.Player.Guard
             int count = Physics.RaycastNonAlloc(from, delta / distance, sightHits, distance, Physics.DefaultRaycastLayers, QueryTriggerInteraction.Ignore);
             for (int i = 0; i < count; i++)
             {
-                Transform hit = sightHits[i].transform;
-                if (!hit.IsChildOf(transform) && !hit.IsChildOf(target))
+                Transform hitTransform = sightHits[i].transform;
+                if (!hitTransform.IsChildOf(transform) && !hitTransform.IsChildOf(target))
                     return true;
             }
             return false;
         }
 
-        /// <summary>
-        /// 심장 소리 크기·빠르기를 연출 세기에 맞춘다.
-        /// </summary>
+        /// <summary>가까울수록 긴장감이 커지도록 심장 소리를 크고 빠르게 하고, 거의 0이면 멈춘다.</summary>
         private void UpdateHeartbeat()
         {
             if (heartbeat == null)
@@ -219,9 +200,7 @@ namespace GuardVsMannequin.Player.Guard
                 heartbeat.Play();
         }
 
-        /// <summary>
-        /// 처음 쓸 때 화면 효과 볼륨(노이즈·색 번짐·채도)과 2D 심장 소리 소스를 만든다.
-        /// </summary>
+        /// <summary>원격 가드마다 만들면 낭비이므로 로컬 가드에서 처음 쓸 때 만들고, 위치를 알리지 않게 2D로 둔다.</summary>
         private void EnsureCreated()
         {
             if (volume != null)
@@ -234,12 +213,12 @@ namespace GuardVsMannequin.Player.Guard
             grain.response.Override(0.6f);
             chromatic = profile.Add<ChromaticAberration>(true);
             chromatic.intensity.Override(0f);
-            color = profile.Add<ColorAdjustments>(true);
-            color.saturation.Override(0f);
+            colorAdjustments = profile.Add<ColorAdjustments>(true);
+            colorAdjustments.saturation.Override(0f);
 
-            var holder = new GameObject("GuardDreadVolume");
-            holder.transform.SetParent(transform, false);
-            volume = holder.AddComponent<Volume>();
+            var volumeHolder = new GameObject("GuardDreadVolume");
+            volumeHolder.transform.SetParent(transform, false);
+            volume = volumeHolder.AddComponent<Volume>();
             volume.isGlobal = true;
             volume.priority = 90f;
             volume.sharedProfile = profile;

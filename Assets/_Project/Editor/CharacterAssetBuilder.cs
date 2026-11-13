@@ -8,17 +8,7 @@ using UnityEngine;
 
 namespace GuardVsMannequin.Editor
 {
-    /// <summary>
-    /// 캐릭터 외형과 무기 모델을 만든다.
-    /// - 마네킹 외형: Blender로 만든 로우폴리 매장 마네킹(Art/Characters/Models/SK_Mannequin.fbx, Humanoid)
-    ///   + Kevin Iglesias 이동 애니메이션 (파일 이름 Skin_Dummy·Model_Dummy는 기존 프리팹 참조를 지키려고 그대로 둔다)
-    /// - 가드 외형: Blender로 만든 로우폴리 시설 경비원(SK_Guard.fbx, Humanoid) + Kevin 이동 애니메이션, 조준 IK
-    /// - 사냥 시간 마네킹 외형: Blender로 만든 로우폴리 구울(SK_Ghoul.fbx, Generic + 자체 애니메이션, 준비는 <see cref="GhoulSkinBuilder"/>)
-    /// - 가드 소총: Blender로 만든 로우폴리 소총(SM_GuardRifle.fbx, 총구 +Z, Muzzle·Right Hand·Left Hand 표시 포함)
-    ///   (Art/Weapons/Weapon_View.prefab에 덮어써 Guard 프리팹의 참조를 유지한다)
-    /// 모델은 스크립트·충돌체를 제거하고, 발을 원점에 맞추고, 정해진 키로 크기를 맞춰 저장한다.
-    /// 머티리얼은 URP Lit으로 변환한다. 다시 실행하면 같은 경로에 덮어쓴다.
-    /// </summary>
+    /// <summary>새 프로젝트에서도 메뉴 하나로 준비되도록 캐릭터 외형과 무기 모델을 만든다.</summary>
     public static class CharacterAssetBuilder
     {
         internal const string SkinFolder = "Assets/_Project/Art/Skins";
@@ -43,16 +33,14 @@ namespace GuardVsMannequin.Editor
 
         private const float HumanHeight = 1.8f;
 
-        // 사냥 시간 Ghoul은 위압감을 주도록 사람보다 크게 만든다. (기본 자세 경계 높이 기준)
+        // 사냥 시간 구울은 위압감을 주도록 사람보다 크게 만든다.
         private const float GhoulHeight = 2.4f;
 
         // 걷기/달리기 블렌드 트리의 기준 속도(m/s)
         private const float WalkSpeed = 1.6f;
         private const float RunSpeed = 4.5f;
 
-        /// <summary>
-        /// 모든 캐릭터 외형과 무기 모델을 만든다.
-        /// </summary>
+        /// <summary>새 프로젝트에서 메뉴 하나로 모든 외형·총을 준비하도록 한 번에 만든다.</summary>
         [MenuItem(EditorMenus.Root + "캐릭터·무기 에셋 생성")]
         public static void BuildAll()
         {
@@ -69,7 +57,7 @@ namespace GuardVsMannequin.Editor
         }
 
         /// <summary>
-        /// 사냥 시간 구울 외형만 다시 만든다. (마네킹·가드·총은 건드리지 않음)
+        /// 구울 모델만 고쳤을 때 손으로 조정한 가드 총 위치를 덮어쓰지 않도록 구울만 다시 만든다.
         /// </summary>
         [MenuItem(EditorMenus.Root + "캐릭터 생성/구울 외형만 다시 만들기")]
         private static void BuildGhoulSkinFromMenu()
@@ -79,17 +67,14 @@ namespace GuardVsMannequin.Editor
             AssetDatabase.SaveAssets();
         }
 
-        /// <summary>
-        /// 사냥 시간 마네킹 외형(Generic 리그, 전용 애니메이터)을 만든다.
-        /// 맞는 순간(attackHitDelay)은 Blender 공격 클립의 맞는 프레임으로 정해지므로 다시 만들 때마다 맞춘다.
-        /// </summary>
+        /// <summary>구울은 사람 뼈 구조가 아니라 전용 애니메이터로 만들고, 공격 지연을 클립에 맞춰 다시 정한다.</summary>
         private static void BuildGhoulSkin()
         {
-            AnimatorController ghoul = GhoulSkinBuilder.Prepare();
-            if (ghoul == null)
+            AnimatorController ghoulController = GhoulSkinBuilder.Prepare();
+            if (ghoulController == null)
                 return;
 
-            CharacterSkin ghoulSkin = CreateSkin("Ghoul", GhoulSkinBuilder.SourcePath, ghoul, GhoulHeight, useAimIK: false, GhoulSkinPath);
+            CharacterSkin ghoulSkin = CreateSkin("Ghoul", GhoulSkinBuilder.SourcePath, ghoulController, GhoulHeight, useAimIK: false, GhoulSkinPath);
             if (ghoulSkin == null)
                 return;
             ghoulSkin.attackHitDelay = GhoulSkinBuilder.DefaultAttackHitDelay();
@@ -98,7 +83,7 @@ namespace GuardVsMannequin.Editor
         }
 
         /// <summary>
-        /// 마네킹 외형만 다시 만든다. (가드·구울·총은 건드리지 않음)
+        /// 마네킹 모델만 고쳤을 때 다른 외형을 다시 만드느라 기다리지 않도록 마네킹만 다시 만든다.
         /// </summary>
         [MenuItem(EditorMenus.Root + "캐릭터 생성/마네킹 외형만 다시 만들기")]
         private static void BuildMannequinSkinFromMenu()
@@ -108,9 +93,7 @@ namespace GuardVsMannequin.Editor
             AssetDatabase.SaveAssets();
         }
 
-        /// <summary>
-        /// 로우폴리 마네킹 모델을 Humanoid로 임포트·검사하고, 이동 + 감정 표현·상호작용 컨트롤러(가드와 따로)로 외형을 만든다.
-        /// </summary>
+        /// <summary>뼈 연결이 틀리면 게임에서 자세가 깨지므로 먼저 검사한 뒤 마네킹 전용 컨트롤러로 외형을 만든다.</summary>
         private static void BuildMannequinSkin()
         {
             var report = new System.Collections.Generic.List<string>();
@@ -120,8 +103,8 @@ namespace GuardVsMannequin.Editor
                 return;
             }
 
-            AnimatorController mannequin = MannequinAnimatorBuilder.CreateController();
-            CharacterSkin skin = CreateSkin("Dummy", MannequinSource, mannequin, HumanHeight, useAimIK: false, DummySkinPath);
+            AnimatorController mannequinController = MannequinAnimatorBuilder.CreateController();
+            CharacterSkin skin = CreateSkin("Dummy", MannequinSource, mannequinController, HumanHeight, useAimIK: false, DummySkinPath);
             if (skin != null)
             {
                 skin.displayName = "Mannequin";
@@ -131,7 +114,7 @@ namespace GuardVsMannequin.Editor
         }
 
         /// <summary>
-        /// 가드 외형과 총만 다시 만든다. (마네킹·구울은 건드리지 않음)
+        /// 가드 모델이나 총만 고쳤을 때 다른 외형을 다시 만드느라 기다리지 않도록 가드와 총만 다시 만든다.
         /// </summary>
         [MenuItem(EditorMenus.Root + "캐릭터 생성/가드 외형·총만 다시 만들기")]
         private static void BuildGuardSkinFromMenu()
@@ -142,10 +125,7 @@ namespace GuardVsMannequin.Editor
             AssetDatabase.SaveAssets();
         }
 
-        /// <summary>
-        /// 로우폴리 경비원 모델을 Humanoid로 임포트·검사하고, 공용 이동 컨트롤러 + 조준 IK로 가드 외형을 만든 뒤 총 프리팹을 만든다.
-        /// 총·손 위치 조정값(CharacterSkin.weaponGrip)은 외형 에셋에 그대로 남는다.
-        /// </summary>
+        /// <summary>뼈 연결이 틀리면 총이 손에 붙지 않으므로 먼저 검사하고, 손으로 다듬은 총 위치는 유지한다.</summary>
         private static void BuildGuardSkin()
         {
             var report = new System.Collections.Generic.List<string>();
@@ -155,19 +135,15 @@ namespace GuardVsMannequin.Editor
                 return;
             }
 
-            AnimatorController humanoid = CreateHumanoidLocomotionController(HumanoidControllerPath);
-            CreateSkin("Guard", GuardSource, humanoid, HumanHeight, useAimIK: true, GuardSkinPath);
+            AnimatorController humanoidController = CreateHumanoidLocomotionController(HumanoidControllerPath);
+            CreateSkin("Guard", GuardSource, humanoidController, HumanHeight, useAimIK: true, GuardSkinPath);
             CreateGun();
             Debug.Log($"[CharacterAssetBuilder] 가드 외형·총 생성: {GuardSkinPath}, {WeaponViewPath}\n{string.Join("\n", report)}");
         }
 
         #region 애니메이터
 
-        /// <summary>
-        /// 휴머노이드 공용 이동 컨트롤러를 만든다.
-        /// 로컬 이동 속도(MoveX, MoveZ)로 대기/걷기/달리기 8방향을 섞는 2D 블렌드 트리 하나로 구성한다.
-        /// 가드의 손 조준 IK를 위해 IK Pass를 켠다. 같은 경로에 있으면 지우고 새로 만든다.
-        /// </summary>
+        /// <summary>옆·뒤로 걸을 때도 발이 미끄러지지 않도록 로컬 이동 속도로 8방향을 섞는 블렌드 트리를 만든다.</summary>
         /// <param name="path">저장할 컨트롤러 경로.</param>
         internal static AnimatorController CreateHumanoidLocomotionController(string path)
         {
@@ -177,19 +153,19 @@ namespace GuardVsMannequin.Editor
             controller.AddParameter("MoveZ", AnimatorControllerParameterType.Float);
             controller.AddParameter("Speed", AnimatorControllerParameterType.Float);
 
-            AnimatorState state = controller.CreateBlendTreeInController("Locomotion", out BlendTree tree, 0);
-            controller.layers[0].stateMachine.defaultState = state;
-            tree.blendType = BlendTreeType.FreeformDirectional2D;
-            tree.blendParameter = "MoveX";
-            tree.blendParameterY = "MoveZ";
+            AnimatorState locomotionState = controller.CreateBlendTreeInController("Locomotion", out BlendTree blendTree, 0);
+            controller.layers[0].stateMachine.defaultState = locomotionState;
+            blendTree.blendType = BlendTreeType.FreeformDirectional2D;
+            blendTree.blendParameter = "MoveX";
+            blendTree.blendParameterY = "MoveZ";
 
-            AddClip(tree, "Idles/HumanM@Idle01", Vector2.zero);
+            AddClip(blendTree, "Idles/HumanM@Idle01", Vector2.zero);
             string[] directions = { "Forward", "Backward", "Left", "Right", "ForwardLeft", "ForwardRight", "BackwardLeft", "BackwardRight" };
             foreach (string direction in directions)
             {
-                Vector2 dir = DirectionVector(direction);
-                AddClip(tree, $"Movement/Walk/HumanM@Walk01_{direction}", dir * WalkSpeed);
-                AddClip(tree, $"Movement/Run/HumanM@Run01_{direction}", dir * RunSpeed);
+                Vector2 directionVector = DirectionVector(direction);
+                AddClip(blendTree, $"Movement/Walk/HumanM@Walk01_{direction}", directionVector * WalkSpeed);
+                AddClip(blendTree, $"Movement/Run/HumanM@Run01_{direction}", directionVector * RunSpeed);
             }
 
             // IK Pass는 레이어 배열을 복사해 바꾼 뒤 다시 넣어야 저장된다.
@@ -201,9 +177,7 @@ namespace GuardVsMannequin.Editor
             return controller;
         }
 
-        /// <summary>
-        /// 방향 이름을 (x, z) 단위 벡터로 바꾼다.
-        /// </summary>
+        /// <summary>방향을 하나씩 손으로 적지 않도록 파일 이름의 방향 단어로 블렌드 트리 위치를 정한다.</summary>
         private static Vector2 DirectionVector(string direction)
         {
             float x = direction.Contains("Left") ? -1f : direction.Contains("Right") ? 1f : 0f;
@@ -211,28 +185,22 @@ namespace GuardVsMannequin.Editor
             return new Vector2(x, z).normalized;
         }
 
-        /// <summary>
-        /// Kevin Iglesias 남성 애니메이션 파일의 클립을 블렌드 트리에 추가한다.
-        /// </summary>
-        private static void AddClip(BlendTree tree, string relativePath, Vector2 position)
+        /// <summary>캐릭터가 캡슐 밖으로 미끄러지지 않도록 클립을 넣기 전에 제자리 재생 설정을 맞춘다.</summary>
+        private static void AddClip(BlendTree blendTree, string relativePath, Vector2 position)
         {
-            string path = $"{KevinMaleAnimations}/{relativePath}.fbx";
-            DisableBakeIntoPoseXZ(path);
-            AnimationClip clip = AssetDatabase.LoadAllAssetsAtPath(path).OfType<AnimationClip>()
-                .FirstOrDefault(c => !c.name.StartsWith("__preview__"));
+            string clipPath = $"{KevinMaleAnimations}/{relativePath}.fbx";
+            DisableBakeIntoPoseXZ(clipPath);
+            AnimationClip clip = AssetDatabase.LoadAllAssetsAtPath(clipPath).OfType<AnimationClip>()
+                .FirstOrDefault(animationClip => !animationClip.name.StartsWith("__preview__"));
             if (clip == null)
             {
-                Debug.LogWarning($"[CharacterAssetBuilder] 애니메이션을 찾을 수 없습니다: {path}");
+                Debug.LogWarning($"[CharacterAssetBuilder] 애니메이션을 찾을 수 없습니다: {clipPath}");
                 return;
             }
-            tree.AddChild(clip, position);
+            blendTree.AddChild(clip, position);
         }
 
-        /// <summary>
-        /// 클립의 "Root Transform Position (XZ) Bake Into Pose"를 끈다.
-        /// 켜져 있으면 루트 모션을 끈 캐릭터가 클립 동안 앞으로 나아갔다가 반복될 때 제자리로 돌아온다.
-        /// 끄면 수평 이동이 루트 모션으로 분리되고, 루트 모션을 쓰지 않으므로 제자리 애니메이션이 된다.
-        /// </summary>
+        /// <summary>켜 두면 반복할 때 캐릭터가 제자리로 튀므로 Root Transform Position (XZ) Bake Into Pose를 끈다.</summary>
         private static void DisableBakeIntoPoseXZ(string path)
         {
             if (AssetImporter.GetAtPath(path) is not ModelImporter importer)
@@ -242,15 +210,15 @@ namespace GuardVsMannequin.Editor
             if (clips.Length == 0)
                 clips = importer.defaultClipAnimations;
 
-            bool changed = false;
+            bool isChanged = false;
             foreach (ModelImporterClipAnimation clip in clips)
             {
                 if (!clip.lockRootPositionXZ)
                     continue;
                 clip.lockRootPositionXZ = false;
-                changed = true;
+                isChanged = true;
             }
-            if (!changed)
+            if (!isChanged)
                 return;
 
             importer.clipAnimations = clips;
@@ -261,21 +229,19 @@ namespace GuardVsMannequin.Editor
 
         #region 외형
 
-        /// <summary>
-        /// 원본 모델로 외형 프리팹과 <see cref="CharacterSkin"/> 에셋을 만들고 반환한다. 원본이 없으면 null.
-        /// </summary>
-        /// <param name="stripInactiveParts">꺼져 있는 파츠(교체용 장비 등)를 지울지 여부. 켜 두면 크기 맞춤 경계에서도 빠진다.</param>
+        /// <summary>게임은 외형의 발이 원점·정해진 키라고 가정하므로 원본 모델을 그 형태로 맞춰 저장한다.</summary>
+        /// <param name="stripInactiveParts">꺼져 있는 교체용 파츠를 지울지 여부.</param>
         internal static CharacterSkin CreateSkin(string skinName, string sourcePath, RuntimeAnimatorController controller,
             float targetHeight, bool useAimIK, string skinAssetPath, bool stripInactiveParts = false)
         {
-            GameObject source = AssetDatabase.LoadAssetAtPath<GameObject>(sourcePath);
-            if (source == null)
+            GameObject sourceModel = AssetDatabase.LoadAssetAtPath<GameObject>(sourcePath);
+            if (sourceModel == null)
             {
                 Debug.LogError($"[CharacterAssetBuilder] 원본 모델을 찾을 수 없습니다: {sourcePath}");
                 return null;
             }
 
-            GameObject model = InstantiateClean(source);
+            GameObject model = InstantiateClean(sourceModel);
             if (stripInactiveParts)
                 RemoveInactiveParts(model);
             UrpMaterialConverter.ConvertRenderers(model.GetComponentsInChildren<Renderer>(true));
@@ -300,9 +266,7 @@ namespace GuardVsMannequin.Editor
             return skin;
         }
 
-        /// <summary>
-        /// 모델에 애니메이터가 없으면 원본 모델 파일의 Avatar로 추가한다. 루트 모션은 끈다.
-        /// </summary>
+        /// <summary>이동은 캐릭터 컨트롤러가 하므로 루트 모션을 끄고, 화면 밖 캐릭터는 뼈 계산을 멈춘다.</summary>
         private static void EnsureAnimator(GameObject model, string sourcePath)
         {
             Animator animator = model.GetComponentInChildren<Animator>();
@@ -315,27 +279,25 @@ namespace GuardVsMannequin.Editor
             animator.cullingMode = AnimatorCullingMode.CullUpdateTransforms;
         }
 
-        /// <summary>
-        /// 꺼져 있는 오브젝트를 지운다. 켜진 스킨드 메시가 뼈로 쓰는 트랜스폼이 들어 있으면 남긴다.
-        /// </summary>
+        /// <summary>꺼진 교체용 장비는 용량만 늘고 크기 맞춤에 섞이므로 지우되, 켜진 메시가 쓰는 뼈는 남긴다.</summary>
         private static void RemoveInactiveParts(GameObject model)
         {
             var usedBones = new System.Collections.Generic.HashSet<Transform>();
-            foreach (SkinnedMeshRenderer skinned in model.GetComponentsInChildren<SkinnedMeshRenderer>(false))
+            foreach (SkinnedMeshRenderer skinnedRenderer in model.GetComponentsInChildren<SkinnedMeshRenderer>(false))
             {
-                foreach (Transform bone in skinned.bones)
+                foreach (Transform bone in skinnedRenderer.bones)
                 {
                     if (bone != null)
                         usedBones.Add(bone);
                 }
-                if (skinned.rootBone != null)
-                    usedBones.Add(skinned.rootBone);
+                if (skinnedRenderer.rootBone != null)
+                    usedBones.Add(skinnedRenderer.rootBone);
             }
 
-            Transform[] inactive = model.GetComponentsInChildren<Transform>(true)
-                .Where(t => t != model.transform && !t.gameObject.activeSelf)
+            Transform[] inactiveParts = model.GetComponentsInChildren<Transform>(true)
+                .Where(part => part != model.transform && !part.gameObject.activeSelf)
                 .ToArray();
-            foreach (Transform part in inactive)
+            foreach (Transform part in inactiveParts)
             {
                 // 이미 지운 부모 아래에 있었거나, 쓰이는 뼈를 품고 있으면 건너뛴다.
                 if (part == null || part.GetComponentsInChildren<Transform>(true).Any(usedBones.Contains))
@@ -344,9 +306,7 @@ namespace GuardVsMannequin.Editor
             }
         }
 
-        /// <summary>
-        /// 조준 IK를 쓰는 외형인데 휴머노이드 Avatar가 아니면 경고한다. (손 뼈를 찾지 못해 총이 손에 붙지 않는다)
-        /// </summary>
+        /// <summary>조준 IK는 휴머노이드 손 뼈로 동작하므로 아니면 만들 때 바로 알린다.</summary>
         private static void WarnIfNotHumanoid(GameObject model, string skinName, bool useAimIK)
         {
             if (!useAimIK)
@@ -360,7 +320,7 @@ namespace GuardVsMannequin.Editor
         }
 
         /// <summary>
-        /// 원본(프리팹이면 그 안의 모델 파일)에서 Avatar를 찾는다.
+        /// 에셋 팩은 모델을 프리팹으로 감싸 주는 경우가 많아, 원본에 Avatar가 없으면 의존하는 모델 파일까지 찾아본다.
         /// </summary>
         private static Avatar FindAvatar(string sourcePath)
         {
@@ -381,22 +341,18 @@ namespace GuardVsMannequin.Editor
 
         #region 무기
 
-        /// <summary>
-        /// Blender로 만든 로우폴리 소총(총구 +Z, 원점 = 권총 손잡이)으로 총 프리팹을 만든다.
-        /// 모델에 함께 들어 있는 Muzzle·Right Hand·Left Hand 표시를 루트 바로 아래로 옮긴다. (GuardWeaponView가 Muzzle을 바로 아래 자식에서 찾음)
-        /// 손·총구 위치를 바꾸려면 generate_guard_rifle.py의 위치 값을 고친 뒤 다시 만든다.
-        /// </summary>
+        /// <summary>GuardWeaponView가 총구·손 표시를 찾을 수 있도록 소총 모델의 표시를 루트 바로 아래로 옮겨 총 프리팹을 만든다.</summary>
         private static void CreateGun()
         {
-            GameObject source = AssetDatabase.LoadAssetAtPath<GameObject>(GunSource);
-            if (source == null)
+            GameObject gunModelAsset = AssetDatabase.LoadAssetAtPath<GameObject>(GunSource);
+            if (gunModelAsset == null)
             {
                 Debug.LogError($"[CharacterAssetBuilder] 총 모델을 찾을 수 없습니다: {GunSource}");
                 return;
             }
 
             var root = new GameObject(Path.GetFileNameWithoutExtension(WeaponViewPath));
-            GameObject model = InstantiateClean(source);
+            GameObject model = InstantiateClean(gunModelAsset);
             UrpMaterialConverter.ConvertRenderers(model.GetComponentsInChildren<Renderer>(true));
             model.transform.SetParent(root.transform, false);
             model.transform.localPosition = Vector3.zero;
@@ -426,9 +382,7 @@ namespace GuardVsMannequin.Editor
 
         #region 공용
 
-        /// <summary>
-        /// 원본을 씬에 풀어서 만들고, 게임에 필요 없는 스크립트·충돌체·물리·카메라·조명·오디오를 제거한다.
-        /// </summary>
+        /// <summary>에셋 팩 모델에 붙어 온 스크립트·충돌체·카메라 등이 게임 캐릭터와 충돌하므로 제거한다.</summary>
         internal static GameObject InstantiateClean(GameObject source)
         {
             var instance = (GameObject)PrefabUtility.InstantiatePrefab(source);
@@ -447,18 +401,14 @@ namespace GuardVsMannequin.Editor
             return instance;
         }
 
-        /// <summary>
-        /// 자식까지 포함해 해당 종류의 컴포넌트를 모두 제거한다.
-        /// </summary>
+        /// <summary>지울 컴포넌트 종류가 많아 같은 반복을 형식 매개변수 하나로 처리한다.</summary>
         private static void RemoveAll<T>(GameObject root) where T : Component
         {
             foreach (T component in root.GetComponentsInChildren<T>(true))
                 Object.DestroyImmediate(component);
         }
 
-        /// <summary>
-        /// 모델을 감싸는 루트를 만들고, 높이를 맞춘 뒤 발이 원점·중심이 XZ 원점에 오도록 옮긴다.
-        /// </summary>
+        /// <summary>모델마다 원점·크기가 제각각이라 캡슐에 맞도록 키를 맞추고 발을 원점에 옮긴다.</summary>
         private static GameObject NormalizeToFeet(GameObject model, string rootName, float targetHeight)
         {
             var root = new GameObject(rootName);
@@ -466,28 +416,26 @@ namespace GuardVsMannequin.Editor
             model.transform.localPosition = Vector3.zero;
             model.transform.localRotation = Quaternion.identity;
 
-            Bounds bounds = GetRendererBounds(root);
-            if (bounds.size.y > 0.001f)
-                model.transform.localScale *= targetHeight / bounds.size.y;
+            Bounds modelBounds = GetRendererBounds(root);
+            if (modelBounds.size.y > 0.001f)
+                model.transform.localScale *= targetHeight / modelBounds.size.y;
 
-            bounds = GetRendererBounds(root);
-            model.transform.localPosition -= new Vector3(bounds.center.x, bounds.min.y, bounds.center.z);
+            modelBounds = GetRendererBounds(root);
+            model.transform.localPosition -= new Vector3(modelBounds.center.x, modelBounds.min.y, modelBounds.center.z);
             return root;
         }
 
-        /// <summary>
-        /// 자식 렌더러 전체의 월드 경계. (스킨드 메시는 기본 포즈 경계)
-        /// </summary>
+        /// <summary>원점이 제각각인 모델의 실제 크기를 알려고 자식 렌더러 전체의 월드 경계를 구한다.</summary>
         internal static Bounds GetRendererBounds(GameObject root)
         {
             Renderer[] renderers = root.GetComponentsInChildren<Renderer>(true);
             if (renderers.Length == 0)
                 return new Bounds(root.transform.position, Vector3.zero);
 
-            Bounds bounds = renderers[0].bounds;
-            foreach (Renderer target in renderers)
-                bounds.Encapsulate(target.bounds);
-            return bounds;
+            Bounds combinedBounds = renderers[0].bounds;
+            foreach (Renderer childRenderer in renderers)
+                combinedBounds.Encapsulate(childRenderer.bounds);
+            return combinedBounds;
         }
 
         #endregion

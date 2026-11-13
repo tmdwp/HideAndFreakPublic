@@ -5,13 +5,21 @@ using UnityEngine;
 
 namespace GuardVsMannequin.Editor
 {
-    /// <summary>
-    /// 모드 하나의 설정(에디터 전용 에셋). "모드 내보내기"가 이 설정으로 번들과 mod.json을 만든다.
-    /// 만들기: Project 창 우클릭 > Create > Hide&amp;Freak > Mod Project
-    /// </summary>
+    /// <summary>"모드 내보내기"가 번들과 mod.json을 만들 때 쓰는 모드 하나의 설정.</summary>
     [CreateAssetMenu(menuName = EditorMenus.Root + "Mod Project", fileName = "ModProject")]
     public class ModProject : ScriptableObject
     {
+        /// <summary>언어 하나의 맵 이름.</summary>
+        [Serializable]
+        public class LocalizedName
+        {
+            [Tooltip("언어 코드. 예: ko, en")]
+            public string language = "ko";
+
+            [Tooltip("이 언어로 보여 줄 맵 이름. 비우면 이 언어의 번역을 쓰지 않는다.")]
+            public string text = "";
+        }
+
         /// <summary>맵 하나의 내보내기 설정.</summary>
         [Serializable]
         public class MapSetting
@@ -22,8 +30,15 @@ namespace GuardVsMannequin.Editor
             [Tooltip("맵 ID의 뒷부분(영문 소문자·숫자·밑줄). 전체 ID는 '<모드 ID>.<이것>'.")]
             public string mapKey = "map";
 
-            [Tooltip("표시 이름. 번역은 strings.csv에 'mod.<모드 ID>.<mapKey>' 줄로 넣는다.")]
+            [Tooltip("번역이 없을 때 보여 줄 맵 이름.")]
             public string displayName = "My Map";
+
+            [Tooltip("언어별 맵 이름. 내보낼 때 strings.csv가 자동으로 만들어진다. 쓰지 않을 언어는 비워 둔다.")]
+            public List<LocalizedName> names = new()
+            {
+                new LocalizedName { language = "ko" },
+                new LocalizedName { language = "en" }
+            };
 
             [Tooltip("이 맵을 고를 수 있는 최소·최대 인원. 0이면 게임 기본값(2~10명).")]
             public int minPlayers;
@@ -67,9 +82,6 @@ namespace GuardVsMannequin.Editor
 
         [Tooltip("에셋 번들에 넣을 것(캐릭터 외형 CharacterSkin, 사물 프리팹 등). 맵 씬이 쓰는 것은 자동으로 씬 번들에 들어가므로, 다른 모드와 함께 쓰게 할 것만 넣는다.")]
         public List<UnityEngine.Object> sharedAssets = new();
-
-        [Tooltip("번역 파일(strings.csv와 같은 형식). 키는 'mod.<모드 ID>.'로 시작해야 한다. (선택)")]
-        public TextAsset strings;
 
         [Header("내보내기")]
         [Tooltip("내보낸 모드를 복사할 게임의 Mods 폴더. (비우면 복사하지 않음, 예: C:/Games/HideAndFreak/Mods)")]

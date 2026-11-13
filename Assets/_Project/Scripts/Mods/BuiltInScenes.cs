@@ -5,17 +5,13 @@ using UnityEngine.SceneManagement;
 
 namespace GuardVsMannequin.Mods
 {
-    /// <summary>
-    /// 게임에 들어 있는 씬(빌드 설정의 씬) 이름 목록.
-    /// 모드 맵 씬이 이 이름과 같으면, 이름으로 씬을 불러올 때 PC마다 내장 씬과 모드 씬 중 다른 쪽이 열리거나
-    /// 게스트가 씬을 찾지 못할 수 있으므로 모드 검사에서 막는다.
-    /// </summary>
+    /// <summary>모드 맵 씬 이름이 겹치면 PC마다 다른 씬이 열릴 수 있어 막으려고 내장 씬 이름 목록을 모은다.</summary>
     public static class BuiltInScenes
     {
         private static HashSet<string> names;
 
         /// <summary>
-        /// 플레이 모드에 들어갈 때 목록을 다시 읽게 한다. (도메인 재로드를 끈 채 빌드 설정을 바꾼 경우)
+        /// 도메인 재로드를 끈 채 빌드 설정을 바꾸면 옛 목록이 남으므로 플레이 모드에 들어갈 때 다시 읽게 한다.
         /// </summary>
         [UnityEngine.RuntimeInitializeOnLoadMethod(UnityEngine.RuntimeInitializeLoadType.SubsystemRegistration)]
         private static void ResetOnPlay()
@@ -23,9 +19,7 @@ namespace GuardVsMannequin.Mods
             names = null;
         }
 
-        /// <summary>
-        /// 씬 이름이 내장 씬과 같은지 여부. (대소문자 무시 — 네트워크 씬 조회가 대소문자를 구분하지 않음)
-        /// </summary>
+        /// <summary>네트워크 씬 조회가 대소문자를 구분하지 않으므로 여기서도 무시하고 비교한다.</summary>
         public static bool Contains(string sceneName)
         {
             if (names == null)

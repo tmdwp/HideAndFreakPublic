@@ -3,12 +3,7 @@ using UnityEngine;
 
 namespace GuardVsMannequin.UI
 {
-    /// <summary>
-    /// 로비 배경 연출: 가드(도망)와 구울(추격)이 경로(<see cref="LobbyChasePath"/>)를 따라 계속 돈다.
-    /// - 구울은 가드 뒤에서 거리를 좁혔다 벌렸다 하며, 가까워지면 할퀴기(Attack 트리거)를 한다.
-    /// - 이동 애니메이션은 각 캐릭터의 <see cref="CharacterSkinView"/>가 위치 변화로 알아서 고른다.
-    /// 네트워크·게임 규칙과 무관한 화면 장식이다.
-    /// </summary>
+    /// <summary>로비 배경에서 가드와 구울이 거리를 좁혔다 벌렸다 하며 경로를 계속 돈다.</summary>
     public class LobbyChaseLoop : MonoBehaviour
     {
         [Tooltip("두 캐릭터가 따라 도는 경로.")]
@@ -44,12 +39,12 @@ namespace GuardVsMannequin.UI
         [Tooltip("쫓는 쪽 애니메이션 재생 속도 배율. 발이 미끄러져 보이면 조절한다.")]
         [SerializeField] private float chaserAnimationSpeed = 1.2f;
 
-        private float travelled;
-        private float elapsed;
+        private float travelledDistance;
+        private float elapsedTime;
         private float nextAttackTime;
 
         /// <summary>
-        /// 시작 위치에 두 캐릭터를 놓는다. (외형의 첫 프레임 속도가 튀지 않도록 Awake에서)
+        /// 외형은 위치 변화로 이동 속도를 재므로, 첫 프레임에 원래 자리에서 경로로 순간 이동해 속도가 튀지 않도록 Awake에서 미리 놓는다.
         /// </summary>
         private void Awake()
         {
@@ -57,7 +52,7 @@ namespace GuardVsMannequin.UI
         }
 
         /// <summary>
-        /// 쫓는 쪽 애니메이션 속도를 맞춘다. (외형은 각자의 Awake에서 붙는다)
+        /// 외형의 Animator는 각자의 Awake에서 붙으므로 그 뒤인 Start에서 재생 속도를 맞춘다.
         /// </summary>
         private void Start()
         {
@@ -66,38 +61,36 @@ namespace GuardVsMannequin.UI
         }
 
         /// <summary>
-        /// 경로를 따라 이동하고, 가까우면 할퀴기를 시도한다.
+        /// 거리 간격과 할퀴기가 같은 시간축을 쓰도록 이동 거리와 경과 시간을 함께 늘린다.
         /// </summary>
         private void Update()
         {
-            travelled += runSpeed * Time.deltaTime;
-            elapsed += Time.deltaTime;
+            travelledDistance += runSpeed * Time.deltaTime;
+            elapsedTime += Time.deltaTime;
             Place();
             TryAttack();
         }
 
-        /// <summary>
-        /// 지금 두 캐릭터 사이 거리. 평소 거리를 중심으로 천천히 오르내린다.
-        /// </summary>
+        /// <summary>연출이 단조롭지 않도록 거리를 사인파로 오르내리게 한다.</summary>
         private float CurrentGap()
         {
-            float wave = gapPeriod > 0f ? Mathf.Sin(elapsed * Mathf.PI * 2f / gapPeriod) : 0f;
+            float wave = gapPeriod > 0f ? Mathf.Sin(elapsedTime * Mathf.PI * 2f / gapPeriod) : 0f;
             return Mathf.Max(0.5f, baseGap + gapSwing * wave);
         }
 
         /// <summary>
-        /// 가드는 이동 거리 위치에, 구울은 그보다 거리만큼 뒤에 놓는다.
+        /// 두 캐릭터가 같은 경로를 쓰도록 구울은 가드 위치에서 거리만큼 뒤를 물어본다.
         /// </summary>
         private void Place()
         {
             if (path == null)
                 return;
-            SetPose(runner, path.Evaluate(travelled));
-            SetPose(chaser, path.Evaluate(travelled - CurrentGap()));
+            SetPose(runner, path.Evaluate(travelledDistance));
+            SetPose(chaser, path.Evaluate(travelledDistance - CurrentGap()));
         }
 
         /// <summary>
-        /// 트랜스폼이 있으면 위치·회전을 지정한다.
+        /// 인스펙터에서 한쪽 캐릭터를 비워 둬도 오류 없이 동작하도록 확인한다.
         /// </summary>
         private static void SetPose(Transform target, Pose pose)
         {
@@ -105,15 +98,13 @@ namespace GuardVsMannequin.UI
                 target.SetPositionAndRotation(pose.position, pose.rotation);
         }
 
-        /// <summary>
-        /// 충분히 가깝고 대기 시간이 지났으면 할퀴기 트리거를 발동한다. (트리거가 없는 외형은 건너뜀)
-        /// </summary>
+        /// <summary>할퀴기를 연달아 하면 어색하므로 성공했을 때만 대기 시간을 건다.</summary>
         private void TryAttack()
         {
-            if (chaserSkin == null || elapsed < nextAttackTime || CurrentGap() > attackDistance)
+            if (chaserSkin == null || elapsedTime < nextAttackTime || CurrentGap() > attackDistance)
                 return;
             if (chaserSkin.TryPlayTrigger(CharacterAnimatorParameters.Attack))
-                nextAttackTime = elapsed + attackCooldown;
+                nextAttackTime = elapsedTime + attackCooldown;
         }
     }
 }
