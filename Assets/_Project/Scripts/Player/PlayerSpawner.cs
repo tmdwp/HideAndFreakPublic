@@ -240,7 +240,9 @@ namespace GuardVsMannequin.Player
             matchResult.ResetParticipants();
 
             List<int> clientIds = new List<int>(ServerManager.Clients.Keys);
-            Dictionary<int, PlayerRole> roles = roleAssigner.Assign(clientIds, stateMachine.Settings.guardCount);
+            IRoomInfo room = GameServices.Room;
+            Dictionary<int, PlayerRole> roles = roleAssigner.Assign(clientIds, stateMachine.Settings.guardCount,
+                clientId => room?.GetTeamPreference(clientId) ?? TeamPreference.Random);
 
             foreach (KeyValuePair<int, PlayerRole> pair in roles)
             {
@@ -328,6 +330,7 @@ namespace GuardVsMannequin.Player
             victim.ServerDied -= OnAvatarDied;
 
             NetworkObject avatar = victim.NetworkObject;
+            matchResult.RecordElimination(avatar, attacker);
             spawnedAvatars.Remove(avatar);
             if (avatar.IsSpawned)
                 ServerManager.Despawn(avatar);

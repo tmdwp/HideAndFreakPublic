@@ -19,13 +19,18 @@ namespace GuardVsMannequin.Player
         /// <summary>리그마다 손가락 뼈 이름이 달라 시작 뼈만 찾고 그 아래는 모두 팔다리로 묶는다.</summary>
         public static HashSet<Transform> CollectLimbBones(Animator animator)
         {
-            var limbBones = new HashSet<Transform>();
             if (animator == null)
-                return limbBones;
+                return new HashSet<Transform>();
+            return CollectLimbBones(bone => SkinBones.Find(animator, bone));
+        }
 
+        /// <summary>에디터 미리 굽기는 실행 중이 아닌 애니메이터라 아바타 정보로 뼈를 찾으므로 찾는 방법을 받는다.</summary>
+        public static HashSet<Transform> CollectLimbBones(System.Func<HumanBodyBones, Transform> findBone)
+        {
+            var limbBones = new HashSet<Transform>();
             foreach (HumanBodyBones rootId in LimbRoots)
             {
-                Transform rootBone = SkinBones.Find(animator, rootId);
+                Transform rootBone = findBone(rootId);
                 if (rootBone == null)
                     continue;
                 foreach (Transform bone in rootBone.GetComponentsInChildren<Transform>(true))
@@ -68,7 +73,11 @@ namespace GuardVsMannequin.Player
             if (keptTriangleCount > 0)
                 return limbMesh;
 
-            Object.Destroy(limbMesh);
+            // 에디터 굽기에서도 부르므로 플레이 중이 아니면 즉시 지운다.
+            if (Application.isPlaying)
+                Object.Destroy(limbMesh);
+            else
+                Object.DestroyImmediate(limbMesh);
             return null;
         }
 

@@ -31,6 +31,10 @@ namespace GuardVsMannequin.UI
             joinSteamButton.onClick.AddListener(() => SessionServices.Session?.JoinSteamRoom(roomCodeInput.text, joinPasswordInput.text));
             joinDirectButton.onClick.AddListener(() => SessionServices.Session?.JoinDirectRoom(addressInput.text));
 
+            // 입력한 뒤 마우스로 버튼을 찾지 않아도 되도록 Enter로 바로 입장한다.
+            LobbyInputSubmit.Connect(joinSteamButton, roomCodeInput, joinPasswordInput);
+            LobbyInputSubmit.Connect(joinDirectButton, addressInput);
+
             joinPasswordInput.contentType = InputField.ContentType.Password;
 
             if (SessionServices.Session != null)

@@ -57,9 +57,9 @@ namespace GuardVsMannequin.Player.Mannequin
         }
 
         /// <summary>날아가는 동안 맞은 총알은 이 물체에 닿으므로 마네킹 체력으로 넘긴다.</summary>
-        public void TakeDamage(int amount, NetworkObject attacker)
+        public bool TakeDamage(int amount, NetworkObject attacker)
         {
-            damageTarget.TakeDamage(amount, attacker);
+            return damageTarget.TakeDamage(amount, attacker);
         }
 
         /// <summary>날아가는 동안 맞은 충격도 반영되도록 날아가기 처리로 넘긴다.</summary>

@@ -77,18 +77,20 @@ namespace GuardVsMannequin.Map
             foreach (SpawnPoint point in GetPoints(PlayerRole.Mannequin))
                 mannequinSpawns.Add(point.transform.position);
 
-            var rawCandidates = new List<Vector3>();
+            var placedCandidates = new List<Vector3>();
             foreach (SpawnPoint point in GetPoints(role))
-                rawCandidates.Add(point.transform.position);
+                placedCandidates.Add(point.transform.position);
             MapNavMesh.EnsureBuilt();
+            var rawCandidates = new List<Vector3>(placedCandidates);
             rawCandidates.AddRange(NavMeshPointSampler.Sample(NavMeshCandidateCount, out _));
 
-            List<Vector3> candidates = SpawnCandidateFilter.FilterStandable(rawCandidates, mannequinSpawns);
+            List<Vector3> candidates = SpawnCandidateFilter.FilterStandable(rawCandidates, mannequinSpawns, out SpawnCandidateFilter.Report report);
             if (candidates.Count == 0)
             {
-                // 모두 걸러져도 스폰이 실패하지 않도록 거르지 않은 후보를 쓴다.
-                Debug.LogWarning($"[SpawnPointRegistry] 갈 수 있는 가드 스폰 후보가 없어 검사 전 후보 {rawCandidates.Count}개를 사용합니다. 맵의 NavMesh와 스폰 지점을 확인하세요.");
-                candidates = rawCandidates;
+                // 무작위 NavMesh 지점에는 외곽 벽 윗면·지붕처럼 갇히는 곳이 섞여 있어, 검사에 실패하면 맵 제작자가 놓은 지점만 쓴다.
+                candidates = placedCandidates.Count > 0 ? placedCandidates : rawCandidates;
+                Debug.LogWarning($"[SpawnPointRegistry] 갈 수 있는 가드 스폰 후보가 없어 {(placedCandidates.Count > 0 ? "놓인 가드 스폰 지점" : "검사 전 후보")} {candidates.Count}개를 사용합니다. " +
+                                 $"({report}) 맵의 NavMesh를 다시 굽거나 스폰 지점을 확인하세요.");
             }
 
             // 지붕 위 같은 섬이 중심을 끌어가지 않도록 갈 수 있는 후보의 평균을 맵 중심으로 잡는다.

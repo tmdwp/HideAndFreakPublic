@@ -13,6 +13,22 @@ namespace GuardVsMannequin.UI
         private const float LeaveNoticeSeconds = 0.25f;
 
         /// <summary>
+        /// 게임 중 게스트는 나가면 복귀할 수 없고 방장이 나가면 모두가 나가게 되므로, 그런 경우에만 확인 창을 거친다.
+        /// </summary>
+        public static void RequestLeave()
+        {
+            RoomState room = RoomState.Instance;
+            int otherMemberCount = room != null ? room.Members.Count - 1 : 0;
+            string warningKey = LeaveConfirmRules.GetWarningKey(IsHost, room != null && room.IsInGame, otherMemberCount);
+            if (warningKey == null)
+            {
+                LeaveRoom();
+                return;
+            }
+            ConfirmDialog.Show("confirm.leave.title", warningKey, "confirm.leave.confirm", LeaveRoom);
+        }
+
+        /// <summary>
         /// 그냥 끊으면 서버가 재접속을 기다리며 자리를 남기므로, 게임 중인 게스트는 스스로 나간다고 먼저 알리고 잠시 뒤 끊는다.
         /// </summary>
         public static void LeaveRoom()

@@ -27,7 +27,7 @@ namespace GuardVsMannequin.UI
         private void Start()
         {
             primaryButton.onClick.AddListener(OnPrimaryClicked);
-            leaveButton.onClick.AddListener(() => SessionServices.Session?.Leave());
+            leaveButton.onClick.AddListener(RoomClient.RequestLeave);
         }
 
         /// <summary>호스트 알림은 놓치지 않도록 매 프레임 꺼내고, 문구는 가비지를 줄이려고 일정 간격으로만 갱신한다.</summary>

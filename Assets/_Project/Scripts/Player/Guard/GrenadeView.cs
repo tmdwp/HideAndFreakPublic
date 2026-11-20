@@ -5,26 +5,24 @@ using UnityEngine.Rendering;
 
 namespace GuardVsMannequin.Player.Guard
 {
-    /// <summary>에셋이 없어도 보이도록 비어 있으면 임시 도형으로 대신하는 수류탄 연출.</summary>
+    /// <summary>에셋이 없어도 보이도록 비어 있으면 임시 도형으로 대신하는 연막탄 연출.</summary>
     public class GrenadeView : MonoBehaviour
     {
-        [Tooltip("날아가는 수류탄 모델. 비우면 작은 구를 쓴다.")]
+        [Tooltip("날아가는 연막탄 모델. 비우면 작은 구를 쓴다.")]
         [SerializeField] private GameObject grenadeModel;
 
-        [Tooltip("폭발 이펙트 프리팹. 비우면 번쩍이는 빛과 퍼지는 구로 대신한다.")]
+        [Tooltip("터질 때 쓸 이펙트 프리팹. 비우면 코드로 만든 연막을 쓴다.")]
         [SerializeField] private GameObject explosionEffect;
 
         [Tooltip("임시 수류탄 구의 머티리얼.")]
         [SerializeField] private Material grenadeMaterial;
 
-        [Tooltip("임시 폭발 구의 머티리얼.")]
-        [SerializeField] private Material blastMaterial;
+        [Tooltip("연막 입자 머티리얼(반투명 파티클).")]
+        [SerializeField] private Material smokeMaterial;
 
-        [SerializeField] private Color flashColor = new(1f, 0.6f, 0.25f);
+        [SerializeField] private Color smokeColor = new(0.72f, 0.88f, 1f);
 
         private const float FallbackGrenadeSize = 0.18f;
-        private const float BlastDuration = 0.35f;
-        private const float EffectLifetime = 3f;
 
         private NoiseEmitter noiseEmitter;
 
@@ -49,31 +47,21 @@ namespace GuardVsMannequin.Player.Guard
         }
 
         /// <summary>
-        /// 폭발 이펙트 에셋이 없어도 위치와 반경이 보이도록 빛과 퍼지는 구로 대신한다.
+        /// 연막이 퍼진 범위가 곧 효과 범위라 마네킹도 피할 곳을 알 수 있도록, 판정과 같은 반경·시간으로 연막을 띄운다.
         /// </summary>
         private void PlayExplosion(Vector3 position)
         {
             if (noiseEmitter != null)
                 noiseEmitter.PlayLocalAt(NoiseType.GrenadeExplosion, position);
 
+            float duration = GameTuning.GrenadeSmokeDuration;
             if (explosionEffect != null)
             {
-                EffectPool.Spawn(explosionEffect, position, Quaternion.identity, null, 1f, 1f, EffectLifetime);
+                EffectPool.Spawn(explosionEffect, position, Quaternion.identity, null, 1f, 1f, duration);
                 return;
             }
 
-            var blast = new GameObject("GrenadeBlast");
-            blast.transform.position = position;
-            Light flash = blast.AddComponent<Light>();
-            flash.type = LightType.Point;
-            flash.color = flashColor;
-            flash.range = GameTuning.GrenadeRadius * 4f;
-            // 순간적인 섬광이라 그림자 비용을 쓸 가치가 없다.
-            flash.shadows = LightShadows.None;
-
-            GameObject sphere = CreatePrimitiveWithoutCollider(PrimitiveType.Sphere, blastMaterial);
-            sphere.transform.SetParent(blast.transform, false);
-            blast.AddComponent<GrenadeBlastAnimator>().Run(flash, sphere.transform, GameTuning.GrenadeRadius, BlastDuration);
+            SmokeCloud.Spawn(position, GameTuning.GrenadeRadius, duration, smokeMaterial, smokeColor);
         }
 
         /// <summary>
@@ -81,25 +69,16 @@ namespace GuardVsMannequin.Player.Guard
         /// </summary>
         private GameObject CreateFallbackGrenade()
         {
-            GameObject sphere = CreatePrimitiveWithoutCollider(PrimitiveType.Sphere, grenadeMaterial);
+            GameObject sphere = GameObject.CreatePrimitive(PrimitiveType.Sphere);
+            // 연출용 도형이 플레이어나 판정 광선에 걸리지 않도록 기본 충돌체를 없앤다.
+            Destroy(sphere.GetComponent<Collider>());
+            Renderer sphereRenderer = sphere.GetComponent<Renderer>();
+            sphereRenderer.shadowCastingMode = ShadowCastingMode.Off;
+            if (grenadeMaterial != null)
+                sphereRenderer.sharedMaterial = grenadeMaterial;
             sphere.name = "Grenade";
             sphere.transform.localScale = Vector3.one * FallbackGrenadeSize;
             return sphere;
         }
-
-        /// <summary>
-        /// 연출용 도형이 플레이어나 판정 광선에 걸리지 않도록 기본 충돌체를 없앤다.
-        /// </summary>
-        private static GameObject CreatePrimitiveWithoutCollider(PrimitiveType type, Material material)
-        {
-            GameObject primitive = GameObject.CreatePrimitive(type);
-            Destroy(primitive.GetComponent<Collider>());
-            Renderer primitiveRenderer = primitive.GetComponent<Renderer>();
-            primitiveRenderer.shadowCastingMode = ShadowCastingMode.Off;
-            if (material != null)
-                primitiveRenderer.sharedMaterial = material;
-            return primitive;
-        }
-
     }
 }

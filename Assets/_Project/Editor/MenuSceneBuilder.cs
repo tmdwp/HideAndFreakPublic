@@ -186,7 +186,78 @@ namespace GuardVsMannequin.Editor
                 CreateDirectCreateScreen(canvas);
                 added++;
             }
+            if (canvas.GetComponent<LobbyRoomBrowserView>() is LobbyRoomBrowserView browserView
+                && new SerializedObject(browserView).FindProperty("rowTemplate").objectReferenceValue is Button roomRow
+                && roomRow.GetComponent<RoomListRowView>() == null)
+            {
+                AddRoomRowColumns(roomRow);
+                added++;
+            }
             return added;
+        }
+
+        // 공개방 줄과 머리글이 같은 칸 위치를 쓰도록 칸별 가로 범위(0~1)를 한곳에 둔다.
+        private static readonly (string name, string headerKey, float min, float max, TextAnchor alignment)[] RoomColumns =
+        {
+            ("Name", "lobby.browse.column.name", 0f, 0.4f, TextAnchor.MiddleLeft),
+            ("Map", "lobby.browse.column.map", 0.4f, 0.62f, TextAnchor.MiddleLeft),
+            ("Players", "lobby.browse.column.players", 0.62f, 0.73f, TextAnchor.MiddleCenter),
+            ("Ping", "lobby.browse.column.ping", 0.73f, 0.84f, TextAnchor.MiddleCenter),
+            ("Tags", string.Empty, 0.84f, 1f, TextAnchor.MiddleRight)
+        };
+
+        /// <summary>이름 길이에 따라 열이 어긋나지 않도록 한 줄 글자를 칸별 글자로 바꾸고, 목록 위에 같은 칸의 머리글을 단다.</summary>
+        private static void AddRoomRowColumns(Button rowTemplate)
+        {
+            // 예전 한 줄 글자는 칸 글자와 겹치므로 지운다.
+            foreach (Text oldLabel in rowTemplate.GetComponentsInChildren<Text>(true))
+                UnityEngine.Object.DestroyImmediate(oldLabel.gameObject, true);
+
+            var texts = new Text[RoomColumns.Length];
+            for (int i = 0; i < RoomColumns.Length; i++)
+                texts[i] = CreateRoomColumnText(rowTemplate.transform, RoomColumns[i], string.Empty, 22, EditorUiFactory.TextColor);
+
+            RoomListRowView view = rowTemplate.gameObject.AddComponent<RoomListRowView>();
+            TestEnvironmentSetupTool.SetField(view, "nameText", texts[0]);
+            TestEnvironmentSetupTool.SetField(view, "mapText", texts[1]);
+            TestEnvironmentSetupTool.SetField(view, "playersText", texts[2]);
+            TestEnvironmentSetupTool.SetField(view, "pingText", texts[3]);
+            TestEnvironmentSetupTool.SetField(view, "tagsText", texts[4]);
+
+            // 스크롤 목록 바깥 윗변에 붙여, 사용자가 목록을 옮겨도 머리글이 따라가게 한다.
+            Transform scrollRoot = rowTemplate.transform.parent != null && rowTemplate.transform.parent.parent != null
+                ? rowTemplate.transform.parent.parent.parent
+                : null;
+            if (scrollRoot == null || scrollRoot.Find("RoomListHeader") != null)
+                return;
+
+            RectTransform header = EditorUiFactory.CreateRect(scrollRoot, "RoomListHeader");
+            header.anchorMin = new Vector2(0f, 1f);
+            header.anchorMax = new Vector2(1f, 1f);
+            header.pivot = new Vector2(0.5f, 0f);
+            header.anchoredPosition = new Vector2(0f, 2f);
+            header.sizeDelta = new Vector2(0f, 26f);
+            foreach (var column in RoomColumns)
+            {
+                if (column.headerKey.Length > 0)
+                    CreateRoomColumnText(header, column, column.headerKey, 18, HintColor);
+            }
+        }
+
+        /// <summary>줄과 머리글의 칸이 정확히 맞도록 같은 범위·여백으로 글자를 만든다.</summary>
+        private static Text CreateRoomColumnText(Transform parent, (string name, string headerKey, float min, float max, TextAnchor alignment) column,
+            string key, int fontSize, Color color)
+        {
+            Text text = EditorUiFactory.CreateText(parent, column.name, key, fontSize, column.alignment, color);
+            RectTransform rect = text.rectTransform;
+            rect.anchorMin = new Vector2(column.min, 0f);
+            rect.anchorMax = new Vector2(column.max, 1f);
+            rect.offsetMin = new Vector2(14f, 0f);
+            rect.offsetMax = new Vector2(-8f, 0f);
+            text.raycastTarget = false;
+            text.horizontalOverflow = HorizontalWrapMode.Wrap;
+            text.verticalOverflow = VerticalWrapMode.Truncate;
+            return text;
         }
 
         /// <summary>실수로 테스트 방을 열지 않도록 일반 방과 테스트 방 만들기를 따로 나눈 화면을 만든다.</summary>
@@ -403,6 +474,7 @@ namespace GuardVsMannequin.Editor
             rowLabel.fontSize = 22;
             EditorUiFactory.StretchWithPadding(rowLabel.rectTransform, 14f);
             EditorUiFactory.SetHeight(rowTemplate, 56f);
+            AddRoomRowColumns(rowTemplate);
             rowTemplate.gameObject.SetActive(false);
 
             Text status = EditorUiFactory.CreateText(screen, "Status", string.Empty, 20, TextAnchor.MiddleCenter, HintColor);
@@ -452,11 +524,259 @@ namespace GuardVsMannequin.Editor
         /// <returns>새로 추가한 영역 수.</returns>
         public static int AddMissingRoomSections(GameObject canvas)
         {
-            if (canvas.GetComponent<RoomModRequiredPopup>() != null || canvas.GetComponent<RoomFooterView>() == null)
+            if (canvas.GetComponent<RoomFooterView>() == null)
                 return 0;
 
-            CreateRoomModRequiredPopup(canvas);
-            return 1;
+            int added = 0;
+            if (canvas.GetComponent<RoomModRequiredPopup>() == null)
+            {
+                CreateRoomModRequiredPopup(canvas);
+                added++;
+            }
+            if (canvas.GetComponent<RoomSettingsWindow>() == null && AddRoomSettingsWindow(canvas))
+                added++;
+            else if (ConnectLeaveBlock(canvas))
+                added++;
+            if (canvas.GetComponent<RoomTeamSelectView>() == null)
+            {
+                if (AddRoomTeamSelect(canvas))
+                    added++;
+            }
+            else if (UpgradeTeamPicker(canvas))
+                added++;
+            if (MoveMapRowsToTeamPanel(canvas))
+                added++;
+            return added;
+        }
+
+        // 팀 선택 위로 옮겨 설정 창을 열지 않아도 보이게 할 맵·게임 시간 항목.
+        private static readonly GameSettingId[] MapSectionIds =
+        {
+            GameSettingId.Map, GameSettingId.PlayTime, GameSettingId.HuntTime, GameSettingId.HuntDelay
+        };
+
+        private const string TeamPanelName = "TeamSelectPanel";
+        private const string MapHeaderName = "MapHeader";
+        private const string TeamPickerName = "TeamPicker";
+        private static readonly string[] OldTeamButtonNames = { "GuardButton", "MannequinButton", "RandomButton" };
+
+        // 참가자 목록을 키운 뒤 오른쪽에 팀 선택을 두는 가로 범위.
+        private const float MembersPanelRight = 0.62f;
+        private const float TeamPanelLeft = 0.64f;
+
+        /// <summary>
+        /// 설정이 가운데 창으로 옮겨 비게 된 오른쪽을 쓰도록 참가자 목록을 넓히고 글자를 키운 뒤, 그 오른쪽에 시작 팀 선택을 둔다.
+        /// </summary>
+        /// <returns>참가자 목록을 찾아 바꿨으면 true.</returns>
+        private static bool AddRoomTeamSelect(GameObject canvas)
+        {
+            RoomMemberListView memberView = canvas.GetComponent<RoomMemberListView>();
+            if (memberView == null || !(new SerializedObject(memberView).FindProperty("memberListText").objectReferenceValue is Text memberList))
+                return false;
+            var membersPanel = canvas.transform.Find("MembersPanel") as RectTransform;
+            if (membersPanel == null)
+                return false;
+
+            membersPanel.anchorMax = new Vector2(MembersPanelRight, membersPanel.anchorMax.y);
+            membersPanel.offsetMax = new Vector2(0f, membersPanel.offsetMax.y);
+            memberList.fontSize = Mathf.Max(memberList.fontSize, 30);
+
+            RectTransform panel = EditorUiFactory.CreatePanel(canvas.transform, TeamPanelName,
+                new Vector2(TeamPanelLeft, membersPanel.anchorMin.y), new Vector2(0.97f, membersPanel.anchorMax.y), EditorUiFactory.PanelColor);
+            // 가운데 설정 창의 어두운 바탕 아래에 그려지도록 참가자 목록 바로 뒤에 둔다.
+            panel.SetSiblingIndex(membersPanel.GetSiblingIndex() + 1);
+            EditorUiFactory.AddVerticalLayout(panel, 14f, 28);
+            AddHeader(panel, "room.team.title");
+
+            RoomTeamSelectView view = canvas.AddComponent<RoomTeamSelectView>();
+            CreateTeamPicker(panel, view);
+
+            Text summary = EditorUiFactory.CreateText(panel, "Summary", string.Empty, 22, TextAnchor.UpperLeft, EditorUiFactory.TextColor);
+            summary.gameObject.AddComponent<LayoutElement>().flexibleHeight = 1f;
+            TestEnvironmentSetupTool.SetField(view, "summaryText", summary);
+            return true;
+        }
+
+        /// <summary>
+        /// 팀 세 개를 버튼으로 나열하면 맵 설정을 위에 둘 자리가 모자라, 가운데에 고른 팀을 보이고 양옆 버튼으로 넘기는 한 줄로 만든다.
+        /// </summary>
+        private static RectTransform CreateTeamPicker(Transform panel, RoomTeamSelectView view)
+        {
+            const float pickerHeight = 76f;
+            RectTransform picker = EditorUiFactory.CreateRow(panel, TeamPickerName, pickerHeight, 10f);
+
+            Button previous = EditorUiFactory.CreateButton(picker, "PreviousButton", "<", EditorUiFactory.ButtonColor, out Text previousLabel);
+            previousLabel.fontSize = 30;
+            EditorUiFactory.SetWidth(previous, pickerHeight);
+
+            // 바탕 색으로 팀을 구분하므로 버튼이 아닌 칸으로 둔다.
+            RectTransform choice = EditorUiFactory.CreatePanel(picker, "Choice", Vector2.zero, Vector2.one, EditorUiFactory.ButtonColor);
+            EditorUiFactory.SetFlexibleWidth(choice);
+            // 문구는 RoomTeamSelectView가 고른 팀에 맞춰 채우므로 key를 넘기지 않는다.
+            Text choiceLabel = EditorUiFactory.CreateText(choice, "Label", string.Empty, 30, TextAnchor.MiddleCenter, EditorUiFactory.TextColor);
+            choiceLabel.fontStyle = FontStyle.Bold;
+            EditorUiFactory.Stretch(choiceLabel.rectTransform);
+
+            Button next = EditorUiFactory.CreateButton(picker, "NextButton", ">", EditorUiFactory.ButtonColor, out Text nextLabel);
+            nextLabel.fontSize = 30;
+            EditorUiFactory.SetWidth(next, pickerHeight);
+
+            TestEnvironmentSetupTool.SetField(view, "previousButton", previous);
+            TestEnvironmentSetupTool.SetField(view, "nextButton", next);
+            TestEnvironmentSetupTool.SetField(view, "choiceText", choiceLabel);
+            TestEnvironmentSetupTool.SetField(view, "choiceBackground", choice.GetComponent<Image>());
+            return picker;
+        }
+
+        /// <summary>
+        /// 손으로 다듬은 프리팹을 초기화하지 않도록, 팀 버튼 세 개가 남은 예전 팀 선택만 좌우 버튼 한 줄로 바꾼다.
+        /// </summary>
+        /// <returns>바꿨으면 true.</returns>
+        private static bool UpgradeTeamPicker(GameObject canvas)
+        {
+            RoomTeamSelectView view = canvas.GetComponent<RoomTeamSelectView>();
+            if (view == null || new SerializedObject(view).FindProperty("choiceText").objectReferenceValue != null)
+                return false;
+            Transform panel = canvas.transform.Find(TeamPanelName);
+            if (panel == null)
+                return false;
+
+            // 예전 첫 팀 버튼 자리에 새 줄을 넣어 제목·요약 사이 순서를 지킨다.
+            int insertIndex = -1;
+            foreach (string buttonName in OldTeamButtonNames)
+            {
+                Transform oldButton = panel.Find(buttonName);
+                if (oldButton == null)
+                    continue;
+                insertIndex = insertIndex < 0 ? oldButton.GetSiblingIndex() : Mathf.Min(insertIndex, oldButton.GetSiblingIndex());
+                UnityEngine.Object.DestroyImmediate(oldButton.gameObject);
+            }
+
+            RectTransform picker = CreateTeamPicker(panel, view);
+            if (insertIndex >= 0)
+                picker.SetSiblingIndex(insertIndex);
+            return true;
+        }
+
+        /// <summary>
+        /// 맵과 게임 시간은 판마다 먼저 확인하는 값이라 설정 창을 열지 않아도 보이도록 팀 선택 위로 옮긴다.
+        /// 줄은 그대로 RoomSettingsView가 갱신하므로 위치만 바꾼다.
+        /// </summary>
+        /// <returns>옮겼으면 true.</returns>
+        private static bool MoveMapRowsToTeamPanel(GameObject canvas)
+        {
+            RoomSettingsView settingsView = canvas.GetComponent<RoomSettingsView>();
+            var panel = canvas.transform.Find(TeamPanelName) as RectTransform;
+            if (settingsView == null || panel == null || panel.Find(MapHeaderName) != null)
+                return false;
+
+            SerializedProperty rows = new SerializedObject(settingsView).FindProperty("settingRows");
+            var mapRows = new List<SettingRowView>();
+            foreach (GameSettingId id in MapSectionIds)
+            {
+                for (int i = 0; i < rows.arraySize; i++)
+                {
+                    if (rows.GetArrayElementAtIndex(i).objectReferenceValue is SettingRowView row && row.SettingId == id)
+                        mapRows.Add(row);
+                }
+            }
+            if (mapRows.Count == 0)
+                return false;
+
+            Text header = AddHeader(panel, "room.map.title");
+            header.name = MapHeaderName;
+            header.transform.SetSiblingIndex(0);
+            for (int i = 0; i < mapRows.Count; i++)
+            {
+                var rowTransform = (RectTransform)mapRows[i].transform;
+                rowTransform.SetParent(panel, false);
+                rowTransform.SetSiblingIndex(i + 1);
+                // 가운데 창에 맞춰 키웠던 줄이라 좁은 오른쪽 칸에 맞게 원래 크기로 되돌린다.
+                EnlargeContents(rowTransform, 1f / RoomSettingsWindowScale);
+            }
+            return true;
+        }
+
+        /// <summary>
+        /// 맵·게임 설정을 오른쪽 칸 대신 화면 가운데 큰 창으로 옮기고, 하단 막대에 창을 켜고 끄는 On/Off 버튼을 단다.
+        /// 기존 설정 줄과 연결은 그대로 두고 창의 위치·크기만 바꾼다.
+        /// </summary>
+        /// <returns>설정 창을 찾아 바꿨으면 true.</returns>
+        private static bool AddRoomSettingsWindow(GameObject canvas)
+        {
+            RoomSettingsView settingsView = canvas.GetComponent<RoomSettingsView>();
+            RoomFooterView footer = canvas.GetComponent<RoomFooterView>();
+            if (settingsView == null || footer == null)
+                return false;
+            if (!(new SerializedObject(settingsView).FindProperty("settingsHintText").objectReferenceValue is Text hint))
+                return false;
+            if (!(new SerializedObject(footer).FindProperty("leaveButton").objectReferenceValue is Button leaveButton))
+                return false;
+
+            var window = (RectTransform)hint.transform.parent;
+            window.anchorMin = new Vector2(0.14f, 0.16f);
+            window.anchorMax = new Vector2(0.86f, 0.95f);
+            window.offsetMin = window.offsetMax = Vector2.zero;
+            if (window.TryGetComponent(out Image windowImage))
+                windowImage.color = new Color(0.06f, 0.07f, 0.09f, 0.98f);
+            EnlargeContents(window, RoomSettingsWindowScale);
+
+            // 창 뒤의 참가자 목록을 어둡게 가리되, 하단 막대(On/Off·시작 버튼)는 가리지 않는다.
+            RectTransform dim = EditorUiFactory.CreatePanel(window.parent, "SettingsWindowDim", new Vector2(0f, 0.14f), Vector2.one, new Color(0f, 0f, 0f, 0.6f));
+            dim.SetSiblingIndex(window.GetSiblingIndex());
+            Button dimButton = dim.gameObject.AddComponent<Button>();
+            dimButton.transition = Selectable.Transition.None;
+
+            // 상태 문구는 RoomSettingsWindow가 채우므로 key를 넘기지 않는다.
+            Button toggle = EditorUiFactory.CreateButton(leaveButton.transform.parent, "SettingsWindowToggle", string.Empty, EditorUiFactory.ButtonColor, out Text toggleLabel);
+            EditorUiFactory.SetWidth(toggle, 260f);
+            toggle.transform.SetSiblingIndex(leaveButton.transform.GetSiblingIndex());
+
+            RoomSettingsWindow view = canvas.AddComponent<RoomSettingsWindow>();
+            TestEnvironmentSetupTool.SetField(view, "window", window.gameObject);
+            TestEnvironmentSetupTool.SetField(view, "dimBackground", dimButton);
+            TestEnvironmentSetupTool.SetField(view, "toggleButton", toggle);
+            TestEnvironmentSetupTool.SetField(view, "toggleLabel", toggleLabel);
+            TestEnvironmentSetupTool.SetArray(view, "blockedWhileOpen", new UnityEngine.Object[] { leaveButton });
+            return true;
+        }
+
+        /// <summary>설정 창을 먼저 만든 프리팹에는 나가기 막기 연결이 없으므로, 비어 있으면 하단의 나가기 버튼을 넣는다.</summary>
+        /// <returns>연결했으면 true.</returns>
+        private static bool ConnectLeaveBlock(GameObject canvas)
+        {
+            RoomSettingsWindow window = canvas.GetComponent<RoomSettingsWindow>();
+            RoomFooterView footer = canvas.GetComponent<RoomFooterView>();
+            if (window == null || footer == null)
+                return false;
+            if (new SerializedObject(window).FindProperty("blockedWhileOpen").arraySize > 0)
+                return false;
+            if (!(new SerializedObject(footer).FindProperty("leaveButton").objectReferenceValue is Button leaveButton))
+                return false;
+
+            TestEnvironmentSetupTool.SetArray(window, "blockedWhileOpen", new UnityEngine.Object[] { leaveButton });
+            return true;
+        }
+
+        // 가운데 창은 화면을 넓게 쓰므로 글자·줄도 그만큼 키운다.
+        private const float RoomSettingsWindowScale = 1.25f;
+
+        /// <summary>창 안의 글자 크기와 레이아웃 고정 크기를 같은 배율로 키워, 배치는 유지한 채 더 크게 보이게 한다.</summary>
+        private static void EnlargeContents(RectTransform root, float scale)
+        {
+            foreach (Text text in root.GetComponentsInChildren<Text>(true))
+                text.fontSize = Mathf.RoundToInt(text.fontSize * scale);
+            foreach (LayoutElement element in root.GetComponentsInChildren<LayoutElement>(true))
+            {
+                if (element.preferredHeight > 0f)
+                    element.preferredHeight *= scale;
+                if (element.minHeight > 0f)
+                    element.minHeight *= scale;
+                if (element.preferredWidth > 0f)
+                    element.preferredWidth *= scale;
+                if (element.minWidth > 0f)
+                    element.minWidth *= scale;
+            }
         }
 
         /// <summary>모드가 없는 게스트가 직접 설치할 수 있도록 다른 화면 위에 설치 안내 창을 만든다.</summary>
@@ -935,11 +1255,12 @@ namespace GuardVsMannequin.Editor
         /// <summary>
         /// 룸 화면 구역(참가자·설정)이 같은 제목 모양이 되도록 한곳에서 만든다.
         /// </summary>
-        private static void AddHeader(Transform parent, string content)
+        private static Text AddHeader(Transform parent, string content)
         {
             Text header = EditorUiFactory.CreateText(parent, "Header", content, 30, TextAnchor.MiddleLeft, EditorUiFactory.AccentColor);
             header.fontStyle = FontStyle.Bold;
             EditorUiFactory.SetHeight(header, 40f);
+            return header;
         }
 
         /// <summary>

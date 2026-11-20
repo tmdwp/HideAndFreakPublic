@@ -53,6 +53,16 @@ namespace GuardVsMannequin.Player
         void SetFrozen(bool frozen);
 
         /// <summary>
+        /// 도약처럼 이동 속도 제한(은신 중 0 포함)과 상관없이 정해진 시간 동안 밀어야 하는 이동.
+        /// 충돌은 평소처럼 처리하며, 땅이나 공중에 있을 때만 적용한다.
+        /// </summary>
+        /// <param name="horizontalVelocity">수평 속도(m/s). 세로 성분은 무시한다.</param>
+        /// <param name="duration">단위는 초.</param>
+        /// <param name="launchSpeed">처음 위로 차오르는 속도(m/s). 0이면 바닥을 따라 곧게 민다.</param>
+        /// <param name="arcGravity">도약 동안 평소 중력 대신 쓸 아래 가속도(m/s²).</param>
+        void Dash(Vector3 horizontalVelocity, float duration, float launchSpeed, float arcGravity);
+
+        /// <summary>
         /// 밟고 선 바닥까지 밀면 올라선 사물이 넘어지므로, 옆면으로 부딪힌 충돌만 (닿은 충돌체, 닿은 지점, 캐릭터 속도)로 알린다.
         /// 스스로 시뮬레이션하는 내 아바타에서만 발생한다.
         /// </summary>

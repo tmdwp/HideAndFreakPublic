@@ -1,14 +1,11 @@
 using System.Collections.Generic;
 using UnityEngine;
-using UnityEngine.Rendering;
 
 namespace GuardVsMannequin.Player
 {
     /// <summary>몸통·머리가 카메라를 가리지 않도록 1인칭 소유자 화면에 팔다리만 보여 준다.</summary>
     public class FirstPersonBodyView : MonoBehaviour, IPerspectiveListener
     {
-        private const string LimbObjectName = "FirstPersonLimbs";
-
         [Tooltip("로컬 플레이어가 되자마자 1인칭 팔다리를 보일지 여부. 가드는 켜고, 마네킹은 끈다(사냥 시간 1인칭에서 켜짐).")]
         [SerializeField] private bool showOnSpawn = true;
 
@@ -19,6 +16,8 @@ namespace GuardVsMannequin.Player
         private CharacterSkinView skinView;
         private Animator builtForAnimator;
         private bool isActive;
+        // 미리 구운 팔다리는 모델 프리팹의 일부이고 메시도 에셋이라 여기서 지우면 안 된다.
+        private bool ownsLimbs;
 
         /// <summary>
         /// 소유자 구성보다 먼저 구독해야 로컬 플레이어 등록을 놓치지 않으므로 Awake에서 구독한다.
@@ -103,11 +102,17 @@ namespace GuardVsMannequin.Player
         /// <summary>외형 교체를 알아내려고 기억하는 애니메이터.</summary>
         private Animator CurrentAnimator => skinView != null ? skinView.Animator : null;
 
-        /// <summary>외형마다 렌더러 구성이 달라 지금 외형의 렌더러마다 팔다리 복제를 새로 만든다.</summary>
+        /// <summary>
+        /// 외형 프리팹에 미리 구운 팔다리가 있으면 그대로 쓰고, 없는 외형(모드 외형 등)만 렌더러마다 팔다리 복제를 새로 만든다.
+        /// </summary>
         private void Rebuild()
         {
             ClearLimbs();
             builtForAnimator = CurrentAnimator;
+            if (TryUseBakedLimbs())
+                return;
+
+            ownsLimbs = true;
             HashSet<Transform> limbBones = LimbMeshFilter.CollectLimbBones(builtForAnimator);
             if (limbBones.Count == 0)
                 return;
@@ -132,40 +137,49 @@ namespace GuardVsMannequin.Player
                 Debug.LogWarning($"[FirstPersonBodyView] '{name}' 외형 모델의 Read/Write가 꺼져 있어 1인칭 팔다리를 만들지 못한 부분이 있습니다. 모델 가져오기 설정에서 Read/Write를 켜세요.", this);
         }
 
-        /// <summary>애니메이션을 그대로 따라가도록 원본과 같은 뼈를 쓰고, 그림자는 원본이 그리므로 끈다.</summary>
+        /// <summary>스폰마다 메시를 거르지 않도록 에디터에서 구워 둔 팔다리를 목록에 넣는다.</summary>
+        private bool TryUseBakedLimbs()
+        {
+            BakedSkinParts bakedParts = skinView != null ? skinView.BakedParts : null;
+            if (bakedParts == null || bakedParts.LimbRenderers.Count == 0)
+                return false;
+
+            ownsLimbs = false;
+            for (int i = 0; i < bakedParts.LimbRenderers.Count && i < bakedParts.LimbSources.Count; i++)
+            {
+                SkinnedMeshRenderer limbRenderer = bakedParts.LimbRenderers[i];
+                if (limbRenderer == null)
+                    continue;
+                limbObjects.Add(limbRenderer.gameObject);
+                limbSources.Add(bakedParts.LimbSources[i]);
+                limbRenderers.Add(limbRenderer);
+            }
+            return true;
+        }
+
+        /// <summary>외형이 바뀌면 어느 원본을 따라갈지 알아야 하므로 원본과 함께 기억한다.</summary>
         private void CreateLimbRenderer(SkinnedMeshRenderer source, Mesh limbMesh)
         {
-            var limbObject = new GameObject(LimbObjectName) { layer = source.gameObject.layer };
-            Transform limbTransform = limbObject.transform;
-            limbTransform.SetParent(source.transform.parent, false);
-            limbTransform.SetLocalPositionAndRotation(source.transform.localPosition, source.transform.localRotation);
-            limbTransform.localScale = source.transform.localScale;
-
-            SkinnedMeshRenderer limbRenderer = limbObject.AddComponent<SkinnedMeshRenderer>();
-            limbRenderer.sharedMesh = limbMesh;
-            limbRenderer.bones = source.bones;
-            limbRenderer.rootBone = source.rootBone;
-            limbRenderer.sharedMaterials = source.sharedMaterials;
-            limbRenderer.shadowCastingMode = ShadowCastingMode.Off;
-            limbRenderer.receiveShadows = source.receiveShadows;
-            // 카메라 바로 앞에 있어 경계 계산이 어긋나면 잘려 보일 수 있으므로 화면 밖 판정 없이 매번 갱신한다.
-            limbRenderer.updateWhenOffscreen = true;
-
-            limbObjects.Add(limbObject);
+            SkinnedMeshRenderer limbRenderer = LimbRendererFactory.Create(source, limbMesh);
+            limbObjects.Add(limbRenderer.gameObject);
             limbSources.Add(source);
             limbRenderers.Add(limbRenderer);
             limbMeshes.Add(limbMesh);
         }
 
         /// <summary>
-        /// 다시 만들 때 이전 복제가 겹쳐 남지 않고 메시가 새지 않도록 모두 지운다.
+        /// 다시 만들 때 이전 복제가 겹쳐 남지 않고 메시가 새지 않도록 직접 만든 것만 지우고, 구운 팔다리는 숨기기만 한다.
         /// </summary>
         private void ClearLimbs()
         {
             foreach (GameObject limbObject in limbObjects)
             {
-                if (limbObject != null)
+                if (limbObject == null)
+                    continue;
+                if (ownsLimbs)
                     Destroy(limbObject);
+                else
+                    limbObject.SetActive(false);
             }
             foreach (Mesh limbMesh in limbMeshes)
             {
@@ -177,6 +191,7 @@ namespace GuardVsMannequin.Player
             limbRenderers.Clear();
             limbMeshes.Clear();
             builtForAnimator = null;
+            ownsLimbs = false;
         }
     }
 }

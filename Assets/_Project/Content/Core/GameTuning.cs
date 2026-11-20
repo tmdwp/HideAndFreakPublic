@@ -17,9 +17,6 @@ namespace GuardVsMannequin.Core
 
         #region 이동
 
-        /// <summary>사냥 시간 마네킹 이동 속도 배율(호스트 설정 속도에 곱함).</summary>
-        public static float MannequinHuntSpeedMultiplier => Get(nameof(MannequinHuntSpeedMultiplier), 0.875f);
-
         /// <summary>달리기 중 이동 속도 배율.</summary>
         public static float SprintSpeedMultiplier => Get(nameof(SprintSpeedMultiplier), 1.6f);
 
@@ -60,9 +57,6 @@ namespace GuardVsMannequin.Core
         /// <summary>사냥 시간 마네킹 공격 쿨타임(초).</summary>
         public static float MannequinAttackCooldown => Get(nameof(MannequinAttackCooldown), 1f);
 
-        /// <summary>휘두르는 동안 쫓아가며 때리지 못하도록 공격 시작 후 이동을 막는 시간(초).</summary>
-        public static float MannequinAttackMoveLock => Get(nameof(MannequinAttackMoveLock), 0.9f);
-
         /// <summary>끊긴 사람이 돌아올 수 있고 그동안 살아 있는 것으로 세는 시간(초).</summary>
         public static float RejoinGraceSeconds => Get(nameof(RejoinGraceSeconds), 60f);
 
@@ -71,6 +65,43 @@ namespace GuardVsMannequin.Core
 
         /// <summary>감정 표현 한 번의 재생 시간(초).</summary>
         public static float EmoteDuration => Get(nameof(EmoteDuration), 1.5f);
+
+        #endregion
+
+        #region 구울 (사냥 시간 마네킹)
+
+        /// <summary>사냥 시간 구울 기본 이동 속도(m/s). 0이면 멈춰 버리므로 최소값을 둔다.</summary>
+        public static float GhoulMoveSpeed => Mathf.Max(0.1f, Get(nameof(GhoulMoveSpeed), 2.46f));
+
+        /// <summary>은신 중 공격할 때 정면으로 뛰어드는 거리(m).</summary>
+        public static float GhoulLungeDistance => Mathf.Max(0f, Get(nameof(GhoulLungeDistance), 2f));
+
+        /// <summary>도약해 뛰어올랐다 떨어질 때까지의 체공 시간(초). 짧을수록 빠르게 덮친다.</summary>
+        public static float GhoulLungeDuration => Mathf.Max(0.05f, Get(nameof(GhoulLungeDuration), 0.45f));
+
+        /// <summary>도약할 때 뛰어오르는 최고 높이(m). 0이면 바닥을 따라 곧게 뛰어든다.</summary>
+        public static float GhoulLungeHeight => Mathf.Max(0f, Get(nameof(GhoulLungeHeight), 0.6f));
+
+        /// <summary>스태미나가 가득 찬 상태에서 쉬지 않고 은신할 수 있는 시간(초).</summary>
+        public static float GhoulStealthStaminaSeconds => Mathf.Max(0.1f, Get(nameof(GhoulStealthStaminaSeconds), 20f));
+
+        /// <summary>도약 공격 피해.</summary>
+        public static int GhoulLungeDamage => Mathf.Max(1, GetInt(nameof(GhoulLungeDamage), 2));
+
+        /// <summary>다른 사람 화면에 보이는 켜진 손전등 빛줄기 길이(m).</summary>
+        public static float FlashlightBeamLength => Mathf.Max(0.5f, Get(nameof(FlashlightBeamLength), 6f));
+
+        /// <summary>다른 사람 화면에 보이는 손전등 빛줄기 진하기(0~1). 0이면 빛줄기 없이 렌즈 빛만 보인다.</summary>
+        public static float FlashlightBeamAlpha => Mathf.Clamp01(Get(nameof(FlashlightBeamAlpha), 0.2f));
+
+        /// <summary>다른 사람 화면에 보이는 손전등 렌즈 빛 반경(m).</summary>
+        public static float FlashlightLensGlowSize => Mathf.Max(0.01f, Get(nameof(FlashlightLensGlowSize), 0.07f));
+
+        /// <summary>도약하는 동안 가드와 부딪혔다고 보는 구울 몸 둘레 반경(m). 닿으면 끝까지 가지 않아도 바로 피해를 준다.</summary>
+        public static float GhoulLungeContactRadius => Mathf.Max(0.1f, Get(nameof(GhoulLungeContactRadius), 0.7f));
+
+        /// <summary>은신 중 구울 숨소리·발소리 크기 배율(0~1).</summary>
+        public static float GhoulStealthSoundMultiplier => Mathf.Clamp01(Get(nameof(GhoulStealthSoundMultiplier), 0.15f));
 
         #endregion
 
@@ -166,6 +197,12 @@ namespace GuardVsMannequin.Core
         /// <summary>안개 첫 겹부터 마지막 겹까지의 거리(m).</summary>
         public static float BoundaryFogDepth => Mathf.Max(0f, Get(nameof(BoundaryFogDepth), 10f));
 
+        /// <summary>카메라에서 이 거리(m)부터 경계 안개가 옅어지기 시작한다.</summary>
+        public static float BoundaryFogFarFadeStart => Mathf.Max(0f, Get(nameof(BoundaryFogFarFadeStart), 10f));
+
+        /// <summary>카메라에서 이 거리(m)보다 먼 경계 안개는 보이지 않는다.</summary>
+        public static float BoundaryFogFarFadeEnd => Mathf.Max(BoundaryFogFarFadeStart + 0.1f, Get(nameof(BoundaryFogFarFadeEnd), 30f));
+
         #endregion
 
         #region 사냥 시간 마네킹 시야
@@ -212,6 +249,12 @@ namespace GuardVsMannequin.Core
 
         /// <summary>부딪힐 때 면에 수직인 속도가 되튀는 비율(0~1).</summary>
         public static float GrenadeBounciness => Mathf.Clamp01(Get(nameof(GrenadeBounciness), 0.4f));
+
+        /// <summary>터진 뒤 연막이 남아 있는 시간(초).</summary>
+        public static float GrenadeSmokeDuration => Mathf.Max(0.1f, Get(nameof(GrenadeSmokeDuration), 5f));
+
+        /// <summary>연막 안 마네킹에게 수류탄 효과를 다시 거는 간격(초). 너무 짧으면 동기화가 잦아진다.</summary>
+        public static float GrenadeSmokeRefreshInterval => Mathf.Max(0.1f, Get(nameof(GrenadeSmokeRefreshInterval), 0.5f));
 
         /// <summary>손전등 범위(m).</summary>
         public static float FlashlightRange => Get(nameof(FlashlightRange), 25f);

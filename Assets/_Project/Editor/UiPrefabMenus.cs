@@ -58,6 +58,13 @@ namespace GuardVsMannequin.Editor
             int hudAdded = EditPrefab(UiPrefabLibrary.HudCanvasPath, root => SharedUiBuilder.AddMissingHudSections(root.transform));
             int rowsAdded = EditPrefab(UiPrefabLibrary.SettingsPanelPath, SharedUiBuilder.AddMissingRebindRows);
             int graphicsRowsAdded = EditPrefab(UiPrefabLibrary.SettingsPanelPath, SharedUiBuilder.AddMissingGraphicsRows);
+            // 줄을 다 넣은 뒤 넘치지 않도록 페이지를 스크롤로 감싸고, 화면마다 덮어쓴 크기도 큰 창으로 맞춘다.
+            int settingsScrolled = EditPrefab(UiPrefabLibrary.SettingsPanelPath, SettingsPanelLayout.MakePagesScrollable);
+            int backgroundSeparated = EditPrefab(UiPrefabLibrary.SettingsPanelPath, SettingsPanelLayout.SeparateBackground);
+            int settingsEnlarged = Mathf.Max(0, EditPrefab(UiPrefabLibrary.SettingsPanelPath, SettingsPanelLayout.Enlarge))
+                                   + Mathf.Max(0, EditPrefab(UiPrefabLibrary.LobbyCanvasPath, SettingsPanelLayout.Enlarge))
+                                   + Mathf.Max(0, EditPrefab(UiPrefabLibrary.RoomCanvasPath, SettingsPanelLayout.Enlarge))
+                                   + Mathf.Max(0, EditPrefab(UiPrefabLibrary.HudCanvasPath, SettingsPanelLayout.Enlarge));
             int lobbyAdded = EditPrefab(UiPrefabLibrary.LobbyCanvasPath, MenuSceneBuilder.AddMissingLobbySections);
             int roomAdded = EditPrefab(UiPrefabLibrary.RoomCanvasPath, MenuSceneBuilder.AddMissingRoomSections);
             int roomPlayersAdded = EditPrefab(UiPrefabLibrary.RoomCanvasPath, MenuSceneBuilder.AddMissingPlayerPanel);
@@ -68,7 +75,7 @@ namespace GuardVsMannequin.Editor
             int testRowsAdded = EditPrefab(UiPrefabLibrary.HudCanvasPath, root =>
                 MenuSceneBuilder.AddMissingSettingRows(root.GetComponentInChildren<HudTestRoomPanel>(true), id => id != GameSettingId.Map));
 
-            Debug.Log($"[UiPrefabMenus] HUD 영역 {Describe(hudAdded)}, 키 설정 줄 {Describe(rowsAdded)}, 그래픽 설정 줄 {Describe(graphicsRowsAdded)}, 로비 영역(버전 표시·모드 화면·방 이름·공개방 찾기) {Describe(lobbyAdded)}, 룸 영역(모드 설치 안내) {Describe(roomAdded)}, 플레이어 관리(룸 {Describe(roomPlayersAdded)}, HUD {Describe(hudPlayersAdded)}), " +
+            Debug.Log($"[UiPrefabMenus] HUD 영역 {Describe(hudAdded)}, 키 설정 줄 {Describe(rowsAdded)}, 그래픽 설정 줄 {Describe(graphicsRowsAdded)}, 설정 페이지 스크롤 {Describe(settingsScrolled)}, 설정 창 크기 {Describe(settingsEnlarged)}, 설정 창 배경 분리 {Describe(backgroundSeparated)}, 로비 영역(버전 표시·모드 화면·방 이름·공개방 찾기) {Describe(lobbyAdded)}, 룸 영역(모드 설치 안내·가운데 설정 창·팀 선택 좌우 버튼·맵 설정을 팀 선택 위로) {Describe(roomAdded)}, 플레이어 관리(룸 {Describe(roomPlayersAdded)}, HUD {Describe(hudPlayersAdded)}), " +
                       $"룸 설정 줄 {Describe(roomRowsAdded)}, 테스트 메뉴 설정 줄 {Describe(testRowsAdded)}. " +
                       "모양이 마음에 들면 '현재 UI를 초기화 기준으로 저장'으로 기준본도 갱신하세요.");
         }

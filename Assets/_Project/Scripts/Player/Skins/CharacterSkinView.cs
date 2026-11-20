@@ -31,6 +31,8 @@ namespace GuardVsMannequin.Player
         private HandAimIK aimIK;
         private CharacterSkin activeSkin;
         private GameObject activeModel;
+        private Vector3 modelBasePosition;
+        private float modelHeightOffset;
         private bool isApplied;
 
         /// <summary>외형이 바뀌면 달라지므로 쓸 때마다 읽는 지금 몸 렌더러.</summary>
@@ -53,8 +55,21 @@ namespace GuardVsMannequin.Player
             }
         }
 
+        /// <summary>미리 구운 팔다리·판정 캡슐이 없는 외형이면 null.</summary>
+        public BakedSkinParts BakedParts
+        {
+            get
+            {
+                EnsureApplied();
+                return activeModel != null ? activeModel.GetComponent<BakedSkinParts>() : null;
+            }
+        }
+
         /// <summary>서버가 맞는 순간에 판정하도록 외형마다 다른 공격 지연(초).</summary>
         public float AttackHitDelay => ActiveSkin != null ? ActiveSkin.attackHitDelay : 0f;
+
+        /// <summary>도약 동작이 없는 외형은 일반 공격 동작을 대신 재생하므로 그 지연을 쓴다.</summary>
+        public float LungeHitDelay => ActiveSkin != null && ActiveSkin.lungeHitDelay > 0f ? ActiveSkin.lungeHitDelay : AttackHitDelay;
 
         /// <summary>외형이 바뀌면 달라지므로 쓸 때마다 읽는 애니메이터.</summary>
         public Animator Animator
@@ -131,12 +146,47 @@ namespace GuardVsMannequin.Player
         }
 
         /// <summary>
+        /// 쭈그린 동작이 없는 외형도 자세가 낮아 보이도록 모델만 내린다.
+        /// 감정 표현이 외형 부모를 움직이므로 부모 대신 모델을 옮기고, 외형이 바뀌어도 유지되게 값을 기억한다.
+        /// </summary>
+        public void SetModelHeightOffset(float heightOffset)
+        {
+            EnsureApplied();
+            modelHeightOffset = heightOffset;
+            if (activeModel != null)
+                activeModel.transform.localPosition = modelBasePosition + Vector3.up * modelHeightOffset;
+        }
+
+        /// <summary>
         /// 외형 시스템 도입 전 프리팹과 호환하도록, 외형 컴포넌트가 없으면 지정한 렌더러를 대신 준다.
         /// </summary>
         public static Renderer[] ResolveBodyRenderers(Component owner, Renderer[] fallback)
         {
             CharacterSkinView skinView = owner.GetComponent<CharacterSkinView>();
             return skinView != null ? skinView.BodyRenderers : fallback ?? new Renderer[0];
+        }
+
+        /// <summary>손전등처럼 외형마다 위치가 다른 부착 지점을 모델 안에서 이름으로 찾는다. 기본 도형이거나 없으면 null.</summary>
+        public Transform FindModelPoint(string pointName)
+        {
+            EnsureApplied();
+            return activeModel != null ? FindDescendant(activeModel.transform, pointName) : null;
+        }
+
+        /// <summary>
+        /// 지점은 뼈 아래 깊이 있을 수 있어 모든 자식을 차례로 찾는다.
+        /// </summary>
+        private static Transform FindDescendant(Transform parent, string childName)
+        {
+            foreach (Transform child in parent)
+            {
+                if (child.name == childName)
+                    return child;
+                Transform found = FindDescendant(child, childName);
+                if (found != null)
+                    return found;
+            }
+            return null;
         }
 
         /// <summary>조준 IK는 외형 모델에 붙어 바깥에서 찾기 어려워 여기서 방향 기준을 넘긴다.</summary>
@@ -205,8 +255,13 @@ namespace GuardVsMannequin.Player
             activeModel = Instantiate(skin.modelPrefab, parent, false);
             activeModel.name = skin.modelPrefab.name;
             activeModel.transform.localRotation = Quaternion.Euler(0f, skin.yawOffset, 0f);
+            modelBasePosition = activeModel.transform.localPosition;
+            activeModel.transform.localPosition = modelBasePosition + Vector3.up * modelHeightOffset;
 
             activeModel.GetComponentsInChildren(true, skinRenderers);
+            // 미리 구운 1인칭 팔다리는 몸이 아니므로, 숨김·외곽선이 복제본까지 켜고 끄지 않게 뺀다.
+            if (activeModel.TryGetComponent(out BakedSkinParts bakedParts))
+                skinRenderers.RemoveAll(bakedParts.IsLimbRenderer);
             bodyRenderers = skinRenderers.ToArray();
             foreach (Renderer fallbackRenderer in fallbackRenderers ?? new Renderer[0])
             {

@@ -19,15 +19,35 @@ namespace GuardVsMannequin.Player
         /// </summary>
         /// <param name="wantsSprint">달리기 키를 누른 채 움직이고 있는지.</param>
         /// <returns>소진 상태면 키를 눌러도 달리지 않으므로 실제로 달리는지를 돌려준다.</returns>
+        /// <summary>
+        /// 도약처럼 한 번에 모두 쓰는 동작이 있어, 바닥내고 소진 상태로 만든다.
+        /// 바로 회복이 시작되면 곧장 다시 쓸 수 있으므로 회복 대기도 처음부터 다시 센다.
+        /// </summary>
+        public void Deplete()
+        {
+            Current = 0f;
+            IsExhausted = true;
+            recoverDelayRemaining = SprintRules.RecoverDelay;
+        }
+
         public bool Tick(bool wantsSprint, float deltaTime)
+        {
+            return Tick(wantsSprint, SprintRules.DrainPerSecond, deltaTime);
+        }
+
+        /// <summary>달리기 말고도 스태미나를 쓰는 동작(구울 은신)이 있어, 쓰는 속도를 받아 한 프레임 진행한다.</summary>
+        /// <param name="wantsDrain">스태미나를 쓰는 동작을 하려는지.</param>
+        /// <param name="drainPerSecond">초당 쓰는 비율(0~1).</param>
+        /// <returns>소진 상태면 쓰지 못하므로 실제로 쓰고 있는지를 돌려준다.</returns>
+        public bool Tick(bool wantsDrain, float drainPerSecond, float deltaTime)
         {
             if (IsExhausted && Current >= SprintRules.RestartRatio)
                 IsExhausted = false;
 
-            bool isSprinting = wantsSprint && !IsExhausted && Current > 0f;
+            bool isSprinting = wantsDrain && !IsExhausted && Current > 0f;
             if (isSprinting)
             {
-                Current = Mathf.Max(0f, Current - SprintRules.DrainPerSecond * deltaTime);
+                Current = Mathf.Max(0f, Current - drainPerSecond * deltaTime);
                 recoverDelayRemaining = SprintRules.RecoverDelay;
                 if (Current <= 0f)
                     IsExhausted = true;

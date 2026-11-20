@@ -381,6 +381,27 @@ namespace GuardVsMannequin.Room
         }
 
         /// <summary>
+        /// 판 도중에 바꾸면 다음 판 배정과 헷갈리므로 룸에 있을 때만 받고, 같은 값이면 다시 보내지 않는다.
+        /// </summary>
+        [ServerRpc(RequireOwnership = false)]
+        public void SetTeamPreferenceServerRpc(TeamPreference preference, NetworkConnection caller = null)
+        {
+            if (caller == null || isInGame.Value || !members.TryGetValue(caller.ClientId, out RoomMember member))
+                return;
+            if (preference is not (TeamPreference.Random or TeamPreference.Guard or TeamPreference.Mannequin) || member.teamPreference == preference)
+                return;
+
+            member.teamPreference = preference;
+            members[caller.ClientId] = member;
+        }
+
+        /// <inheritdoc />
+        public TeamPreference GetTeamPreference(int clientId)
+        {
+            return members.TryGetValue(clientId, out RoomMember member) ? member.teamPreference : TeamPreference.Random;
+        }
+
+        /// <summary>
         /// 느린 PC를 끊긴 것으로 오인하지 않도록, 아직 씬을 불러오는 중이라는 알림을 받는 동안 서버가 판 시작을 기다린다.
         /// </summary>
         [ServerRpc(RequireOwnership = false)]

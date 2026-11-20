@@ -27,19 +27,26 @@ namespace GuardVsMannequin.UI
 
         public string PartName => partName;
 
+        // 맞바꾼 줄을 알아보도록 키 글자를 잠깐 강조하는 시간(초)과 색.
+        private const float SwapFlashDuration = 1.5f;
+        private static readonly Color SwapFlashColor = new(0.45f, 0.9f, 0.55f, 1f);
+
         private InputAction action;
         private string labelKey;
         private int bindingIndex = -1;
-        private Action onChanged;
+        private Action<RebindRowView, string> onChanged;
         private InputActionRebindingExtensions.RebindingOperation rebindOperation;
+        private string pathBeforeChange;
+        private Color normalKeyColor;
+        private float flashEndTime;
 
         /// <summary>
         /// 원본 입력 에셋을 고치지 않도록 설정 화면이 편집하는 복제본에서 대상 바인딩을 찾는다.
         /// </summary>
         /// <param name="editingActions">설정 화면이 편집하는 입력 에셋 복제본.</param>
         /// <param name="labelKey">표시 이름 문구의 key.</param>
-        /// <param name="changed">바인딩이 바뀌면 저장하도록 호출할 함수.</param>
-        public void Bind(InputActionAsset editingActions, string labelKey, Action changed)
+        /// <param name="changed">바인딩이 바뀌면 부를 함수. 겹친 키를 맞바꿀 수 있도록 이 줄과 바꾸기 전 키 경로를 넘긴다.</param>
+        public void Bind(InputActionAsset editingActions, string labelKey, Action<RebindRowView, string> changed)
         {
             this.labelKey = labelKey;
             onChanged = changed;
@@ -48,15 +55,43 @@ namespace GuardVsMannequin.UI
 
             rebindButton.onClick.AddListener(StartRebind);
             resetButton.onClick.AddListener(ResetBinding);
+            normalKeyColor = keyText.color;
             Refresh();
         }
 
         /// <summary>
-        /// 화면이 닫힌 뒤 누른 키가 몰래 바인딩되지 않도록 진행 중인 입력 대기를 취소한다.
+        /// 화면이 닫힌 뒤 누른 키가 몰래 바인딩되지 않도록 진행 중인 입력 대기를 취소하고, 강조도 끝낸다.
         /// </summary>
         private void OnDisable()
         {
             rebindOperation?.Cancel();
+            if (flashEndTime > 0f)
+            {
+                flashEndTime = 0f;
+                keyText.color = normalKeyColor;
+            }
+        }
+
+        /// <summary>
+        /// 강조 시간이 지나면 원래 색으로 돌린다.
+        /// </summary>
+        private void Update()
+        {
+            if (flashEndTime > 0f && Time.unscaledTime >= flashEndTime)
+            {
+                flashEndTime = 0f;
+                keyText.color = normalKeyColor;
+            }
+        }
+
+        /// <summary>
+        /// 다른 줄에서 키를 바꿔 이 줄의 키가 바뀌었음을 알아보도록 잠깐 다른 색으로 보인다.
+        /// </summary>
+        public void FlashSwapped()
+        {
+            Refresh();
+            keyText.color = SwapFlashColor;
+            flashEndTime = Time.unscaledTime + SwapFlashDuration;
         }
 
         /// <summary>
@@ -75,6 +110,7 @@ namespace GuardVsMannequin.UI
                 return;
 
             IsAnyRebinding = true;
+            pathBeforeChange = action.bindings[bindingIndex].effectivePath;
             keyText.text = Loc.Get("options.pressKey");
             action.Disable();
 
@@ -100,7 +136,7 @@ namespace GuardVsMannequin.UI
 
             Refresh();
             if (isChanged)
-                onChanged?.Invoke();
+                onChanged?.Invoke(this, pathBeforeChange);
         }
 
         /// <summary>
@@ -111,9 +147,11 @@ namespace GuardVsMannequin.UI
             if (bindingIndex < 0 || IsAnyRebinding)
                 return;
 
+            // 기본 키가 다른 동작에 이미 쓰이고 있을 수 있어 바꾸기 전 키를 함께 넘긴다.
+            string previousPath = action.bindings[bindingIndex].effectivePath;
             action.RemoveBindingOverride(bindingIndex);
             Refresh();
-            onChanged?.Invoke();
+            onChanged?.Invoke(this, previousPath);
         }
     }
 }

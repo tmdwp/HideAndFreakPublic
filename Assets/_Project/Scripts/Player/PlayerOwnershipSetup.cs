@@ -63,6 +63,8 @@ namespace GuardVsMannequin.Player
         private void SetupAsOwner()
         {
             playerCamera.gameObject.SetActive(true);
+            // 프리팹을 고치지 않아도 내 시야각 설정이 적용되도록 내 카메라에만 붙인다.
+            Cameras.ViewFieldOfView.Attach(playerCamera);
             motor?.SetupAsOwner(playerCamera);
             SetBehavioursEnabled(true);
             // 프리팹을 고치지 않아도 모든 역할이 사물을 밀 수 있도록, 충돌을 직접 겪는 소유자 아바타에만 붙인다.

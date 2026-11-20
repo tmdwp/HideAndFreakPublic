@@ -1,6 +1,7 @@
 using GuardVsMannequin.Audio;
 using GuardVsMannequin.Core;
 using GuardVsMannequin.Player.Mannequin;
+using GuardVsMannequin.Rendering;
 using GuardVsMannequin.Settings;
 using UnityEngine;
 using UnityEngine.Rendering;
@@ -14,6 +15,8 @@ namespace GuardVsMannequin.Player.Guard
     public class GuardDreadEffect : MonoBehaviour
     {
         [Header("화면")]
+        [Tooltip("필름 그레인·색수차·채도 효과 프로필. 비우면 기본값으로 실행 중에 만든다.")]
+        [SerializeField] private VolumeProfile profileTemplate;
         [SerializeField] private float maxGrain = 1f;
         [SerializeField] private float maxChromatic = 0.8f;
         [Tooltip("가장 가까울 때 채도 감소(-100 = 흑백).")]
@@ -66,8 +69,7 @@ namespace GuardVsMannequin.Player.Guard
         {
             if (volume != null)
                 Destroy(volume.gameObject);
-            if (profile != null)
-                Destroy(profile);
+            VolumeProfiles.Release(profile);
         }
 
         /// <summary>보이는 구울과의 거리로 연출 세기를 정하고, 갑자기 튀지 않게 천천히 따라간다.</summary>
@@ -206,22 +208,19 @@ namespace GuardVsMannequin.Player.Guard
             if (volume != null)
                 return;
 
-            profile = ScriptableObject.CreateInstance<VolumeProfile>();
-            grain = profile.Add<FilmGrain>(true);
-            grain.type.Override(FilmGrainLookup.Medium3);
-            grain.intensity.Override(0f);
-            grain.response.Override(0.6f);
-            chromatic = profile.Add<ChromaticAberration>(true);
-            chromatic.intensity.Override(0f);
-            colorAdjustments = profile.Add<ColorAdjustments>(true);
-            colorAdjustments.saturation.Override(0f);
-
             var volumeHolder = new GameObject("GuardDreadVolume");
             volumeHolder.transform.SetParent(transform, false);
             volume = volumeHolder.AddComponent<Volume>();
             volume.isGlobal = true;
             volume.priority = 90f;
-            volume.sharedProfile = profile;
+
+            profile = VolumeProfiles.Assign(volume, profileTemplate, CreateDefaultProfile);
+            grain = VolumeProfiles.GetOrAdd<FilmGrain>(profile);
+            chromatic = VolumeProfiles.GetOrAdd<ChromaticAberration>(profile);
+            colorAdjustments = VolumeProfiles.GetOrAdd<ColorAdjustments>(profile);
+            grain.intensity.Override(0f);
+            chromatic.intensity.Override(0f);
+            colorAdjustments.saturation.Override(0f);
 
             if (noiseEmitter.Library != null)
             {
@@ -231,6 +230,21 @@ namespace GuardVsMannequin.Player.Guard
                 heartbeat.spatialBlend = 0f;
                 heartbeat.clip = noiseEmitter.Library.GetClip(NoiseType.GuardHeartbeat);
             }
+        }
+
+        /// <summary>에디터 미리 굽기와 실행 중 대체가 같은 값을 쓰도록 기본 프로필을 한곳에서 만든다.</summary>
+        public static VolumeProfile CreateDefaultProfile()
+        {
+            VolumeProfile defaultProfile = ScriptableObject.CreateInstance<VolumeProfile>();
+            defaultProfile.name = "VP_GuardDread";
+
+            var defaultGrain = defaultProfile.Add<FilmGrain>(true);
+            defaultGrain.type.Override(FilmGrainLookup.Medium3);
+            defaultGrain.intensity.Override(0f);
+            defaultGrain.response.Override(0.6f);
+            defaultProfile.Add<ChromaticAberration>(true).intensity.Override(0f);
+            defaultProfile.Add<ColorAdjustments>(true).saturation.Override(0f);
+            return defaultProfile;
         }
     }
 }

@@ -11,6 +11,7 @@
 
 규칙은 mapkit_common.py와 같다. (피벗은 바닥 중앙, 앞면은 블렌더 -Y = Unity +Z)
 발광 부분은 머티리얼 M_GR_Glow / M_GR_Screen 이름으로 찾아 Unity 발광 머티리얼로 바꿔 끼운다.
+가구는 메시 콜라이더로 그대로 밟고 다니므로, 디테일은 걷는 윗면(상판·선반·이불 비탈)을 피해 옆면·앞면에 붙인다.
 """
 import math
 import os
@@ -36,6 +37,7 @@ palette = {
     "Charcoal":     ((0.16, 0.16, 0.18), 0.0, 0.6, 0.0),
     "Metal":        ((0.70, 0.71, 0.73), 0.85, 0.3, 0.0),
     "Blanket":      ((0.24, 0.36, 0.58), 0.0, 0.95, 0.0),
+    "BlanketTrim":  ((0.42, 0.55, 0.74), 0.0, 0.95, 0.0),
     "Pillow":       ((0.94, 0.92, 0.86), 0.0, 0.95, 0.0),
     "Fabric":       ((0.45, 0.20, 0.18), 0.0, 0.95, 0.0),
     "Rug":          ((0.55, 0.42, 0.30), 0.0, 1.0, 0.0),
@@ -79,6 +81,15 @@ def makeBed():
         b.box((0.55, 0.32, 0.12), (x, 0.78, 0.56), "Pillow")
     b.box((1.46, 0.06, 1.0), (0, 1.0, 0.5), "OakDark")
     b.box((1.46, 0.08, 0.05), (0, 1.0, 1.0), "Oak")
+    # 머리판 패널·기둥, 이불 위로 접힌 홑이불 (걷는 윗면 높이는 그대로 둔다)
+    for u in (-0.34, 0.34):
+        b.frame("-Y", (0, 0.97, 0), 0.62, 0.3, 0.03, 0.008, "Oak", u=u, v=0.8)
+    for sx in (-1, 1):
+        b.box((0.05, 0.08, 1.04), (sx * 0.715, 1.0, 0.52), "Oak")
+    with b.noBevel():
+        b.box((1.42, 0.14, 0.062), (0, 0.46, 0.521), "Pillow")
+        for sx in (-1, 1):
+            b.plate("+X" if sx > 0 else "-X", (sx * 0.7, 0, 0), 1.9, 0.03, 0.004, "OakDark", v=0.2)
     return b.build()
 
 
@@ -97,6 +108,7 @@ def makeDrawer(name, centerX, frontY, bottomZ, width, depth, height, frontColor,
     for sx in (-1, 1):
         b.box((wall, depth, height * 0.8), (centerX + sx * (width / 2 - wall / 2), mid, bottomZ + height * 0.4), bodyColor)
     b.box((width, wall, height * 0.8), (centerX, back - wall / 2, bottomZ + height * 0.4), bodyColor)
+    b.frame("-Y", (centerX, frontY - 0.015, bottomZ + height / 2), width - 0.03, height - 0.03, 0.008, 0.003, frontColor)
     return b.build()
 
 
@@ -124,6 +136,8 @@ def makeNightstand():
     for sx in (-1, 1):
         for sy in (-1, 1):
             b.box((0.03, 0.03, 0.05), (sx * 0.2, sy * 0.17, 0.025), "OakDark")
+    for facing, x in (("+X", 0.225), ("-X", -0.225)):
+        b.frame(facing, (x, 0, 0), 0.32, 0.42, 0.02, 0.004, "OakDark", v=0.3)
     body = b.build()
     drawers = [
         makeDrawer("GR_Nightstand_Drawer1", 0.0, -0.2, 0.095, 0.4, 0.37, 0.2, "OakDark", "Oak"),
@@ -148,6 +162,13 @@ def makeDesk():
     for sy in (-1, 1):
         b.box((0.04, 0.04, 0.72), (0.56, sy * 0.26, 0.36), "White")
     b.box((0.78, 0.02, 0.3), (0.18, 0.28, 0.55), "White")
+    b.plate("-Y", (0, -0.3, 0), 1.2, 0.03, 0.003, "OakDark", v=0.735)
+    b.frame("+Y", (0, 0.29, 0), 0.7, 0.24, 0.02, 0.004, "Gray", u=-0.18, v=0.55)
+    b.frame("-X", (-0.59, 0, 0), 0.46, 0.6, 0.02, 0.004, "Gray", v=0.36)
+    with b.noBevel():
+        b.box((0.03, 0.5, 0.03), (0.56, 0, 0.12), "White")
+        for sy in (-1, 1):
+            b.box((0.05, 0.05, 0.015), (0.56, sy * 0.26, 0.0075), "Gray")
     body = b.build()
     drawers = [
         makeDrawer(f"GR_Desk_Drawer{i + 1}", -0.39, -0.275, z, 0.355, 0.52, 0.19, "Gray", "White")
@@ -186,6 +207,14 @@ def makeDeskChair():
     b.box((0.42, 0.03, 0.38), (0, 0.205, 0.68), "Oak")
     for sx in (-1, 1):
         b.box((0.035, 0.035, 0.42), (sx * 0.19, 0.2, 0.68), "OakDark")
+    b.box((0.4, 0.4, 0.025), (0, -0.01, 0.4825), "Fabric")
+    b.box((0.44, 0.04, 0.04), (0, 0.205, 0.88), "OakDark")
+    for u in (-0.1, 0.0, 0.1):
+        b.plate("-Y", (0, 0.19, 0), 0.012, 0.3, 0.003, "OakDark", u=u, v=0.68)
+    with b.noBevel():
+        for sx in (-1, 1):
+            b.box((0.02, 0.38, 0.02), (sx * 0.19, 0, 0.15), "OakDark")
+        b.box((0.38, 0.02, 0.02), (0, -0.19, 0.22), "OakDark")
     return b.build()
 
 
@@ -198,6 +227,11 @@ def makeBookshelf():
     for i in range(6):
         b.box((0.74, 0.29, 0.03), (0, 0, 0.015 + i * 0.35), "Oak")
     b.box((0.8, 0.3, 0.03), (0, 0, 1.785), "OakDark")
+    # 선반 위는 빌더가 책을 꽂는 자리라 비워 두고, 옆판 몰딩과 뒤판 널 이음선만 넣는다
+    for facing, x in (("+X", 0.4), ("-X", -0.4)):
+        b.frame(facing, (x, 0, 0), 0.22, 1.6, 0.025, 0.004, "Oak", v=0.9)
+    for u in (-0.25, 0.0, 0.25):
+        b.plate("-Y", (0, 0.1355, 0), 0.006, 1.74, 0.002, "Oak", u=u, v=0.9)
     return b.build()
 
 
@@ -208,6 +242,9 @@ def makeBook():
     b.box((0.25, 0.18, 0.006), (0, 0, 0.037), "Blue")
     b.box((0.01, 0.18, 0.04), (-0.12, 0, 0.02), "Blue")
     b.box((0.238, 0.172, 0.028), (0.004, 0, 0.02), "Paper")
+    b.plate("+Z", (0, 0, 0.04), 0.12, 0.05, 0.0008, "Cream", u=0.02, v=0.03)
+    b.textBars("+Z", (0, 0, 0.0408), 0.08, 0.006, (1.0, 0.6), "Graphite", u=0.02, v=0.036, depth=0.0004)
+    b.textBars("-X", (-0.125, 0, 0), 0.1, 0.008, (1.0,), "Yellow", v=0.02, depth=0.0006)
     return b.build()
 
 
@@ -220,6 +257,13 @@ def makeWardrobe():
     b.box((0.004, 0.01, 1.8), (0, -0.3, 1.04), "Gray")
     for x in (-0.05, 0.05):
         b.box((0.015, 0.03, 0.22), (x, -0.31, 1.1), "Metal")
+    front = (0, -0.3, 0)
+    for u in (-0.25, 0.25):
+        b.frame("-Y", front, 0.4, 1.05, 0.03, 0.006, "Cream", u=u, v=1.38)
+        b.frame("-Y", front, 0.4, 0.5, 0.03, 0.006, "Cream", u=u, v=0.46)
+    for u in (-0.49, 0.49):
+        b.hinges("-Y", front, u, (0.4, 1.0, 1.7), "Metal", radius=0.008, length=0.08)
+    b.bolts("-Y", front, [(0.05, 0.95)], "Charcoal", radius=0.008, depth=0.004)
     return b.build()
 
 
@@ -235,6 +279,11 @@ def makeSofa():
     for sx in (-1, 1):
         for sy in (-1, 1):
             b.box((0.05, 0.05, 0.06), (sx * 0.82, sy * 0.34, 0.03), "OakDark")
+    for x in (-0.42, 0.42):
+        b.box((0.8, 0.1, 0.3), (x, 0.16, 0.64), "Fabric")
+        b.bolts("-Y", (x, 0.11, 0.64), [(-0.2, 0), (0.2, 0)], "OakDark", radius=0.015, depth=0.006)
+    b.box((0.28, 0.09, 0.28), (-0.56, 0.05, 0.64), "Cream", rot=rotX(-16) @ rotY(8))
+    b.plate("-Y", (0, -0.4, 0), 1.74, 0.015, 0.004, "OakDark", v=0.09)
     return b.build()
 
 
@@ -246,6 +295,13 @@ def makeCoffeeTable():
     for sx in (-1, 1):
         for sy in (-1, 1):
             b.box((0.04, 0.04, 0.41), (sx * 0.46, sy * 0.21, 0.205), "OakDark")
+    with b.noBevel():
+        for sy in (-1, 1):
+            b.box((0.88, 0.02, 0.05), (0, sy * 0.21, 0.385), "OakDark")
+        for sx in (-1, 1):
+            b.box((0.02, 0.38, 0.05), (sx * 0.46, 0, 0.385), "OakDark")
+        b.box((0.28, 0.2, 0.006), (0.2, 0.02, 0.133), "Paper", rot=rotZ(10))
+        b.box((0.28, 0.06, 0.001), (0.2, 0.08, 0.1365), "Red", rot=rotZ(10))
     return b.build()
 
 
@@ -254,6 +310,10 @@ def makeRug():
     b = MeshBuilder("GR_Rug", "GiantRoom", bevel=0.0)
     b.box((2.0, 1.4, 0.006), (0, 0, 0.003), "RugTrim")
     b.box((1.8, 1.2, 0.008), (0, 0, 0.004), "Rug")
+    b.frame("+Z", (0, 0, 0.008), 1.5, 0.9, 0.04, 0.001, "RugTrim")
+    b.box((0.4, 0.4, 0.001), (0, 0, 0.0085), "RugTrim", rot=rotZ(45))
+    for x in (-0.55, 0.55):
+        b.box((0.14, 0.14, 0.001), (x, 0, 0.0085), "RugTrim", rot=rotZ(45))
     return b.build()
 
 
@@ -264,6 +324,12 @@ def makeFloorLamp():
     b.cylinder(0.012, 0.012, 1.4, (0, 0, 0.72), "Metal", segments=10)
     b.hollowCylinder(0.2, 0.12, 0.25, 0.006, (0, 0, 1.47), "Cream", segments=20)
     b.sphere(0.05, (0, 0, 1.42), "Glow", segments=12)
+    b.cylinder(0.05, 0.03, 0.04, (0, 0, 0.05), "Charcoal", segments=12)
+    b.cylinder(0.02, 0.02, 0.04, (0, 0, 1.3), "Charcoal", segments=10)
+    b.hollowCylinder(0.203, 0.203, 0.012, 0.008, (0, 0, 1.351), "Charcoal", segments=20)
+    b.hollowCylinder(0.123, 0.123, 0.012, 0.008, (0, 0, 1.589), "Charcoal", segments=20)
+    b.cylinder(0.002, 0.002, 0.1, (0.04, 0, 1.33), "Metal", segments=4)
+    b.sphere(0.007, (0.04, 0, 1.275), "Metal", segments=6)
     return b.build()
 
 
@@ -275,6 +341,10 @@ def makeDeskLamp():
     b.box((0.015, 0.015, 0.22), (0, -0.03, 0.3), "Metal", rot=rotX(60))
     b.hollowCylinder(0.07, 0.03, 0.09, 0.004, (0, -0.13, 0.36), "Red", segments=16, rot=rotX(-30))
     b.sphere(0.025, (0, -0.15, 0.33), "Glow", segments=10)
+    for y, z in ((0.06, 0.03), (0.04, 0.25), (-0.12, 0.355)):
+        b.cylinder(0.014, 0.014, 0.03, (0, y, z), "Charcoal", segments=8, rot=rotY(90))
+    b.cylinder(0.085, 0.085, 0.006, (0, 0.05, 0.003), "Metal", segments=18)
+    b.box((0.02, 0.012, 0.008), (0.045, 0.05, 0.024), "Red")
     return b.build()
 
 
@@ -284,6 +354,8 @@ def makeCeilingLamp():
     b.cylinder(0.05, 0.05, 0.05, (0, 0, -0.025), "White", segments=16)
     b.cylinder(0.25, 0.22, 0.08, (0, 0, -0.09), "White", segments=28)
     b.cylinder(0.21, 0.21, 0.01, (0, 0, -0.135), "Glow", segments=28)
+    b.cylinder(0.09, 0.09, 0.012, (0, 0, -0.006), "Metal", segments=16)
+    b.hollowCylinder(0.223, 0.223, 0.012, 0.012, (0, 0, -0.131), "Metal", segments=28)
     return b.build()
 
 
@@ -294,6 +366,16 @@ def makeToyBox():
     b.box((0.62, 0.47, 0.04), (0, 0, 0.44), "OakDark")
     for i, color in enumerate(("Red", "Yellow", "Blue")):
         b.box((0.56, 0.01, 0.05), (0, -0.226, 0.1 + i * 0.1), color)
+    front = (0, -0.225, 0)
+    b.plate("-Y", (0, -0.235, 0), 0.06, 0.07, 0.008, "Metal", v=0.41)
+    for u in (-0.27, 0.27):
+        for v in (0.03, 0.39):
+            b.plate("-Y", front, 0.04, 0.04, 0.003, "Metal", u=u, v=v)
+    b.handle("+X", (0.3, 0, 0), 0.16, "OakDark", vertical=False, standoff=0.015, thickness=0.015, v=0.3)
+    b.handle("-X", (-0.3, 0, 0), 0.16, "OakDark", vertical=False, standoff=0.015, thickness=0.015, v=0.3)
+    with b.noBevel():
+        for x in (-0.2, 0.2):
+            b.cylinder(0.01, 0.01, 0.08, (x, 0.235, 0.42), "Metal", segments=8, rot=rotY(90))
     return b.build()
 
 
@@ -304,6 +386,10 @@ def makeTrashCan():
     b.hollowCylinder(0.155, 0.155, 0.02, 0.01, (0, 0, 0.34), "Charcoal", segments=24)
     b.sphere(0.05, (0.03, 0.02, 0.06), "Paper", segments=8)
     b.sphere(0.04, (-0.04, -0.02, 0.05), "Paper", segments=8)
+    for z in (0.2,):
+        radius = 0.13 + 0.02 * z / 0.34 + 0.003
+        b.hollowCylinder(radius, radius, 0.012, 0.004, (0, 0, z), "Charcoal", segments=24)
+    b.hollowCylinder(0.134, 0.134, 0.016, 0.004, (0, 0, 0.008), "Charcoal", segments=24)
     return b.build()
 
 
@@ -318,6 +404,16 @@ def makeDoor():
         b.box((0.7, 0.01, 0.7), (0, -0.025, z), "Cream")
     b.cylinder(0.03, 0.03, 0.05, (0.35, -0.05, 1.0), "Metal", segments=12, rot=rotX(90))
     b.box((0.12, 0.02, 0.02), (0.31, -0.08, 1.0), "Metal")
+    # 뒷면(+Y)에도 패널·손잡이를 달아 양쪽에서 문으로 보이게 한다
+    for z in (0.5, 1.5):
+        b.box((0.7, 0.01, 0.7), (0, 0.025, z), "Cream")
+        b.frame("-Y", (0, -0.03, z), 0.6, 0.6, 0.02, 0.004, "White")
+        b.frame("+Y", (0, 0.03, z), 0.6, 0.6, 0.02, 0.004, "White")
+    b.cylinder(0.03, 0.03, 0.05, (0.35, 0.05, 1.0), "Metal", segments=12, rot=rotX(90))
+    b.box((0.12, 0.02, 0.02), (0.31, 0.08, 1.0), "Metal")
+    b.plate("-Y", (0, -0.02, 0), 0.05, 0.18, 0.005, "Metal", u=0.35, v=1.0)
+    b.plate("+Y", (0, 0.02, 0), 0.05, 0.18, 0.005, "Metal", u=-0.35, v=1.0)
+    b.hinges("+Y", (0, 0.02, 0), 0.45, (0.3, 1.05, 1.8), "Metal", radius=0.008, length=0.1)
     return b.build()
 
 
@@ -331,6 +427,9 @@ def makePencil():
     b.cylinder(0.0012, 0.0002, 0.005, (0.095, 0, 0.004), "Graphite", segments=6, rot=rotY(90))
     b.cylinder(0.0042, 0.0042, 0.008, (-0.079, 0, 0.004), "Metal", segments=10, rot=rotY(90))
     b.cylinder(0.004, 0.004, 0.008, (-0.087, 0, 0.004), "Pink", segments=10, rot=rotY(90))
+    b.cylinder(0.00405, 0.00405, 0.012, (-0.06, 0, 0.004), "Green", segments=6, rot=rotY(90))
+    for x in (-0.0765, -0.0815):
+        b.cylinder(0.0045, 0.0045, 0.001, (x, 0, 0.004), "Metal", segments=10, rot=rotY(90))
     return b.build()
 
 
@@ -339,6 +438,7 @@ def makeEraser():
     b = MeshBuilder("GR_Small_Eraser", "GiantRoom", bevel=0.0015)
     b.box((0.05, 0.02, 0.012), (0, 0, 0.006), "White")
     b.box((0.03, 0.0205, 0.0125), (0.006, 0, 0.006), "Blue")
+    b.textBars("+Z", (0.006, 0, 0.01225), 0.02, 0.002, (1.0, 0.6), "White", depth=0.0002, v=0.003)
     return b.build()
 
 
@@ -349,6 +449,8 @@ def makeRuler():
     for i in range(25):
         length = 0.008 if i % 5 else 0.014
         b.box((0.0008, length, 0.0004), (-0.12 + i * 0.01, 0.015 - length / 2, 0.0021), "Black")
+    b.box((0.25, 0.003, 0.0003), (0, -0.012, 0.00205), "Blue")
+    b.cylinder(0.003, 0.003, 0.0003, (0.115, -0.006, 0.00205), "Black", segments=8)
     return b.build()
 
 
@@ -358,6 +460,11 @@ def makeSharpener():
     b.box((0.03, 0.02, 0.015), (0, 0, 0.0075), "Red")
     b.cylinder(0.0045, 0.0045, 0.003, (0, -0.0105, 0.0075), "Black", segments=12, rot=rotX(90))
     b.box((0.016, 0.001, 0.008), (0, 0.0005, 0.0155), "Metal")
+    with b.noBevel():
+        b.cylinder(0.0015, 0.0015, 0.0015, (0, -0.0003, 0.0165), "Graphite", segments=6, rot=rotX(90))
+        for sx in (-1, 1):
+            for dy in (-0.005, 0.0, 0.005):
+                b.box((0.0006, 0.002, 0.011), (sx * 0.0153, dy, 0.0075), "Red")
     return b.build()
 
 
@@ -367,6 +474,9 @@ def makeCrayon():
     b.cylinder(0.0045, 0.0045, 0.08, (0, 0, 0.0045), "Green", segments=10, rot=rotY(90))
     b.cylinder(0.0047, 0.0047, 0.06, (-0.006, 0, 0.0045), "Paper", segments=10, rot=rotY(90))
     b.cylinder(0.0045, 0.0012, 0.01, (0.045, 0, 0.0045), "Green", segments=10, rot=rotY(90))
+    for x in (-0.032, 0.02):
+        b.cylinder(0.0048, 0.0048, 0.002, (x, 0, 0.0045), "Black", segments=10, rot=rotY(90))
+    b.box((0.02, 0.0005, 0.002), (-0.006, -0.0047, 0.0045), "Green")
     return b.build()
 
 
@@ -377,6 +487,8 @@ def makeGlueStick():
     b.cylinder(0.013, 0.013, 0.004, (0, 0, 0.002), "Purple", segments=16)
     b.cylinder(0.0132, 0.0132, 0.025, (0, 0, 0.0875), "Purple", segments=16)
     b.box((0.012, 0.001, 0.04), (0, -0.0126, 0.04), "Yellow")
+    b.cylinder(0.0137, 0.0137, 0.003, (0, 0, 0.0765), "Purple", segments=16)
+    b.textBars("-Y", (0, -0.0131, 0), 0.008, 0.003, (1.0, 0.7, 1.0), "Purple", depth=0.0003, v=0.052)
     return b.build()
 
 
@@ -396,6 +508,8 @@ def makeCoin():
     b = MeshBuilder("GR_Small_Coin", "GiantRoom", bevel=0.0)
     b.cylinder(0.0125, 0.0125, 0.002, (0, 0, 0.001), "Copper", segments=24)
     b.cylinder(0.009, 0.009, 0.0022, (0, 0, 0.001), "Metal", segments=24)
+    b.hollowCylinder(0.0125, 0.0125, 0.0026, 0.001, (0, 0, 0.0013), "Copper", segments=24)
+    b.cylinder(0.005, 0.005, 0.0026, (0, 0, 0.0013), "Copper", segments=8)
     return b.build()
 
 
@@ -407,6 +521,14 @@ def makeDice():
         b.cylinder(0.0025, 0.0025, 0.001, (x, y, 0.0302), "Black", segments=8)
     for x in (-0.007, 0.007):
         b.cylinder(0.0025, 0.0025, 0.001, (x, -0.0152, 0.015 + x), "Black", segments=8, rot=rotX(90))
+    with b.noBevel():
+        for y, z in ((-0.008, -0.008), (0, 0), (0.008, 0.008)):
+            b.cylinder(0.0025, 0.0025, 0.001, (0.0152, y, 0.015 + z), "Black", segments=8, rot=rotY(90))
+        for y in (-0.008, 0.008):
+            for z in (-0.008, 0.008):
+                b.cylinder(0.0025, 0.0025, 0.001, (-0.0152, y, 0.015 + z), "Black", segments=8, rot=rotY(90))
+            for z in (-0.008, 0.0, 0.008):
+                b.cylinder(0.0025, 0.0025, 0.001, (y, 0.0152, 0.015 + z), "Black", segments=8, rot=rotX(90))
     return b.build()
 
 
@@ -417,6 +539,11 @@ def makeToyBlock():
     b.box((0.026, 0.0005, 0.026), (0, -0.0202, 0.02), "Yellow")
     b.box((0.0005, 0.026, 0.026), (0.0202, 0, 0.02), "Red")
     b.box((0.026, 0.026, 0.0005), (0, 0, 0.0402), "Green")
+    with b.noBevel():
+        b.box((0.026, 0.0005, 0.026), (0, 0.0202, 0.02), "Orange")
+        b.box((0.0005, 0.026, 0.026), (-0.0202, 0, 0.02), "Green")
+        b.box((0.016, 0.0005, 0.004), (0, -0.0206, 0.027), "Red")
+        b.box((0.004, 0.0005, 0.016), (0, -0.0206, 0.019), "Red")
     return b.build()
 
 
@@ -428,6 +555,8 @@ def makeMug():
     b.box((0.006, 0.012, 0.05), (0.058, 0, 0.05), "Ceramic")
     for z in (0.028, 0.072):
         b.box((0.02, 0.012, 0.006), (0.048, 0, z), "Ceramic")
+    # 속은 숨는 자리라 비워 두고 바깥 띠만 더한다
+    b.hollowCylinder(0.0405, 0.0405, 0.01, 0.001, (0, 0, 0.07), "Blue", segments=24)
     return b.build()
 
 def makeRubberDuck():
@@ -439,6 +568,8 @@ def makeRubberDuck():
     for x in (-0.012, 0.012):
         b.sphere(0.004, (x, -0.044, 0.082), "Black", segments=8)
     b.sphere(0.012, (0, 0.05, 0.05), "Yellow", segments=10, scale=(0.8, 1.0, 0.8))
+    for x in (-0.036, 0.036):
+        b.sphere(0.02, (x, 0.01, 0.04), "Yellow", segments=8, scale=(0.35, 1.0, 0.6))
     return b.build()
 
 
@@ -448,6 +579,9 @@ def makeBattery():
     b.cylinder(0.007, 0.007, 0.048, (0, 0, 0.007), "Black", segments=14, rot=rotY(90))
     b.cylinder(0.0071, 0.0071, 0.014, (0.016, 0, 0.007), "Copper", segments=14, rot=rotY(90))
     b.cylinder(0.0025, 0.0025, 0.002, (0.025, 0, 0.007), "Metal", segments=10, rot=rotY(90))
+    b.cylinder(0.0066, 0.0066, 0.001, (-0.0245, 0, 0.007), "Metal", segments=14, rot=rotY(90))
+    b.cylinder(0.0073, 0.0073, 0.0012, (0.0085, 0, 0.007), "Metal", segments=14, rot=rotY(90))
+    b.box((0.014, 0.0006, 0.005), (-0.009, -0.0069, 0.007), "White")
     return b.build()
 
 
@@ -456,6 +590,11 @@ def makeStickyNotes():
     b = MeshBuilder("GR_Small_StickyNotes", "GiantRoom", bevel=0.0005)
     b.box((0.075, 0.075, 0.011), (0, 0, 0.0055), "Yellow")
     b.box((0.075, 0.075, 0.0006), (0, -0.002, 0.0118), "Yellow", rot=rotX(4))
+    with b.noBevel():
+        for i, width in enumerate((0.045, 0.03, 0.04)):
+            y = 0.015 - i * 0.012
+            z = 0.0123 + (y + 0.002) * math.tan(math.radians(4))
+            b.box((width, 0.0015, 0.0003), (-0.008 + (width - 0.045) / 2, y, z), "Graphite", rot=rotX(4))
     return b.build()
 
 
@@ -465,6 +604,14 @@ def makeSmartphone():
     b.box((0.07, 0.15, 0.008), (0, 0, 0.004), "Black")
     b.box((0.064, 0.138, 0.0005), (0, 0, 0.0082), "Screen")
     b.cylinder(0.004, 0.004, 0.001, (0.02, 0.06, 0.0002), "Glass", segments=10)
+    with b.noBevel():
+        iconColors = ("Red", "Green", "Yellow", "White", "Orange", "Purple")
+        for row, y in enumerate((0.045, 0.022, -0.001, -0.024)):
+            for col, x in enumerate((-0.02, 0.0, 0.02)):
+                b.box((0.011, 0.011, 0.0002), (x, y, 0.00855), iconColors[(row * 3 + col) % len(iconColors)])
+        b.box((0.012, 0.0015, 0.0003), (0, 0.0715, 0.0082), "Glass")
+        b.box((0.001, 0.02, 0.003), (0.0355, 0.03, 0.004), "Graphite")
+        b.box((0.001, 0.012, 0.003), (-0.0355, 0.04, 0.004), "Graphite")
     return b.build()
 
 
@@ -477,6 +624,18 @@ def makeToyCar():
     for x in (-0.026, 0.026):
         for y in (-0.019, 0.019):
             b.cylinder(0.007, 0.007, 0.006, (x, y, 0.007), "Black", segments=12, rot=rotX(90))
+    with b.noBevel():
+        for side in (-1, 1):
+            b.box((0.001, 0.008, 0.005), (0.0405, side * 0.011, 0.016), "Yellow")
+            b.box((0.001, 0.008, 0.004), (-0.0405, side * 0.011, 0.016), "Orange")
+            b.box((0.003, 0.036, 0.004), (side * 0.0405, 0, 0.009), "Metal")
+            b.box((0.002, 0.002, 0.004), (-0.037, side * 0.012, 0.024), "Red")
+        for x in (-0.026, 0.026):
+            for y in (-0.019, 0.019):
+                b.cylinder(0.0035, 0.0035, 0.0065, (x, y, 0.007), "Metal", segments=8, rot=rotX(90))
+        b.box((0.08, 0.008, 0.0004), (0, 0, 0.0222), "White")
+        b.box((0.038, 0.008, 0.0004), (-0.004, 0, 0.0377), "White")
+        b.box((0.004, 0.03, 0.002), (-0.037, 0, 0.027), "Red")
     return b.build()
 
 
@@ -496,6 +655,11 @@ def makeBottleCap():
     b = MeshBuilder("GR_Small_BottleCap", "GiantRoom", bevel=0.0)
     b.cylinder(0.015, 0.015, 0.006, (0, 0, 0.003), "Red", segments=21)
     b.cylinder(0.0135, 0.0135, 0.0012, (0, 0, 0.0065), "Metal", segments=21)
+    for k in range(14):
+        angle = 360.0 * k / 14
+        b.box((0.0025, 0.002, 0.005), (0.0155 * math.cos(math.radians(angle)), 0.0155 * math.sin(math.radians(angle)), 0.0028),
+              "Red", rot=rotZ(angle))
+    b.cylinder(0.007, 0.007, 0.0004, (0, 0, 0.0073), "White", segments=10)
     return b.build()
 
 
@@ -514,6 +678,7 @@ def makeTapeRoll():
     b = MeshBuilder("GR_Small_TapeRoll", "GiantRoom", bevel=0.0)
     b.hollowCylinder(0.04, 0.04, 0.02, 0.015, (0, 0, 0.04), "Cream", segments=24, rot=rotX(90))
     b.hollowCylinder(0.025, 0.025, 0.021, 0.004, (0, 0, 0.04), "White", segments=24, rot=rotX(90))
+    b.box((0.014, 0.02, 0.0008), (0.008, 0, 0.0802), "Cream", rot=rotY(-6))
     return b.build()
 
 
@@ -536,6 +701,15 @@ def makeAlarmClock():
     for x in (-0.025, 0.025):
         b.sphere(0.016, (x, 0, 0.1), "Metal", segments=12, scale=(1, 1, 0.6))
         b.box((0.004, 0.004, 0.012), (x * 1.2, 0, 0.006), "Metal")
+    for k in range(12):
+        angle = k * 30
+        b.box((0.001, 0.0008, 0.005), (0.032 * math.sin(math.radians(angle)), -0.0224, 0.055 + 0.032 * math.cos(math.radians(angle))),
+              "Black", rot=rotY(angle))
+    b.cylinder(0.003, 0.003, 0.002, (0, -0.023, 0.055), "Metal", segments=8, rot=rotX(90))
+    b.box((0.002, 0.002, 0.012), (0, 0, 0.1), "Metal")
+    b.sphere(0.004, (0, 0, 0.106), "Metal", segments=6)
+    b.cylinder(0.003, 0.003, 0.008, (0, 0.024, 0.055), "Metal", segments=6, rot=rotX(90))
+    b.box((0.014, 0.002, 0.005), (0, 0.029, 0.055), "Metal")
     return b.build()
 
 
@@ -545,40 +719,83 @@ def makeTissueBox():
     b.box((0.24, 0.12, 0.09), (0, 0, 0.045), "Pink")
     b.box((0.12, 0.03, 0.001), (0, 0, 0.0905), "White")
     b.box((0.06, 0.002, 0.04), (0, 0, 0.11), "Paper", rot=rotY(15))
+    with b.noBevel():
+        b.frame("+Z", (0, 0, 0.09), 0.14, 0.045, 0.006, 0.0008, "White")
+        for facing, y in (("-Y", -0.06), ("+Y", 0.06)):
+            for v in (0.02, 0.07):
+                b.plate(facing, (0, y, 0), 0.24, 0.008, 0.0005, "White", v=v)
+        b.box((0.05, 0.002, 0.03), (0.01, 0.004, 0.105), "Paper", rot=rotY(-20))
     return b.build()
 
 
 def makeBlanketDrape():
     """
     침대에서 바닥까지 흘러내린 이불 자락(폭 0.7, 높이 0.55, 길이 약 1.0). 위끝은 매트리스 위에 걸치고(+Y 쪽),
-    앞(-Y)으로 처지며 내려간다: 위는 가파르고(42°) 아래로 갈수록 완만해져(20°) 바닥에 구겨져 고인다.
+    앞(-Y)으로 처지며 내려간다: 위는 가파르고(약 40°) 아래로 갈수록 완만해져(약 27°) 바닥에 구겨져 고인다.
     가장 가파른 곳도 이동 경사 한계(45°) 안이라 맵에서 걸어 오르는 비탈이 된다. 주름은 비탈을 따라 둥근 골로 낸다.
+    천 한 장을 격자 면으로 만든다(상자를 이어 붙이면 꺾인 자리가 계단처럼 걸린다): 윗면·아랫면 두 겹 + 옆 두께 면, 끝단은 밝은 단(BlanketTrim).
     """
-    b = MeshBuilder("GR_BlanketDrape", "GiantRoom", bevel=0.004)
-    width, thick, top = 0.7, 0.016, 0.55
-    b.box((width, 0.09, thick), (0, 0.045, top + thick / 2), "Blanket")
+    b = MeshBuilder("GR_BlanketDrape", "GiantRoom", bevel=0.0)
+    width, thick, top, run = 0.7, 0.016, 0.55, 0.839
+    columns, slopeRows = 12, 16
 
-    # 처지는 곡선: (각도, 수평 거리) 구간을 위에서부터 이어 붙인다.
-    segments = ((42, 0.18), (38, 0.2), (32, 0.25), (20, 0.209))
+    # 세로 단면 (y, z, 주름 세기, 폭 배율): 매트리스 위 평평한 자락 → 처지는 비탈 → 바닥에 고인 자락
+    profile = [(0.09, top, 0.0, 1.0), (0.045, top, 0.0, 1.0), (0.0, top, 0.0, 1.0)]
+    angles = []
+    for k in range(slopeRows):
+        t = (k + 0.5) / slopeRows
+        # 위 끝은 둥글게 넘어가도록 첫 칸만 각도를 눕힌다
+        angles.append((38.0 - 14.0 * t ** 1.2) * (0.6 if k == 0 else 1.0))
+    step = run / slopeRows
+    drops = [step * math.tan(math.radians(a)) for a in angles]
+    fit = top / sum(drops)
     y, z = 0.0, top
-    for index, (angle, run) in enumerate(segments):
-        a = math.radians(angle)
-        drop = run * math.tan(a)
-        length = math.hypot(run, drop)
-        cy, cz = y - run / 2, z - drop / 2 + thick / 2
-        b.box((width, length, thick), (0, cy, cz), "Blanket", rot=rotX(angle))
-        b.cylinder(thick * 0.6, thick * 0.6, width, (0, y, z + thick / 2), "Blanket", segments=8, rot=rotY(90))
-        normal = (0.0, -math.sin(a), math.cos(a))
-        for x, r in ((-0.22, 0.016), (-0.02, 0.012), (0.2, 0.018)):
-            wobble = 0.01 * ((index + int(x * 10)) % 3 - 1)
-            b.cylinder(r, r * 0.8, length * 0.95, (x + wobble, cy + normal[1] * thick * 0.4, cz + normal[2] * thick * 0.4),
-                       "Blanket", segments=8, rot=rotX(90 + angle))
-        y, z = y - run, z - drop
+    for k in range(slopeRows):
+        y -= step
+        z -= drops[k] * fit
+        t = (k + 1) / slopeRows
+        profile.append((y, max(z, 0.0), min(1.0, 0.25 + t * 2.5), 1.0 + 0.04 * t))
+    for offset, bump in ((0.04, 0.006), (0.075, 0.024), (0.11, 0.008), (0.15, 0.02), (0.19, 0.0)):
+        profile.append((y - offset, bump, 0.6, 1.04))
 
-    # 바닥에 고인 자락: 겹쳐 구겨진 두 장 + 둥근 접힘
-    b.box((width + 0.03, 0.17, thick), (0, y - 0.08, thick / 2), "Blanket")
-    b.box((width * 0.8, 0.12, thick), (0.04, y - 0.12, thick * 1.5), "Blanket", rot=rotZ(6))
-    b.cylinder(0.02, 0.02, width * 0.7, (-0.05, y - 0.17, 0.02), "Blanket", segments=10, rot=rotY(90))
+    def wrinkle(u, row):
+        """비탈을 따라 흐르는 주름 높이. 오르는 방향으로는 턱이 생기지 않게 가로 방향으로만 물결친다."""
+        drift = 0.35 * math.sin(row * 0.45)
+        return 0.015 * math.cos(2 * math.pi * (1.5 * u + 0.12 * drift)) + 0.007 * math.cos(2 * math.pi * (3.5 * u + drift))
+
+    bm = b.bm
+    upper, lower = [], []
+    for row, (py, pz, strength, flare) in enumerate(profile):
+        upperRow, lowerRow = [], []
+        for col in range(columns + 1):
+            u = col / columns - 0.5
+            x = u * width * flare
+            surfaceZ = max(pz + thick + strength * wrinkle(u, row), thick)
+            upperRow.append(bm.verts.new((x, py, surfaceZ)))
+            lowerRow.append(bm.verts.new((x, py, max(surfaceZ - thick, 0.0))))
+        upper.append(upperRow)
+        lower.append(lowerRow)
+
+    lastRow = len(profile) - 1
+    trimFaces, flatFaces = [], []
+    for row in range(lastRow):
+        for col in range(columns):
+            face = bm.faces.new([upper[row][col], upper[row][col + 1], upper[row + 1][col + 1], upper[row + 1][col]])
+            if row >= lastRow - 1 or col in (0, columns - 1):
+                trimFaces.append(face)
+            bm.faces.new([lower[row][col], lower[row + 1][col], lower[row + 1][col + 1], lower[row][col + 1]])
+        for col in (0, columns):
+            flatFaces.append(bm.faces.new([upper[row][col], upper[row + 1][col], lower[row + 1][col], lower[row][col]]))
+    for row in (0, lastRow):
+        for col in range(columns):
+            flatFaces.append(bm.faces.new([upper[row][col], upper[row][col + 1], lower[row][col + 1], lower[row][col]]))
+
+    b.applyFaces([v for rowVerts in upper + lower for v in rowVerts], "Blanket", True)
+    trimIndex = b.materialIndex("BlanketTrim")
+    for face in trimFaces + flatFaces:
+        face.material_index = trimIndex
+    for face in flatFaces:
+        face.smooth = False
     return b.build()
 
 furniture = [    makeBed, makeNightstand, makeDesk, makeDeskChair, makeBookshelf, makeBook, makeWardrobe, makeSofa,

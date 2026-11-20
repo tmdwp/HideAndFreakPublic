@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using FishNet.Object;
 using FishNet.Object.Synchronizing;
@@ -37,62 +38,116 @@ namespace GuardVsMannequin.Core
         public string displayName;
         public PlayerRole role;
         public bool survived;
+
+        /// <summary>이 사람이 탈락시킨 상대 수.</summary>
+        public int eliminations;
+
+        /// <summary>함께 붙어 부순 전원 장치 수.</summary>
+        public int objectives;
+
+        /// <summary>판 시작부터 탈락(생존자는 판 끝)까지 버틴 시간(초). 도중에 나가 알 수 없으면 음수.</summary>
+        public float aliveSeconds;
+    }
+
+    /// <summary>판 도중 탈락 소식 하나. 누가 살아 있는지 판이 끝나기 전에 새지 않도록 이름 없이 역할만 담는다.</summary>
+    public struct EliminationNotice
+    {
+        public PlayerRole victimRole;
     }
 
     /// <summary>
-    /// 이번 판의 승패 결과와 참가자별 결과를 동기화한다.
+    /// 이번 판의 승패 결과와 참가자별 결과·기록을 동기화하고, 판 도중 탈락 소식을 모두에게 알린다.
     /// </summary>
     public class MatchResult : NetworkBehaviour
     {
         [SerializeField] private GameStateMachine stateMachine;
 
+        [Tooltip("전원 장치를 부순 사람을 기록하려고 듣는다. 비우면 파괴 기록만 빠진다.")]
+        [SerializeField] private Objectives.ObjectiveTracker objectiveTracker;
+
         private readonly SyncVar<MatchWinner> winner = new(MatchWinner.None);
         private readonly SyncVar<WinReason> reason = new(WinReason.None);
 
-        /// <summary>진행 중에 채워 두면 누가 죽었는지 클라이언트에 새므로, 판이 끝날 때만 채운다.</summary>
+        /// <summary>진행 중에 채워 두면 생존 여부가 클라이언트에 미리 새므로, 판이 끝날 때만 채운다.</summary>
         private readonly SyncList<ParticipantResult> publishedParticipants = new();
 
         /// <summary>생존 판정에 아바타 참조가 필요하지만 동기화할 수는 없어서 서버에만 따로 둔다.</summary>
-        private readonly List<(string name, PlayerRole role, NetworkObject avatar)> serverParticipants = new();
+        private readonly List<ServerParticipant> serverParticipants = new();
+
+        private float matchStartTime;
 
         /// <summary>판이 끝나기 전에는 비어 있다.</summary>
         public IReadOnlyList<ParticipantResult> Participants => publishedParticipants;
 
+        /// <summary>탈락 알림 화면이 네트워크를 몰라도 되도록 모든 PC에서 탈락 소식을 알린다.</summary>
+        public event Action<EliminationNotice> Eliminated;
+
+        /// <summary>기록은 바뀌므로 구조체 대신 참조로 들고 있는 서버 전용 참가자 정보.</summary>
+        private sealed class ServerParticipant
+        {
+            public string name;
+            public PlayerRole role;
+            public NetworkObject avatar;
+            public int eliminations;
+            public int objectives;
+            public float? eliminatedAt;
+        }
+
         /// <summary>
-        /// 지난 판 참가자가 섞이지 않도록 스폰 직전에 서버에서 호출한다.
+        /// 지난 판 참가자가 섞이지 않도록 스폰 직전에 서버에서 호출하고, 버틴 시간의 기준을 이때로 둔다.
         /// </summary>
         [Server]
         public void ResetParticipants()
         {
             serverParticipants.Clear();
             publishedParticipants.Clear();
+            matchStartTime = Time.time;
         }
 
         /// <summary>결과 공개 때 아바타가 남아 있는지로 생존을 가리도록 아바타를 함께 기억한다.</summary>
         [Server]
         public void RegisterParticipant(string displayName, PlayerRole role, NetworkObject avatar)
         {
-            serverParticipants.Add((displayName, role, avatar));
+            serverParticipants.Add(new ServerParticipant { name = displayName, role = role, avatar = avatar });
         }
 
         /// <summary>다시 들어온 사람이 탈락으로 잘못 나오지 않도록 새 아바타로 바꿔 둔다.</summary>
         [Server]
         public void ReplaceAvatar(NetworkObject previous, NetworkObject current)
         {
-            for (int i = 0; i < serverParticipants.Count; i++)
+            foreach (ServerParticipant participant in serverParticipants)
             {
-                if (ReferenceEquals(serverParticipants[i].avatar, previous))
-                    serverParticipants[i] = (serverParticipants[i].name, serverParticipants[i].role, current);
+                if (ReferenceEquals(participant.avatar, previous))
+                    participant.avatar = current;
             }
         }
 
+        /// <summary>결과 화면 기록을 남기고, 판 흐름을 따라가도록 모두에게 이름 없는 탈락 소식을 보낸다.</summary>
+        /// <param name="attacker">환경 피해처럼 공격자가 없으면 null.</param>
+        [Server]
+        public void RecordElimination(NetworkObject victim, NetworkObject attacker)
+        {
+            ServerParticipant victimEntry = FindByAvatar(victim);
+            ServerParticipant attackerEntry = attacker != null ? FindByAvatar(attacker) : null;
+            if (victimEntry == null)
+                return;
+
+            victimEntry.eliminatedAt ??= Time.time;
+            if (attackerEntry != null && attackerEntry != victimEntry)
+                attackerEntry.eliminations++;
+
+            EliminatedObserversRpc(new EliminationNotice { victimRole = victimEntry.role });
+        }
+
         /// <summary>
-        /// 새 판이 시작될 때 지난 결과를 지우려고 서버에서 상태 변경을 듣는다.
+        /// 새 판이 시작될 때 지난 결과를 지우고 전원 장치 파괴 기록을 남기려고 서버에서 듣는다.
         /// </summary>
         public override void OnStartServer()
         {
             base.OnStartServer();
             stateMachine.ServerStateChanged += OnServerStateChanged;
+            if (objectiveTracker != null)
+                objectiveTracker.ServerGeneratorDestroyed += OnGeneratorDestroyed;
         }
 
         /// <summary>
@@ -102,6 +157,36 @@ namespace GuardVsMannequin.Core
         {
             base.OnStopServer();
             stateMachine.ServerStateChanged -= OnServerStateChanged;
+            if (objectiveTracker != null)
+                objectiveTracker.ServerGeneratorDestroyed -= OnGeneratorDestroyed;
+        }
+
+        /// <summary>
+        /// 서버 판정을 거친 소식만 받으므로 그대로 화면에 넘긴다.
+        /// </summary>
+        [ObserversRpc]
+        private void EliminatedObserversRpc(EliminationNotice notice)
+        {
+            Eliminated?.Invoke(notice);
+        }
+
+        /// <summary>함께 부순 사람 모두의 몫으로 센다. 다시 들어온 사람은 아바타 주인으로 찾는다.</summary>
+        private void OnGeneratorDestroyed(IReadOnlyList<int> destroyerClientIds)
+        {
+            foreach (int clientId in destroyerClientIds)
+            {
+                ServerParticipant participant = serverParticipants.Find(entry => entry.avatar != null && entry.avatar.OwnerId == clientId);
+                if (participant != null)
+                    participant.objectives++;
+            }
+        }
+
+        /// <summary>
+        /// 날아가는 동안의 대리 물체가 아니라 아바타 자체로 등록했으므로 참조로 찾는다.
+        /// </summary>
+        private ServerParticipant FindByAvatar(NetworkObject avatar)
+        {
+            return serverParticipants.Find(entry => ReferenceEquals(entry.avatar, avatar));
         }
 
         /// <summary>
@@ -144,13 +229,22 @@ namespace GuardVsMannequin.Core
         private void PublishParticipants()
         {
             publishedParticipants.Clear();
-            foreach ((string name, PlayerRole role, NetworkObject avatar) in serverParticipants)
+            foreach (ServerParticipant participant in serverParticipants)
             {
+                bool survived = participant.avatar != null && participant.avatar.IsSpawned;
+                // 도중에 나간 사람은 언제까지 버텼는지 기록이 없어 알 수 없음으로 둔다.
+                float aliveSeconds = survived ? Time.time - matchStartTime
+                    : participant.eliminatedAt.HasValue ? participant.eliminatedAt.Value - matchStartTime
+                    : -1f;
+
                 publishedParticipants.Add(new ParticipantResult
                 {
-                    displayName = name,
-                    role = role,
-                    survived = avatar != null && avatar.IsSpawned
+                    displayName = participant.name,
+                    role = participant.role,
+                    survived = survived,
+                    eliminations = participant.eliminations,
+                    objectives = participant.objectives,
+                    aliveSeconds = aliveSeconds
                 });
             }
         }

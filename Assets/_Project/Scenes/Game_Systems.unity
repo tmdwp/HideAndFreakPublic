@@ -208,6 +208,7 @@ GameObject:
   m_Component:
   - component: {fileID: 742461279}
   - component: {fileID: 742461278}
+  - component: {fileID: 742461280}
   m_Layer: 0
   m_Name: LowHealthVolume
   m_TagString: Untagged
@@ -227,6 +228,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 5b1c8d74521a49c44849106fd66f8d06, type: 3}
   m_Name: 
   m_EditorClassIdentifier: GuardVsMannequin.Runtime::GuardVsMannequin.UI.LowHealthVignette
+  profileTemplate: {fileID: 11400000, guid: 5a56c1f1ce436664ba4a451d283c549d, type: 2}
   maxVignetteIntensity: 0.6
   maxExposureDrop: 1.5
   blendSpeed: 3
@@ -245,6 +247,23 @@ Transform:
   m_Children: []
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &742461280
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 742461277}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 172515602e62fb746b5d573b38a5fe58, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Unity.RenderPipelines.Core.Runtime::UnityEngine.Rendering.Volume
+  m_IsGlobal: 1
+  priority: 100
+  blendDistance: 0
+  weight: 1
+  sharedProfile: {fileID: 11400000, guid: 5a56c1f1ce436664ba4a451d283c549d, type: 2}
 --- !u!1 &1244703451
 GameObject:
   m_ObjectHideFlags: 0
@@ -374,6 +393,7 @@ GameObject:
   m_Component:
   - component: {fileID: 1258206635}
   - component: {fileID: 1258206634}
+  - component: {fileID: 1258206636}
   m_Layer: 0
   m_Name: HuntingLighting
   m_TagString: Untagged
@@ -396,6 +416,7 @@ MonoBehaviour:
   noiseLibrary: {fileID: 11400000, guid: ee319f26cc7916e48ba986d566c211df, type: 2}
   maxOffDelay: 0.5
   huntingAmbientTint: {r: 0.67, g: 0.67, b: 1, a: 1}
+  darkSkyboxMaterial: {fileID: 2100000, guid: 233e2918ce7588446821167c1d1d815d, type: 2}
 --- !u!4 &1258206635
 Transform:
   m_ObjectHideFlags: 0
@@ -411,6 +432,103 @@ Transform:
   m_Children: []
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!82 &1258206636
+AudioSource:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1258206633}
+  m_Enabled: 1
+  serializedVersion: 4
+  OutputAudioMixerGroup: {fileID: 0}
+  m_audioClip: {fileID: 0}
+  m_Resource: {fileID: 0}
+  m_PlayOnAwake: 0
+  m_Volume: 1
+  m_Pitch: 1
+  Loop: 0
+  Mute: 0
+  Spatialize: 0
+  SpatializePostEffects: 0
+  Priority: 128
+  DopplerLevel: 1
+  MinDistance: 1
+  MaxDistance: 500
+  Pan2D: 0
+  rolloffMode: 0
+  BypassEffects: 0
+  BypassListenerEffects: 0
+  BypassReverbZones: 0
+  rolloffCustomCurve:
+    serializedVersion: 2
+    m_Curve:
+    - serializedVersion: 3
+      time: 0
+      value: 1
+      inSlope: 0
+      outSlope: 0
+      tangentMode: 0
+      weightedMode: 0
+      inWeight: 0.33333334
+      outWeight: 0.33333334
+    - serializedVersion: 3
+      time: 1
+      value: 0
+      inSlope: 0
+      outSlope: 0
+      tangentMode: 0
+      weightedMode: 0
+      inWeight: 0.33333334
+      outWeight: 0.33333334
+    m_PreInfinity: 2
+    m_PostInfinity: 2
+    m_RotationOrder: 4
+  panLevelCustomCurve:
+    serializedVersion: 2
+    m_Curve:
+    - serializedVersion: 3
+      time: 0
+      value: 0
+      inSlope: 0
+      outSlope: 0
+      tangentMode: 0
+      weightedMode: 0
+      inWeight: 0.33333334
+      outWeight: 0.33333334
+    m_PreInfinity: 2
+    m_PostInfinity: 2
+    m_RotationOrder: 4
+  spreadCustomCurve:
+    serializedVersion: 2
+    m_Curve:
+    - serializedVersion: 3
+      time: 0
+      value: 0
+      inSlope: 0
+      outSlope: 0
+      tangentMode: 0
+      weightedMode: 0
+      inWeight: 0.33333334
+      outWeight: 0.33333334
+    m_PreInfinity: 2
+    m_PostInfinity: 2
+    m_RotationOrder: 4
+  reverbZoneMixCustomCurve:
+    serializedVersion: 2
+    m_Curve:
+    - serializedVersion: 3
+      time: 0
+      value: 1
+      inSlope: 0
+      outSlope: 0
+      tangentMode: 0
+      weightedMode: 0
+      inWeight: 0.33333334
+      outWeight: 0.33333334
+    m_PreInfinity: 2
+    m_PostInfinity: 2
+    m_RotationOrder: 4
 --- !u!1001 &1681304925
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -3419,6 +3537,7 @@ MonoBehaviour:
   _addedNetworkObject: {fileID: 1968970278}
   _networkObjectCache: {fileID: 0}
   stateMachine: {fileID: 1968970281}
+  objectiveTracker: {fileID: 1968970279}
 --- !u!114 &1968970278
 MonoBehaviour:
   m_ObjectHideFlags: 0

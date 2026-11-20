@@ -20,5 +20,8 @@ namespace GuardVsMannequin.Room
         public bool isReady;
         public bool isHost;
         public MemberModState modState;
+
+        /// <summary>시작할 때 원하는 팀. 가드 자리 수는 설정이 정하므로 희망일 뿐 보장되지는 않는다.</summary>
+        public Core.TeamPreference teamPreference;
     }
 }

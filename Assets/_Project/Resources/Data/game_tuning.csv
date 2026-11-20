@@ -5,7 +5,6 @@
 id,value,설명
 
 # 이동
-MannequinHuntSpeedMultiplier,0.875,"사냥 시간(구울) 이동 속도 배율 (마네킹 기본 속도 × 이 값, 2.4 × 0.875 = 2.1)"
 SprintSpeedMultiplier,1.6,달리기(Shift) 속도 배율
 StaminaSprintSeconds,5,스태미나가 가득 찼을 때 쉬지 않고 달릴 수 있는 시간(초)
 StaminaRecoverSeconds,8,스태미나가 바닥에서 가득 찰 때까지 시간(초)
@@ -20,10 +19,19 @@ UntransformCooldown,5,변신 해제 후 다시 변신할 수 있을 때까지 �
 InteractRange,2.2,전원 장치와 상호작용할 수 있는 거리(m)
 CoopDestroySpeedBase,1.4,여럿이 함께 파괴할 때 속도 증가 밑값 (인원이 늘수록 거듭제곱으로 빨라짐)
 MannequinAttackCooldown,1,사냥 시간 공격 쿨타임(초)
-MannequinAttackMoveLock,0.9,사냥 시간 공격을 시작한 뒤 이동할 수 없는 시간(초)
 RejoinGraceSeconds,60,게임 중 끊긴 사람이 돌아올 수 있는 시간(초)
 MannequinAttackRadius,0.35,공격 판정 구체 반경(m)
 EmoteDuration,1.5,감정 표현 재생 시간(초)
+
+# 구울 (사냥 시간 마네킹)
+GhoulMoveSpeed, 2.7,"사냥 시간 구울 기본 이동 속도(m/s). 참고: 가드 걷기 2.2, 가드 달리기 2.2 × 1.6 = 3.52"
+GhoulLungeDistance,10,"은신(Shift 누르고 있기) 중 공격할 때 정면으로 뛰어드는 거리(m)"
+GhoulLungeDuration,0.45,"도약해 뛰어올랐다 떨어질 때까지의 체공 시간(초). 짧을수록 빠르게 덮침"
+GhoulLungeHeight,0.6,"도약할 때 뛰어오르는 최고 높이(m). 0 = 바닥을 따라 곧게 뛰어듦"
+GhoulStealthStaminaSeconds,20,"스태미나가 가득 찼을 때 쉬지 않고 은신할 수 있는 시간(초). 스태미나가 바닥나면 은신이 풀림"
+GhoulLungeDamage,2,도약 공격 피해
+GhoulLungeContactRadius,0.7,"도약 중 가드와 부딪혔다고 보는 구울 몸 둘레 반경(m). 닿으면 끝까지 날아가지 않아도 바로 피해"
+GhoulStealthSoundMultiplier,0.15,"은신 중 숨소리·발소리 크기 배율(0~1). 0 = 소리 없음"
 
 # 변신 사물 배치 (판마다 섞기)
 PropShuffleEnabled,1,"판마다 변신 사물 배치를 섞을지 (1 = 섞음, 0 = 맵 원래 배치)"
@@ -50,14 +58,16 @@ PropKillDepth,10,"가장 낮은 사물보다 이만큼(m) 아래로 떨어지면
 DisguiseKnockbackMaxTime,4,"변신한 마네킹이 날아가는 최대 시간(초)"
 
 # 사냥 시간 조명 (모든 플레이어 화면)
-HuntAmbientBrightness,0.15,"사냥 시간 맵 전체 밝기(0~1). 0.03 = 거의 깜깜, 0.1 = 윤곽이 보임, 0.2 이상 = 꽤 밝음"
+HuntAmbientBrightness,0.07,"사냥 시간 맵 전체 밝기(0~1). 0.03 = 거의 깜깜, 0.1 = 윤곽이 보임, 0.2 이상 = 꽤 밝음"
 FlashlightIntensity,8,가드 손전등 밝기
 HuntFlickerLightRatio,0.2,"사냥 시간에 꺼지지 않고 깜빡이며 남는 맵 조명 비율(0~1). 0 = 전부 꺼짐, 0.2 = 5개 중 1개"
-HuntFlickerIntensityScale,0.4,"깜빡이며 남는 조명의 밝기 배율 (원래 밝기 × 이 값)"
+HuntFlickerIntensityScale,0.1,깜빡이며 남는 조명의 밝기 배율 (원래 밝기 × 이 값)
 
 # 맵 경계 안개 (나갈 수 없는 바깥을 가리는 흰 반투명 안개)
 BoundaryFogOpacity,0.05,"안개 불투명도(0~1). 0 = 안개 없음, 0.5 = 바깥이 꽤 보임, 1 = 거의 안 보임"
 BoundaryFogDepth,30,"안개 겹 6장이 퍼져 있는 두께(m). 클수록 경계가 더 부드럽게 흐려짐"
+BoundaryFogFarFadeStart,10,카메라에서 이 거리(m)부터 안개가 옅어지기 시작
+BoundaryFogFarFadeEnd,30,카메라에서 이 거리(m)보다 먼 안개는 보이지 않음
 
 # 사냥 시간 마네킹 시야 (마네킹 본인 화면)
 HuntVisionLightRange,12,개인 조명 범위(m)
@@ -67,16 +77,21 @@ HuntVisionFogEnd,13.5,완전히 안 보이는 거리(m)
 
 # 가드
 GuardSpawnSeparation,8,가드끼리 스폰 위치 최소 거리(m)
-GrenadeRadius,2,수류탄 폭발 반경(m)
+GrenadeRadius,4,수류탄 연막 반경(m)
 GrenadeRevealDuration,4,맞은 마네킹 외곽선이 가드에게 보이는 시간(초)
 GrenadeSlowDuration,3,맞은 마네킹 감속 시간(초)
 GrenadeSlowMultiplier,0.5,감속 배율
 GrenadeThrowSpeed,14,던지는 초기 속도(m/s)
 GrenadeFuseTime,3,"던진 뒤 터지기까지 시간(초). 그동안 벽·바닥·물체에 부딪히면 튕겨나감"
 GrenadeBounciness,0.4,"부딪힐 때 튕기는 정도(0~1). 0 = 튕기지 않고 멈춤, 1 = 같은 속도로 튕김"
+GrenadeSmokeDuration,5,터진 뒤 연막이 남아 있는 시간(초)
+GrenadeSmokeRefreshInterval,0.5,"연막 안 마네킹에게 외곽선·감속을 다시 거는 간격(초). 나가면 마지막으로 걸린 효과가 정해진 시간만큼 남음"
 FlashlightRange,25,손전등 범위(m)
 FlashlightToggleCooldown,0.2,손전등을 다시 켜고 끌 수 있을 때까지 시간(초)
 FlashlightAngle,55,손전등 퍼짐 각도(도)
+FlashlightBeamLength,6,"다른 사람 화면에 보이는 켜진 손전등 빛줄기 길이(m)"
+FlashlightBeamAlpha,0.2,"다른 사람 화면에 보이는 손전등 빛줄기 진하기(0~1). 0 = 빛줄기 없이 렌즈 빛만"
+FlashlightLensGlowSize,0.07,"다른 사람 화면에 보이는 손전등 렌즈 빛 반경(m)"
 GhoulDreadRange,8,"이 거리(m) 안의 구울이 화면에 보이고 가려지지 않으면 가드 화면에 노이즈가 끼고 심장 소리가 남 (가까울수록 강함)"
 
 # 진행

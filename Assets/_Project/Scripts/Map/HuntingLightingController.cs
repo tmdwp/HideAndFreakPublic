@@ -19,6 +19,9 @@ namespace GuardVsMannequin.Map
         [Tooltip("사냥 시간 환경광의 색조. 밝기는 game_tuning.csv의 HuntAmbientBrightness를 곱한다. (가장 밝은 채널 = 1 기준)")]
         [SerializeField] private Color huntingAmbientTint = new Color(0.67f, 0.67f, 1f);
 
+        [Tooltip("사냥 시간 검은 하늘. 머티리얼로 참조해야 셰이더가 빌드에 들어간다. 비우면 실행 중에 만든다.")]
+        [SerializeField] private Material darkSkyboxMaterial;
+
         private MapLight[] mapLights;
         private readonly List<FlickeringLight> huntFlickers = new();
         private AudioSource audioSource;
@@ -29,15 +32,24 @@ namespace GuardVsMannequin.Map
         private float originalReflectionIntensity;
         private Material originalSkybox;
         private Material darkSkybox;
+        private bool ownsDarkSkybox;
 
-        /// <summary>어두워지는 순간 끊김이 없도록 하늘과 오디오 소스를 미리 만들고, 맵 조명은 그 순간에 읽는다.</summary>
+        /// <summary>어두워지는 순간 끊김이 없도록 하늘과 오디오 소스를 미리 준비하고, 맵 조명은 그 순간에 읽는다.</summary>
         private void Awake()
         {
-            darkSkybox = CreateDarkSkybox();
+            ownsDarkSkybox = darkSkyboxMaterial == null;
+            darkSkybox = ownsDarkSkybox ? CreateDarkSkybox() : darkSkyboxMaterial;
 
-            audioSource = gameObject.AddComponent<AudioSource>();
-            audioSource.playOnAwake = false;
-            audioSource.spatialBlend = 0f;
+            if (!TryGetComponent(out audioSource))
+                audioSource = gameObject.AddComponent<AudioSource>();
+            ConfigureAudioSource(audioSource);
+        }
+
+        /// <summary>전원 차단음은 어디서 들어도 같아야 하므로 2D로 두고, 미리 둔 소스도 같은 설정이 되도록 한곳에서 맞춘다.</summary>
+        public static void ConfigureAudioSource(AudioSource source)
+        {
+            source.playOnAwake = false;
+            source.spatialBlend = 0f;
         }
 
         /// <summary>
@@ -47,7 +59,7 @@ namespace GuardVsMannequin.Map
         {
             if (isDark)
                 RestoreEnvironment();
-            if (darkSkybox != null)
+            if (ownsDarkSkybox && darkSkybox != null)
                 Destroy(darkSkybox);
         }
 
@@ -162,14 +174,15 @@ namespace GuardVsMannequin.Map
 
         /// <summary>
         /// 스카이박스를 비우면 카메라 기본 배경색(푸른색)이 보일 수 있으므로, 노출을 0으로 낮춘 기본 절차적 스카이박스로 검은 하늘을 만든다.
+        /// 에디터 미리 굽기도 같은 값으로 에셋을 만들도록 공개한다.
         /// </summary>
-        private static Material CreateDarkSkybox()
+        public static Material CreateDarkSkybox()
         {
             Shader shader = Shader.Find("Skybox/Procedural");
             if (shader == null)
                 return null;
 
-            var material = new Material(shader);
+            var material = new Material(shader) { name = "M_HuntDarkSkybox" };
             material.SetFloat("_Exposure", 0f);
             return material;
         }

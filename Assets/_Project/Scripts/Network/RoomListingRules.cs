@@ -33,7 +33,7 @@ namespace GuardVsMannequin.Network
             bool found = false;
             foreach (RoomListing room in rooms)
             {
-                if (room.hasPassword || !room.hasMap || room.playerCount >= room.maxPlayers)
+                if (room.hasPassword || !room.hasMap || IsFull(room))
                     continue;
                 if (!found || Compare(room, picked) < 0)
                 {
@@ -51,11 +51,21 @@ namespace GuardVsMannequin.Network
                 return first.hasMap ? -1 : 1;
             if (first.hasPassword != second.hasPassword)
                 return first.hasPassword ? 1 : -1;
+            // 찬 방은 사람이 많아도 들어갈 수 없으므로 자리 있는 방 뒤로 보낸다.
+            bool isFirstFull = IsFull(first);
+            if (isFirstFull != IsFull(second))
+                return isFirstFull ? 1 : -1;
             if (first.playerCount != second.playerCount)
                 return second.playerCount.CompareTo(first.playerCount);
 
             int pingOrder = PingRank(first).CompareTo(PingRank(second));
             return pingOrder != 0 ? pingOrder : first.lobbyId.CompareTo(second.lobbyId);
+        }
+
+        /// <summary>목록 표시와 정렬·빠른 참가가 같은 기준을 쓰도록 공개한다.</summary>
+        public static bool IsFull(RoomListing room)
+        {
+            return room.maxPlayers > 0 && room.playerCount >= room.maxPlayers;
         }
 
         /// <summary>

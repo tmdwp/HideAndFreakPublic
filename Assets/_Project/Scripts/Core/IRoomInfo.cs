@@ -19,6 +19,9 @@ namespace GuardVsMannequin.Core
         /// 이름을 아직 받지 못한 클라이언트도 화면에 표시할 수 있도록 "Player N"으로 대신한다.
         /// </summary>
         string GetDisplayName(int clientId);
+
+        /// <summary>역할을 나눌 때 희망 팀을 반영하려고 쓴다. 모르는 사람은 무작위로 본다.</summary>
+        TeamPreference GetTeamPreference(int clientId);
     }
 
     /// <summary>서버 전용 룸 ↔ 게임 씬 전환 흐름.</summary>

@@ -85,21 +85,22 @@ namespace GuardVsMannequin.Player
         /// 도구 쪽이 피해 규칙을 몰라도 되도록, 같은 편 공격 등은 여기서 다시 확인해 거른다.
         /// </summary>
         [Server]
-        public void TakeDamage(int amount, NetworkObject attacker)
+        public bool TakeDamage(int amount, NetworkObject attacker)
         {
             if (!IsAlive || amount <= 0)
-                return;
+                return false;
 
             PlayerRole attackerRole = attacker != null && attacker.TryGetComponent(out PlayerIdentity attackerIdentity)
                 ? attackerIdentity.Role
                 : PlayerRole.None;
 
             if (!DamageRules.CanDamage(attackerRole, Role, GameServices.CurrentStateOrWaiting))
-                return;
+                return false;
 
             currentHealth.Value = Mathf.Max(0, currentHealth.Value - amount);
             if (currentHealth.Value == 0)
                 ServerDied?.Invoke(this, attacker);
+            return true;
         }
     }
 }

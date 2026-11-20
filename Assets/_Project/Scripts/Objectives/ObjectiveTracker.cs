@@ -1,3 +1,5 @@
+using System;
+using System.Collections.Generic;
 using FishNet.Object;
 using FishNet.Object.Synchronizing;
 using GuardVsMannequin.Core;
@@ -10,6 +12,9 @@ namespace GuardVsMannequin.Objectives
         private readonly SyncVar<int> destroyedCount = new();
 
         public int DestroyedCount => destroyedCount.Value;
+
+        /// <summary>판 기록이 장치를 몰라도 되도록 부순 사람들의 접속 ID만 서버에서 알린다.</summary>
+        public event Action<IReadOnlyList<int>> ServerGeneratorDestroyed;
 
         /// <summary>테스트 방에서 설정을 바꾸면 바로 반영되도록 매번 설정에서 읽는다.</summary>
         public int RequiredCount => GameServices.State?.Settings.objectiveCount ?? 0;
@@ -42,6 +47,7 @@ namespace GuardVsMannequin.Objectives
         {
             generator.ServerDestroyed -= OnGeneratorDestroyed;
             destroyedCount.Value++;
+            ServerGeneratorDestroyed?.Invoke(generator.DestroyerClientIds);
         }
     }
 }

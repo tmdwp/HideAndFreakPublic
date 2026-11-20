@@ -40,6 +40,8 @@ namespace GuardVsMannequin.Player
         private float horizontalBudget;
         private float sprintBudget;
         private float riseBudget;
+        private float dashBudget;
+        private float dashBudgetEndTime;
         private float nextCorrectionTime;
         private float lastBudgetTime;
         private bool isTracking;
@@ -103,7 +105,10 @@ namespace GuardVsMannequin.Player
                 return;
             }
 
-            if (horizontalDistance > horizontalBudget + sprintBudget || riseDistance > riseBudget)
+            if (Time.time > dashBudgetEndTime)
+                dashBudget = 0f;
+
+            if (horizontalDistance > horizontalBudget + sprintBudget + dashBudget || riseDistance > riseBudget)
             {
                 Correct(horizontalDistance, riseDistance);
                 return;
@@ -156,6 +161,19 @@ namespace GuardVsMannequin.Player
             TeleportTargetRpc(Owner, position, rotation);
         }
 
+        /// <summary>
+        /// 도약처럼 서버가 허락한 한 번의 빠른 이동은 속도 예산 밖이라, 정한 시간 안에 쓸 수 있는 거리를 따로 준다.
+        /// 남겨 두면 나중에 빨리 달리는 데 쓰일 수 있어서 시간이 지나면 버린다.
+        /// </summary>
+        /// <param name="distance">단위는 m.</param>
+        /// <param name="validSeconds">위치 전송 지연까지 감안한 사용 기한(초).</param>
+        [Server]
+        public void ServerAllowDash(float distance, float validSeconds)
+        {
+            dashBudget = Mathf.Max(0f, distance);
+            dashBudgetEndTime = Time.time + Mathf.Max(0f, validSeconds);
+        }
+
         /// <summary>날아가는 동안에는 이동 속도 규칙을 따르지 않으므로 검증을 멈춘다.</summary>
         [Server]
         public void SetSuspended(bool suspended)
@@ -195,7 +213,10 @@ namespace GuardVsMannequin.Player
         {
             float fromBaseBudget = Mathf.Min(horizontalDistance, horizontalBudget);
             horizontalBudget -= fromBaseBudget;
-            sprintBudget = Mathf.Max(0f, sprintBudget - (horizontalDistance - fromBaseBudget));
+            float remaining = horizontalDistance - fromBaseBudget;
+            float fromSprintBudget = Mathf.Min(remaining, sprintBudget);
+            sprintBudget -= fromSprintBudget;
+            dashBudget = Mathf.Max(0f, dashBudget - (remaining - fromSprintBudget));
         }
 
         /// <summary>벽타기 중에는 비행 속도를 쓰므로 둘 중 큰 값에 여유 배율을 곱한다.</summary>

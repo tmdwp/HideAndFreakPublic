@@ -1,4 +1,4 @@
-using System.Collections;
+﻿using System.Collections;
 using FishNet.Object;
 using GuardVsMannequin.Core;
 using GuardVsMannequin.Localization;
@@ -6,7 +6,7 @@ using UnityEngine;
 
 namespace GuardVsMannequin.Player.Guard
 {
-    /// <summary>숨은 마네킹을 찾아내도록 반경 안 마네킹에 외곽선 표시와 감속을 거는 가드의 수류탄.</summary>
+    /// <summary>숨은 마네킹을 찾아내도록 연막 안 마네킹에 외곽선 표시와 감속을 거는 가드의 연막탄.</summary>
     public class GrenadeTool : NetworkBehaviour, ICooldownGauge
     {
         /// <summary>클라이언트가 보낸 원점이 비정상일 때 대신 쓸 눈 높이(m).</summary>
@@ -21,7 +21,6 @@ namespace GuardVsMannequin.Player.Guard
         [SerializeField] private GrenadeView view;
 
         private readonly ToolCooldown cooldown = new();
-        private readonly MannequinFinder finder = new();
         private IAimProvider aimProvider;
         private IPlayerInput playerInput;
         private CharacterSkinView skinView;
@@ -104,18 +103,14 @@ namespace GuardVsMannequin.Player.Guard
             StartCoroutine(ExplodeAfter(GrenadeTrajectory.GetPosition(segments, fuseTime), fuseTime));
         }
 
-        /// <summary>터지는 연출과 효과가 같은 순간이 되도록 신관 시간만큼 기다린 뒤 서버에서 효과를 건다.</summary>
+        /// <summary>터지는 연출과 효과가 같은 순간이 되도록 신관 시간만큼 기다린 뒤 서버에 연막 판정 영역을 만든다.</summary>
         private IEnumerator ExplodeAfter(Vector3 impactPoint, float fuseTime)
         {
             yield return new WaitForSeconds(fuseTime);
             if (!IsServerInitialized)
                 yield break;
 
-            foreach (PlayerIdentity mannequin in finder.Find(impactPoint, GameTuning.GrenadeRadius, requireLineOfSight: true))
-            {
-                if (mannequin.TryGetComponent(out StatusEffects effects))
-                    effects.ApplyGrenadeHit();
-            }
+            GrenadeSmokeZone.Spawn(impactPoint);
         }
 
         /// <summary>

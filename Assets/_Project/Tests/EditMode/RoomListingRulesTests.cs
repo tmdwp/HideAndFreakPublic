@@ -36,6 +36,21 @@ namespace GuardVsMannequin.Tests
             CollectionAssert.AreEqual(new ulong[] { 5, 4, 6, 3, 2, 1 }, sorted.ConvertAll(room => room.lobbyId));
         }
 
+        /// <summary>찬 방은 들어갈 수 없으므로 사람이 더 많아도 자리 있는 방 뒤에 오는지 확인한다.</summary>
+        [Test]
+        public void Filter_PutsFullRoomsAfterJoinableRooms()
+        {
+            var rooms = new List<RoomListing>
+            {
+                CreateRoom(1, players: 10, maxPlayers: 10, ping: 1),
+                CreateRoom(2, players: 2, ping: 100)
+            };
+
+            List<RoomListing> sorted = RoomListingRules.Filter(rooms, false, false);
+
+            CollectionAssert.AreEqual(new ulong[] { 2, 1 }, sorted.ConvertAll(room => room.lobbyId));
+        }
+
         /// <summary>들어갈 수 없는 방을 숨기는 필터가 각각 따로 동작하는지 확인한다.</summary>
         [Test]
         public void Filter_HidesPasswordAndMissingMapRooms()

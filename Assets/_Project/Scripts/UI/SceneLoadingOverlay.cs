@@ -9,7 +9,12 @@ namespace GuardVsMannequin.UI
     /// <summary>게스트는 로딩 지시가 늦게 오므로 시작 버튼이 눌린 순간부터 씬 전환 로딩 화면을 덮는다.</summary>
     public class SceneLoadingOverlay : MonoBehaviour
     {
-        private SceneLoadingOverlayView view;
+        /// <summary>에디터 미리 굽기가 만드는 프리팹 경로(Resources 기준).</summary>
+        public const string PrefabPath = "UI/SceneLoadingOverlay";
+
+        [Tooltip("로딩 화면 모양. 비우면 실행 중에 기본 모양으로 만든다.")]
+        [SerializeField] private SceneLoadingOverlayView view;
+
         private SceneManager subscribedSceneManager;
         private bool isVisible;
         private bool hasLoadStarted;
@@ -20,21 +25,32 @@ namespace GuardVsMannequin.UI
 
         /// <summary>
         /// 씬 전환 도중에도 화면이 사라지지 않아야 하므로 어느 씬에도 속하지 않는 오브젝트로 한 번 만든다.
+        /// 미리 만든 프리팹이 있으면 에디터에서 고친 모양을 쓰고, 없으면 기본 모양을 코드로 만든다.
         /// </summary>
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
         private static void CreateInstance()
         {
-            var instance = new GameObject(nameof(SceneLoadingOverlay));
+            var prefab = Resources.Load<SceneLoadingOverlay>(PrefabPath);
+            GameObject instance = prefab != null
+                ? Instantiate(prefab).gameObject
+                : new GameObject(nameof(SceneLoadingOverlay), typeof(SceneLoadingOverlay));
+            instance.name = nameof(SceneLoadingOverlay);
             DontDestroyOnLoad(instance);
-            instance.AddComponent<SceneLoadingOverlay>();
         }
 
-        /// <summary>
-        /// 씬에 UI를 배치하지 않아도 되도록 화면을 코드로 만든다.
-        /// </summary>
+        /// <summary>프리팹 없이 만들어졌으면 화면을 코드로 채운다.</summary>
         private void Awake()
         {
-            view = new SceneLoadingOverlayView(transform);
+            EnsureView();
+        }
+
+        /// <summary>에디터 미리 굽기도 같은 기본 모양으로 프리팹을 만들도록 공개한다.</summary>
+        public void EnsureView()
+        {
+            if (view == null)
+                view = GetComponentInChildren<SceneLoadingOverlayView>(true);
+            if (view == null)
+                view = SceneLoadingOverlayView.Create(transform);
         }
 
         /// <summary>

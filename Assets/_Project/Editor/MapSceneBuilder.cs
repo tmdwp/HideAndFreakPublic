@@ -319,6 +319,8 @@ namespace GuardVsMannequin.Editor
             CreateInvisibleBox(boundary, "Wall_South", new Vector3(areaCenter.x, wallCenterY, areaCenter.z - boundarySize.z * 0.5f), new Vector3(boundarySize.x, wallHeight, 0.5f));
             CreateInvisibleBox(boundary, "Wall_East", new Vector3(areaCenter.x + boundarySize.x * 0.5f, wallCenterY, areaCenter.z), new Vector3(0.5f, wallHeight, boundarySize.z));
             CreateInvisibleBox(boundary, "Wall_West", new Vector3(areaCenter.x - boundarySize.x * 0.5f, wallCenterY, areaCenter.z), new Vector3(0.5f, wallHeight, boundarySize.z));
+            // 불러올 때마다 안개를 만들지 않도록 경계와 함께 미리 둔다.
+            BoundaryFogBaker.BakeFor(boundary);
             return ceilingY - floorY;
         }
 

@@ -9,7 +9,7 @@ import random
 import bmesh
 from mathutils import Matrix, Vector
 
-from mapkit_common import MeshBuilder
+from mapkit_common import MeshBuilder, rotY
 
 
 class NatureBuilder(MeshBuilder):
@@ -41,17 +41,36 @@ class NatureBuilder(MeshBuilder):
         bmesh.ops.transform(self.bm, matrix=matrix, verts=verts)
         self.applyFaces(verts, matName, False)
 
-    def cone(self, radius, height, baseZ, matName, segments=8, jitter=0.0, twist=0.0):
-        """밑면 높이가 baseZ인 뾰족한 원뿔(침엽수 층). twist(도)로 층마다 각을 엇갈린다."""
+    def cone(self, radius, height, baseZ, matName, segments=8, jitter=0.0, twist=0.0, serrate=0.0):
+        """
+        밑면 높이가 baseZ인 뾰족한 원뿔(침엽수 층). twist(도)로 층마다 각을 엇갈린다.
+        serrate(0~1)를 주면 밑 테두리를 톱니처럼 번갈아 오므리고 끝을 처지게 해(바깥 반지름은 그대로) 매끈한 원뿔 대신 잎가지 끝이 삐죽한 실루엣이 된다.
+        """
         verts = bmesh.ops.create_cone(self.bm, cap_ends=True, cap_tris=False, segments=segments,
                                       radius1=radius, radius2=0.0, depth=height)["verts"]
         matrix = Matrix.Translation((0, 0, baseZ + height / 2)) @ Matrix.Rotation(math.radians(twist), 4, "Z")
         bmesh.ops.transform(self.bm, matrix=matrix, verts=verts)
         bmesh.ops.remove_doubles(self.bm, verts=verts, dist=1e-4)
         verts = [v for v in verts if v.is_valid]
+        if serrate > 0:
+            rim = sorted((v for v in verts if abs(v.co.z - baseZ) < 1e-4), key=lambda v: math.atan2(v.co.y, v.co.x))
+            for index, v in enumerate(rim):
+                tip = index % 2 == 0
+                scale = 1.0 if tip else 1.0 - serrate * 0.45
+                v.co.x *= scale
+                v.co.y *= scale
+                v.co.z -= serrate * height * (0.18 if tip else -0.04)
         if jitter > 0:
             self.jitter(verts, jitter)
         self.applyFaces(verts, matName, False)
+
+    def roots(self, count, trunkRadius, length, matName, angleOffset=0.0):
+        """밑동에서 사방으로 눕듯 퍼지는 뿌리 돌출. 줄기가 땅에 꽂힌 막대처럼 보이지 않게 한다."""
+        for i in range(count):
+            a = math.tau * i / count + angleOffset + self.rng.uniform(-0.3, 0.3)
+            base = (trunkRadius * 0.45 * math.cos(a), trunkRadius * 0.45 * math.sin(a), 0.02)
+            self.trunk(trunkRadius * 0.5, trunkRadius * 0.12, length * self.rng.uniform(0.8, 1.15), matName, segments=4,
+                       base=base, rot=Matrix.Rotation(a, 4, "Z") @ rotY(self.rng.uniform(68, 76)))
 
     def blob(self, radius, center, matName, scale=(1.0, 1.0, 1.0), jitter=0.0):
         """정이십면체(1단계 분할)를 흔든 덩어리 잎."""

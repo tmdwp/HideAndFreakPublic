@@ -16,7 +16,7 @@ import sys
 import bpy
 
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..", "MapKit", "Source~"))
-from mapkit_common import MeshBuilder, configure, renderPreview, resetScene, rotX  # noqa: E402
+from mapkit_common import MeshBuilder, configure, renderPreview, resetScene, rotX, rotY  # noqa: E402
 
 argv = sys.argv[sys.argv.index("--") + 1:] if "--" in sys.argv else []
 outDir = argv[0] if len(argv) > 0 else os.path.join(os.path.dirname(__file__), "..", "Models")
@@ -57,6 +57,24 @@ def makeRifle():
     b.box((0.022, 0.46, 0.012), (0, -0.2, 0.078), "GunMetal")
     b.box((0.02, 0.02, 0.035), (0, 0.04, 0.095), "GunMetal")
     b.box((0.012, 0.012, 0.03), (0, -0.41, 0.095), "GunSight")
+    # 양옆 총열 덮개 환기 구멍, 오른쪽(-X) 탄피 배출구·장전 손잡이, 왼쪽 조정간, 탄창 홈,
+    # 손잡이 미끄럼 방지 홈, 개머리판 고무 패드, 앞 가늠쇠 받침, 멜빵 고리 (손·총구 위치는 그대로)
+    for facing, x in (("+X", 0.025), ("-X", -0.025)):
+        for k in range(4):
+            u = (0.27 + k * 0.05) * (1 if facing == "-X" else -1)
+            b.plate(facing, (x, 0, 0), 0.03, 0.014, 0.003, "GunMetal", u=u, v=0.035)
+    b.plate("-X", (-0.025, 0, 0), 0.07, 0.022, 0.002, "GunMetal", u=-0.04, v=0.05)
+    b.plate("-X", (-0.025, 0, 0), 0.012, 0.012, 0.025, "GunMetal", u=0.03, v=0.055)
+    b.bolts("+X", (0.025, 0, 0), [(-0.05, 0.03)], "GunSight", radius=0.006, depth=0.004)
+    for facing, x in (("+X", 0.015), ("-X", -0.015)):
+        b.plate(facing, (x, 0, 0), 0.004, 0.1, 0.002, "GunMetal", u=-0.09 if facing == "+X" else 0.09, v=-0.06, tilt=0)
+    with b.noBevel():
+        for k in range(3):
+            b.box((0.037, 0.004, 0.008), (0, 0.013 + k * 0.01, -0.03 - k * 0.025), "GunMetal", rot=rotX(-15))
+        b.box((0.052, 0.012, 0.125), (0, 0.329, -0.005), "GunMetal")
+        b.box((0.02, 0.026, 0.012), (0, -0.41, 0.08), "GunMetal")
+        for y, z in ((-0.42, 0.0), (0.27, -0.05)):
+            b.hollowCylinder(0.012, 0.012, 0.006, 0.004, (0, y, z), "GunMetal", segments=8, rot=rotY(90))
     return b.build()
 
 

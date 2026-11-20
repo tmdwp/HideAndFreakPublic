@@ -16,6 +16,12 @@ namespace GuardVsMannequin.UI
         /// <summary>역할 안내 문구 종류: 우클릭 동작.</summary>
         public const string SecondaryPart = "secondary";
 
+        /// <summary>역할 안내 문구 종류: Shift 동작. (사냥 시간 구울은 달리기 대신 은신)</summary>
+        public const string SprintPart = "sprint";
+
+        /// <summary>역할 안내 문구 종류: 단계가 바뀔 때 화면 가운데에 띄우는 한 줄.</summary>
+        public const string AnnouncePart = "announce";
+
         /// <summary>
         /// 역할을 추가해도 HUD를 고치지 않도록 이름 문구 key는 역할 정의에서 꺼낸다.
         /// </summary>

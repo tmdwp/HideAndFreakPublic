@@ -164,7 +164,9 @@ namespace GuardVsMannequin.Player.Guard
             {
                 endPoint = hit.point;
                 IDamageable target = hit.collider.GetComponentInParent<IDamageable>();
-                target?.TakeDamage(Damage, NetworkObject);
+                // 변신한 마네킹을 맞혔는지는 숨바꼭질의 핵심 정보라 쏜 사람에게만 알린다.
+                if (target != null && target.TakeDamage(Damage, NetworkObject))
+                    HitConfirmedTargetRpc(Owner, !target.IsAlive);
 
                 // 이번 발에 죽은 마네킹은 날아가지 않도록 피해 뒤에 충격을 준다.
                 IImpactReceiver impactReceiver = hit.collider.GetComponentInParent<IImpactReceiver>();
@@ -173,6 +175,15 @@ namespace GuardVsMannequin.Player.Guard
             }
 
             ShotFiredObserversRpc(origin, endPoint, didHit, startedReload);
+        }
+
+        /// <summary>
+        /// HUD가 총을 몰라도 되도록 이 PC 안의 이벤트로 넘긴다.
+        /// </summary>
+        [TargetRpc]
+        private void HitConfirmedTargetRpc(NetworkConnection target, bool isEliminated)
+        {
+            LocalCombatEvents.RaiseHitConfirmed(isEliminated);
         }
 
         /// <summary>

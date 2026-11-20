@@ -36,9 +36,40 @@ namespace GuardVsMannequin.Player
         [Min(0f)]
         public float attackHitDelay;
 
+        [Tooltip("도약 공격 동작(Lunge 트리거)을 시작한 뒤 덮쳐 맞히는 순간까지의 시간(초).\n" +
+                 "0이면 도약 동작이 없는 외형으로 보고 attackHitDelay를 쓴다.")]
+        [Min(0f)]
+        public float lungeHitDelay;
+
         [Tooltip("총을 드는 외형(가드)의 손 위치 설정. 모델마다 손 크기·뼈 방향이 달라 외형별로 둔다.\n" +
                  "Play 중 이 에셋의 값을 바꾸면 바로 반영되고, Play를 꺼도 값이 유지된다.")]
         public WeaponGrip weaponGrip = new WeaponGrip();
+
+        [Tooltip("가드 외형의 손전등 모양. 위치는 모델 안 \"Flashlight\" 이름의 빈 오브젝트를 따르고(없으면 기본 위치),\n" +
+                 "비추는 방향은 항상 시선을 따른다. 밝기·범위·각도는 공정하도록 게임이 정한다.")]
+        public FlashlightLook flashlight = new FlashlightLook();
+    }
+
+    /// <summary>외형마다 달라도 공정성에 영향이 없는 손전등의 위치·색.</summary>
+    [System.Serializable]
+    public class FlashlightLook
+    {
+        /// <summary>모델 안에서 손전등 위치로 쓸 빈 오브젝트 이름.</summary>
+        public const string MountPointName = "Flashlight";
+
+        [Tooltip("손전등 빛 색. 어두운 색으로 덜 보이게 하는 것을 막으려고 밝기는 게임이 맞추고 색감만 쓴다.")]
+        public Color color = new Color(1f, 0.95f, 0.85f, 1f);
+
+        /// <summary>
+        /// 어두운 색을 골라 빛이 약해지거나 남에게 덜 보이는 이점이 없도록, 가장 밝은 채널이 1이 되게 밝기를 맞춘 색.
+        /// </summary>
+        public Color GetNormalizedColor()
+        {
+            float brightest = Mathf.Max(color.r, Mathf.Max(color.g, color.b));
+            if (brightest <= 0.001f)
+                return Color.white;
+            return new Color(color.r / brightest, color.g / brightest, color.b / brightest, 1f);
+        }
     }
 
     /// <summary>3인칭 총을 손에 들리는 위치와 조준 IK 손 위치.</summary>

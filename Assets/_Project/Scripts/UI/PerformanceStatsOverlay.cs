@@ -19,7 +19,12 @@ namespace GuardVsMannequin.UI
         private static readonly Vector2 Margin = new(16f, 12f);
         private static readonly Vector2 Size = new(360f, 60f);
 
-        private Text statsText;
+        /// <summary>에디터 미리 굽기가 만드는 프리팹 경로(Resources 기준).</summary>
+        public const string PrefabPath = "UI/PerformanceStatsOverlay";
+
+        [Tooltip("FPS·핑을 적는 글자. 비우면 실행 중에 기본 모양으로 만든다.")]
+        [SerializeField] private Text statsText;
+
         private int frameCount;
         private float sampleStartTime;
         private bool showFps;
@@ -27,21 +32,34 @@ namespace GuardVsMannequin.UI
         private (int fps, long ping, bool isHost, bool isConnected, string language) shown;
         private bool isShownValid;
 
-        /// <summary>씬 전환에도 남도록 어느 씬에도 속하지 않는 오브젝트로 한 번 만든다.</summary>
+        /// <summary>
+        /// 씬 전환에도 남도록 어느 씬에도 속하지 않는 오브젝트로 한 번 만든다.
+        /// 미리 만든 프리팹이 있으면 에디터에서 고친 모양을 쓰고, 없으면 기본 모양을 코드로 만든다.
+        /// </summary>
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
         private static void CreateInstance()
         {
-            var instance = new GameObject(nameof(PerformanceStatsOverlay));
+            var prefab = Resources.Load<PerformanceStatsOverlay>(PrefabPath);
+            GameObject instance = prefab != null
+                ? Instantiate(prefab).gameObject
+                : new GameObject(nameof(PerformanceStatsOverlay), typeof(PerformanceStatsOverlay));
+            instance.name = nameof(PerformanceStatsOverlay);
             DontDestroyOnLoad(instance);
-            instance.AddComponent<PerformanceStatsOverlay>();
         }
 
-        /// <summary>씬이나 프리팹에 UI를 배치하지 않아도 되도록 화면을 코드로 만든다.</summary>
+        /// <summary>프리팹 없이 만들어졌으면 화면을 코드로 채운다.</summary>
         private void Awake()
         {
-            statsText = CreateText(transform);
+            EnsureLayout();
             sampleStartTime = Time.unscaledTime;
             ApplyOptions();
+        }
+
+        /// <summary>에디터 미리 굽기도 같은 기본 모양으로 프리팹을 만들도록 공개한다.</summary>
+        public void EnsureLayout()
+        {
+            if (statsText == null)
+                statsText = CreateText(transform);
         }
 
         /// <summary>설정 화면에서 바꾸면 다음 표본을 기다리지 않고 바로 반영되도록 변경 알림을 듣는다.</summary>

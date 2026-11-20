@@ -78,8 +78,10 @@ namespace GuardVsMannequin.Editor
             if (ghoulSkin == null)
                 return;
             ghoulSkin.attackHitDelay = GhoulSkinBuilder.DefaultAttackHitDelay();
+            ghoulSkin.lungeHitDelay = GhoulSkinBuilder.DefaultLungeHitDelay();
             EditorUtility.SetDirty(ghoulSkin);
-            Debug.Log($"[CharacterAssetBuilder] 구울 외형 생성: {GhoulSkinPath} (맞는 순간 {ghoulSkin.attackHitDelay:F3}초)");
+            Debug.Log($"[CharacterAssetBuilder] 구울 외형 생성: {GhoulSkinPath} " +
+                      $"(맞는 순간 공격 {ghoulSkin.attackHitDelay:F3}초, 도약 {ghoulSkin.lungeHitDelay:F3}초)");
         }
 
         /// <summary>
@@ -249,7 +251,14 @@ namespace GuardVsMannequin.Editor
             WarnIfNotHumanoid(model, skinName, useAimIK);
 
             GameObject root = NormalizeToFeet(model, $"Model_{skinName}", targetHeight);
-            GameObject prefab = PrefabUtility.SaveAsPrefabAsset(root, $"{SkinFolder}/Model_{skinName}.prefab");
+            Debug.Log("[CharacterAssetBuilder] " + SkinPartBaker.Bake(root));
+
+            // 덮어쓰면 손으로 넣은 손전등 지점 등이 사라지므로 기존 모델에서 읽어 새 모델에 되살린다.
+            string prefabPath = $"{SkinFolder}/Model_{skinName}.prefab";
+            int restoredPoints = ModelAttachPoints.Restore(root, ModelAttachPoints.Capture(prefabPath));
+            if (restoredPoints > 0)
+                Debug.Log($"[CharacterAssetBuilder] Model_{skinName}: 부착 지점 {restoredPoints}개를 이전 모델에서 옮겼습니다.");
+            GameObject prefab = PrefabUtility.SaveAsPrefabAsset(root, prefabPath);
             Object.DestroyImmediate(root);
 
             CharacterSkin skin = AssetDatabase.LoadAssetAtPath<CharacterSkin>(skinAssetPath);

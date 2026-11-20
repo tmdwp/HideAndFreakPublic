@@ -110,7 +110,7 @@ Waiting ─▶ Preparation ─▶ Playing ─▶ Hunting ─▶ Ended
 | `huntHealthMultiplier` | float | 10 | 사냥 시간 마네킹 체력 배율 |
 | `mannequinAttackRange` | float | 3 | 구울(사냥 시간) 공격 사거리(m). 룸 UI에 표시하지 않음 |
 | `guardMoveSpeed` | float | 2.2 | 가드 이동 속도(m/s). 룸 UI에 표시하지 않음 |
-| `mannequinMoveSpeed` | float | 2.4 | 마네킹 기본 이동 속도(m/s). 사냥 시간(구울)에는 × 0.875 = 2.1 (`GameTuning.MannequinHuntSpeedMultiplier`). 룸 UI에 표시하지 않음 |
+| `mannequinMoveSpeed` | float | 2.4 | 마네킹 기본 이동 속도(m/s). 사냥 시간(구울)에는 이 값 대신 game_tuning.csv의 `GhoulMoveSpeed`(기본 2.46). 룸 UI에 표시하지 않음 |
 
 - 기본값은 `Resources/Data/default_game_settings.json`에, 룸에서 조정하는 단위·범위·표시 순서는 `Resources/Data/game_settings.csv`에 둡니다. 런타임 값은 `SyncVar`로 동기화하는 구조체로 관리합니다.
 - 값 검증(범위 제한)은 `GameSettingsValidator`가 담당합니다 (SRP).

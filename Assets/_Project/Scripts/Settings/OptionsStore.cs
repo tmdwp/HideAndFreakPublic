@@ -44,6 +44,8 @@ namespace GuardVsMannequin.Settings
             options.frameLimit = FrameRateSettings.ClampMode(options.frameLimit);
             options.cameraSway = CameraSwaySettings.ClampMode(options.cameraSway);
             options.statsDisplay = StatsDisplaySettings.ClampMode(options.statsDisplay);
+            options.fieldOfView = FieldOfViewSettings.ClampMode(options.fieldOfView);
+            options.crosshairColor = CrosshairSettings.ClampMode(options.crosshairColor);
 
             bool isDisplayChanged = !current.HasSameDisplay(options);
             current = options;

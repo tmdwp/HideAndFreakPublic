@@ -14,6 +14,7 @@ namespace GuardVsMannequin.Core
         /// 체력은 서버 값만 믿어야 조작을 막을 수 있으므로 서버에서만 호출한다.
         /// </summary>
         /// <param name="attacker">환경 피해처럼 공격자가 없으면 null.</param>
-        void TakeDamage(int amount, NetworkObject attacker);
+        /// <returns>피해가 실제로 들어갔으면 true. 공격자에게 명중을 알릴지 정하는 데 쓴다.</returns>
+        bool TakeDamage(int amount, NetworkObject attacker);
     }
 }

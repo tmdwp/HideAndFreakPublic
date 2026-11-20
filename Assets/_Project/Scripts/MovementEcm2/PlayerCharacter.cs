@@ -101,5 +101,80 @@ namespace GuardVsMannequin.Player
             SetVelocity(Vector3.zero);
             SetMovementMode(frozen ? MovementMode.None : MovementMode.Falling);
         }
+
+        private Vector3 dashVelocity;
+        private float dashRemaining;
+        private float dashElapsed;
+        private float dashLaunchSpeed;
+        private float dashArcGravity;
+        private bool isDashStopPending;
+        private bool isDashLaunchPending;
+
+        /// <inheritdoc />
+        void ICharacterMotor.Dash(Vector3 horizontalVelocity, float duration, float launchSpeed, float arcGravity)
+        {
+            dashVelocity = Vector3.ProjectOnPlane(horizontalVelocity, Vector3.up);
+            dashRemaining = Mathf.Max(0f, duration);
+            dashElapsed = 0f;
+            dashLaunchSpeed = Mathf.Max(0f, launchSpeed);
+            dashArcGravity = Mathf.Max(0f, arcGravity);
+            isDashStopPending = dashRemaining > 0f;
+            isDashLaunchPending = isDashStopPending && dashLaunchSpeed > 0f;
+        }
+
+        /// <summary>
+        /// 이동 모드가 속도를 계산한 뒤, 실제 이동 직전에 속도를 덮어써야 최대 속도·감속·중력 제한을 받지 않고 충돌은 그대로 처리된다.
+        /// 벽타기(비행)·날아가기(None) 중에는 방향이 맞지 않으므로 적용하지 않는다.
+        /// </summary>
+        protected override void OnAfterSimulationUpdate(float deltaTime)
+        {
+            base.OnAfterSimulationUpdate(deltaTime);
+            if (!isDashStopPending || deltaTime <= 0f)
+                return;
+
+            bool canDash = IsWalking() || IsFalling();
+            Vector3 currentVelocity = characterMovement.velocity;
+            if (dashRemaining <= 0f)
+            {
+                // 도약 속도가 남으면 감속하는 동안 정한 거리보다 더 미끄러지므로 끝난 다음 틱에 수평 속도를 없앤다.
+                isDashStopPending = false;
+                if (canDash)
+                    characterMovement.velocity = new Vector3(0f, currentVelocity.y, 0f);
+                return;
+            }
+
+            // 마지막 틱은 남은 시간만큼만 밀어야 정한 거리를 넘지 않는다.
+            float activeTime = Mathf.Min(dashRemaining, deltaTime);
+            float activeRatio = activeTime / deltaTime;
+            float verticalVelocity = GetDashVerticalVelocity(currentVelocity.y, activeTime);
+            dashElapsed += deltaTime;
+            dashRemaining -= deltaTime;
+            if (canDash)
+                characterMovement.velocity = new Vector3(dashVelocity.x * activeRatio, verticalVelocity, dashVelocity.z * activeRatio);
+        }
+
+        /// <summary>
+        /// 뛰어올랐다 떨어지는 포물선을 그리도록 도약 중 세로 속도를 정한다.
+        /// 첫 틱에는 바닥에 붙여 두는 처리가 위로 뜨는 것을 막으므로 잠시 끄고, 이번 틱 구간의 평균 속도를 써서 틱 간격과 상관없이 같은 높이가 되게 한다.
+        /// 도중에 높은 곳에 내려앉아 걷기 상태가 되면 바닥 처리를 그대로 따른다.
+        /// </summary>
+        private float GetDashVerticalVelocity(float currentVertical, float activeTime)
+        {
+            if (dashLaunchSpeed <= 0f)
+                return currentVertical;
+
+            if (isDashLaunchPending)
+            {
+                isDashLaunchPending = false;
+                characterMovement.PauseGroundConstraint();
+            }
+            else if (!IsFalling())
+            {
+                return currentVertical;
+            }
+
+            float midTime = dashElapsed + activeTime * 0.5f;
+            return dashLaunchSpeed - dashArcGravity * midTime;
+        }
     }
 }

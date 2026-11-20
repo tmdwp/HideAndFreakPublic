@@ -44,6 +44,20 @@ def ring(b, count, radius, z, size, matName, scale, jitterRatio=0.1, zRange=0.0)
         b.blob(s, center, matName if i % 2 == 0 else "LeafLight", scale=scale, jitter=s * jitterRatio)
 
 
+def undergrowth(b, count, radius, size, twigs, twigLength):
+    """밑동 둘레의 낮은 잎 뭉치와 삐져나온 잔가지. 덩어리 밑이 땅에서 뜬 공처럼 보이지 않게 땅과 이어 준다."""
+    for i in range(count):
+        a = math.tau * (i + 0.5) / count + b.rng.uniform(-0.3, 0.3)
+        r = radius * b.rng.uniform(0.85, 1.05)
+        s = size * b.rng.uniform(0.8, 1.1)
+        b.blob(s, (r * math.cos(a), r * math.sin(a), s * 0.45), "LeafDark" if i % 2 else "Leaf", scale=(1.2, 1.2, 0.6), jitter=s * 0.1)
+    for i in range(twigs):
+        a = math.tau * i / twigs + b.rng.uniform(-0.4, 0.4)
+        b.trunk(0.018, 0.005, twigLength * b.rng.uniform(0.8, 1.2), "Bark", segments=3,
+                base=(radius * 0.5 * math.cos(a), radius * 0.5 * math.sin(a), 0.05 + 0.25 * b.rng.random()),
+                rot=Matrix.Rotation(a, 4, "Z") @ rotY(b.rng.uniform(40, 65)))
+
+
 # ---------------------------------------------------------------- 덤불
 
 def makeRoundBush(name, seed):
@@ -51,6 +65,8 @@ def makeRoundBush(name, seed):
     b = NatureBuilder(name, seed)
     b.blob(0.55, (0, 0, 0.5), "Leaf", scale=(1.0, 1.0, 0.9), jitter=0.06)
     ring(b, 5, 0.45, 0.35, 0.38, "Leaf", (1.0, 1.0, 0.85), zRange=0.08)
+    # 덩어리 모양은 그대로 두고(무작위 순서 유지) 마지막에 덧붙인다
+    undergrowth(b, 4, 0.62, 0.2, 4, 0.4)
     return b.build()
 
 
@@ -65,6 +81,7 @@ def makeWideBush(name, seed):
         b.blob(size, (x, y, size * 0.6), "Leaf" if i % 2 == 0 else "LeafLight", scale=(1.15, 1.0, 0.7),
                jitter=size * 0.12)
     b.blob(0.38, (0.1, 0.05, 0.42), "Leaf", scale=(1.2, 1.0, 0.75), jitter=0.04)
+    undergrowth(b, 3, 0.55, 0.18, 5, 0.35)
     return b.build()
 
 
@@ -79,6 +96,7 @@ def makeTallBush(name, seed):
     b.blob(0.42, (0.08, -0.05, 1.0), "Leaf", scale=(1.0, 1.0, 1.1), jitter=0.05)
     b.blob(0.32, (-0.05, 0.06, 1.48), "LeafLight", scale=(1.0, 1.0, 1.2), jitter=0.04)
     ring(b, 3, 0.3, 0.8, 0.26, "LeafDark", (1.0, 1.0, 1.1), zRange=0.25)
+    undergrowth(b, 3, 0.35, 0.18, 3, 0.35)
     return b.build()
 
 
@@ -96,6 +114,13 @@ def makeBerryBush(name, seed, berries):
         point = mainCenter + Vector((direction.x * mainScale[0], direction.y * mainScale[1],
                                      direction.z * mainScale[2])) * mainRadius * 1.08
         b.blob(0.05, point, "Berry")
+    undergrowth(b, 3, 0.55, 0.18, 3, 0.35)
+    # 옆 덩어리에도 열매 몇 알과 꼭지: 윗면에만 몰려 붙은 것처럼 보이지 않게
+    for _ in range(6):
+        a = b.rng.uniform(0, math.tau)
+        point = Vector((math.cos(a) * 0.52, math.sin(a) * 0.52, b.rng.uniform(0.25, 0.45)))
+        b.blob(0.045, point, "Berry")
+        b.trunk(0.008, 0.004, 0.04, "Bark", segments=3, base=point + Vector((0, 0, 0.035)))
     return b.build()
 
 

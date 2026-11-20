@@ -32,6 +32,7 @@ namespace GuardVsMannequin.Player.Mannequin
         private NoiseEmitter noiseEmitter;
         private MannequinTransformer transformer;
         private PlayerHealth health;
+        private IStealthState stealth;
         private AudioSource breathSource;
         private Vector3 lastPosition;
         private float strideProgress;
@@ -45,6 +46,7 @@ namespace GuardVsMannequin.Player.Mannequin
             noiseEmitter = GetComponent<NoiseEmitter>();
             transformer = GetComponent<MannequinTransformer>();
             health = GetComponent<PlayerHealth>();
+            stealth = GetComponent<IStealthState>();
             lastPosition = transform.position;
         }
 
@@ -69,17 +71,25 @@ namespace GuardVsMannequin.Player.Mannequin
                 movedDistance = 0f;
             smoothedSpeed = Mathf.Lerp(smoothedSpeed, movedDistance / Time.deltaTime, 1f - Mathf.Exp(-8f * Time.deltaTime));
 
-            float selfScale = IsLocalPlayer() ? ownerVolume : 1f;
+            // 은신 값은 서버가 동기화하므로 다른 플레이어 화면에서도 같은 구울 소리가 작아진다.
+            float volumeScale = (IsLocalPlayer() ? ownerVolume : 1f) * GetStealthScale();
             float loudness = Mathf.Lerp(idleBreathVolume, 1f, Mathf.Clamp01(smoothedSpeed / loudBreathSpeed));
-            SetBreathing(true, loudness * selfScale);
+            SetBreathing(true, loudness * volumeScale);
 
             strideProgress += movedDistance;
             float strideLength = smoothedSpeed >= crawlSpeed ? crawlStride : stalkStride;
             if (strideProgress >= strideLength)
             {
                 strideProgress -= strideLength;
-                noiseEmitter.PlayLocal(NoiseType.GhoulStep, selfScale);
+                noiseEmitter.PlayLocal(NoiseType.GhoulStep, volumeScale);
             }
+        }
+
+        /// <summary>은신 중에는 숨어 기다리는 맛이 나도록 몸소리를 줄인다.</summary>
+        private float GetStealthScale()
+        {
+            bool isStealthed = stealth != null && stealth.IsStealthed;
+            return GhoulRules.GetBodySoundMultiplier(isStealthed, GameTuning.GhoulStealthSoundMultiplier);
         }
 
         /// <summary>본인 귀 바로 옆에서 나는 소리는 줄여야 해서 로컬 플레이어인지 확인한다.</summary>

@@ -24,6 +24,13 @@ namespace GuardVsMannequin.Network
     }
 
     /// <summary>
+    /// 호스트가 방을 닫는다는 알림. 이것을 받은 뒤 끊기면 돌아갈 방이 없으므로 게스트가 재참가를 띄우지 않는다.
+    /// </summary>
+    public struct RoomClosingBroadcast : IBroadcast
+    {
+    }
+
+    /// <summary>
     /// 접속 거부 이유.
     /// </summary>
     public enum ConnectionRejectReason : byte

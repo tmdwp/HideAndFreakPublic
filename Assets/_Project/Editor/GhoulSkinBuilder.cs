@@ -20,13 +20,18 @@ namespace GuardVsMannequin.Editor
         private const string AttackClip = "Ghoul_Attack";
         private const string ShriekClip = "Ghoul_Shriek";
         private const string TwitchClip = "Ghoul_Twitch";
+        private const string CrouchClip = "Ghoul_Crouch";
+        private const string CrouchDownClip = "Ghoul_CrouchDown";
+        private const string CrouchUpClip = "Ghoul_CrouchUp";
+        private const string LungeClip = "Ghoul_Lunge";
 
         // 한 번만 재생하는 클립(나머지는 반복).
-        private static readonly HashSet<string> OneShotClips = new() { AttackClip, ShriekClip };
+        private static readonly HashSet<string> OneShotClips = new() { AttackClip, ShriekClip, CrouchDownClip, CrouchUpClip, LungeClip };
 
         // 공격 지연을 맞추려고 generate_ghoul.py의 FPS와 맞는 프레임을 옮겨 둔다.
         private const float ClipFps = 24f;
         private const int AttackHitFrame = 11;
+        private const int LungeHitFrame = 11;
 
         // 이동 속도(m/s) 기준.
         private const float StalkSpeed = 0.3f;
@@ -37,6 +42,12 @@ namespace GuardVsMannequin.Editor
         private const float StopDuration = 0.05f;
         private const float StartDuration = 0.12f;
         private const float GaitChangeDuration = 0.2f;
+
+        // 웅크리기·일어나기 클립 끝 자세가 다음 상태 첫 자세와 같아 짧게만 섞는다.
+        private const float CrouchEnterDuration = 0.08f;
+        private const float CrouchChainDuration = 0.05f;
+        private const float CrouchCancelDuration = 0.1f;
+        private const float CrouchChainExitTime = 0.95f;
 
         // 공격 진입은 즉시, 복귀는 클립이 거의 끝날 때
         private const float AttackEnterDuration = 0.05f;
@@ -53,18 +64,32 @@ namespace GuardVsMannequin.Editor
             return AttackEnterDuration + AttackHitFrame / ClipFps;
         }
 
+        /// <summary>피해 판정이 덮쳐 손톱이 닿는 순간과 맞도록 도약 클립의 맞는 프레임으로 지연을 정한다.</summary>
+        public static float DefaultLungeHitDelay()
+        {
+            return AttackEnterDuration + LungeHitFrame / ClipFps;
+        }
+
         /// <summary>모델을 다시 만들면 임포트 설정이 초기화될 수 있어 매번 맞춘 뒤 컨트롤러를 만든다.</summary>
         public static AnimatorController Prepare()
+        {
+            return PrepareImport() ? CreateController() : null;
+        }
+
+        /// <summary>
+        /// 컨트롤러를 다시 만들지 않고 클립 목록·눈 발광만 맞춘다. 로비 연출처럼 새 클립만 필요한 곳이 게임 애니메이터를 건드리지 않게 따로 연다.
+        /// </summary>
+        internal static bool PrepareImport()
         {
             if (AssetImporter.GetAtPath(SourcePath) is not ModelImporter importer)
             {
                 Debug.LogError($"[GhoulSkinBuilder] 원본 모델을 찾을 수 없습니다: {SourcePath} (generate_ghoul.py를 먼저 실행)");
-                return null;
+                return false;
             }
 
             ConfigureImport(importer);
             RemapEyeMaterial(importer);
-            return CreateController();
+            return true;
         }
 
         /// <summary>사람 뼈 구조가 아니라 Generic으로 임포트하고, 코드가 테이크 이름에 의존하지 않도록 클립 이름을 짧게 바꾼다.</summary>
@@ -95,11 +120,7 @@ namespace GuardVsMannequin.Editor
             if (isChanged)
                 importer.SaveAndReimport();
 
-            ModelImporterClipAnimation[] clips = importer.clipAnimations;
-            if (clips.Length == 0)
-                clips = importer.defaultClipAnimations;
-
-            bool isClipChanged = false;
+            ModelImporterClipAnimation[] clips = MergeWithFileTakes(importer, out bool isClipChanged);
             foreach (ModelImporterClipAnimation clip in clips)
             {
                 string shortName = ShortName(clip.takeName);
@@ -115,6 +136,26 @@ namespace GuardVsMannequin.Editor
 
             importer.clipAnimations = clips;
             importer.SaveAndReimport();
+        }
+
+        /// <summary>
+        /// 저장된 클립 목록은 예전 FBX 기준이라 generate_ghoul.py에 액션을 추가해도 새 테이크가 빠지므로,
+        /// FBX에 지금 있는 테이크 기준으로 목록을 다시 짜고 이미 있던 클립 설정은 그대로 살린다. 사라진 테이크는 뺀다.
+        /// </summary>
+        private static ModelImporterClipAnimation[] MergeWithFileTakes(ModelImporter importer, out bool isChanged)
+        {
+            ModelImporterClipAnimation[] savedClips = importer.clipAnimations;
+            ModelImporterClipAnimation[] fileTakes = importer.defaultClipAnimations;
+            var savedByTake = new Dictionary<string, ModelImporterClipAnimation>();
+            foreach (ModelImporterClipAnimation savedClip in savedClips)
+                savedByTake[savedClip.takeName] = savedClip;
+
+            var merged = new List<ModelImporterClipAnimation>();
+            foreach (ModelImporterClipAnimation take in fileTakes)
+                merged.Add(savedByTake.TryGetValue(take.takeName, out ModelImporterClipAnimation savedClip) ? savedClip : take);
+
+            isChanged = merged.Count != savedClips.Length || merged.Any(clip => !savedByTake.ContainsKey(clip.takeName));
+            return merged.ToArray();
         }
 
         /// <summary>아마추어 이름이 바뀌어도 클립 이름이 같도록 "Armature|" 뒷부분만 남긴다.</summary>
@@ -141,7 +182,8 @@ namespace GuardVsMannequin.Editor
         private static AnimatorController CreateController()
         {
             var clips = new Dictionary<string, AnimationClip>();
-            foreach (string clipName in new[] { IdleClip, StalkClip, CrawlClip, AttackClip, ShriekClip, TwitchClip })
+            foreach (string clipName in new[] { IdleClip, StalkClip, CrawlClip, AttackClip, ShriekClip, TwitchClip,
+                         CrouchClip, CrouchDownClip, CrouchUpClip, LungeClip })
             {
                 AnimationClip clip = FindClip(clipName);
                 if (clip == null)
@@ -157,6 +199,8 @@ namespace GuardVsMannequin.Editor
             controller.AddParameter(CharacterAnimatorParameters.Speed, AnimatorControllerParameterType.Float);
             controller.AddParameter(CharacterAnimatorParameters.Attack, AnimatorControllerParameterType.Trigger);
             controller.AddParameter(CharacterAnimatorParameters.Shriek, AnimatorControllerParameterType.Trigger);
+            controller.AddParameter(CharacterAnimatorParameters.Crouch, AnimatorControllerParameterType.Bool);
+            controller.AddParameter(CharacterAnimatorParameters.Lunge, AnimatorControllerParameterType.Trigger);
 
             AnimatorStateMachine stateMachine = controller.layers[0].stateMachine;
             AnimatorState idleState = stateMachine.AddState("Idle");
@@ -174,8 +218,12 @@ namespace GuardVsMannequin.Editor
             AddSpeedTransition(crawlState, stalkState, AnimatorConditionMode.Less, CrawlExitSpeed, GaitChangeDuration);
             AddSpeedTransition(crawlState, idleState, AnimatorConditionMode.Less, StalkSpeed, StopDuration);
 
+            AddCrouchStates(stateMachine, clips, idleState, stalkState, crawlState);
+
             AddOneShot(stateMachine, idleState, "Attack", clips[AttackClip], CharacterAnimatorParameters.Attack);
             AddOneShot(stateMachine, idleState, "Shriek", clips[ShriekClip], CharacterAnimatorParameters.Shriek);
+            // 웅크리기·일어나기 중간에 눌러도 바로 덮치도록 Any State에서 들어간다.
+            AddOneShot(stateMachine, idleState, "Lunge", clips[LungeClip], CharacterAnimatorParameters.Lunge);
 
             AddTwitchLayer(controller, clips[TwitchClip]);
             EditorUtility.SetDirty(controller);
@@ -191,6 +239,49 @@ namespace GuardVsMannequin.Editor
             transition.AddCondition(mode, threshold, CharacterAnimatorParameters.Speed);
             transition.hasExitTime = false;
             transition.duration = duration;
+        }
+
+        /// <summary>
+        /// 웅크리기 → 은신 유지 → 일어나기 흐름을 만든다. Any State로 들어가면 공격 동작을 끊으므로 이동 상태에서만 웅크리고,
+        /// 도중에 Shift를 떼거나 다시 누르면 끝까지 기다리지 않고 반대 동작으로 넘어간다.
+        /// </summary>
+        private static void AddCrouchStates(AnimatorStateMachine stateMachine, Dictionary<string, AnimationClip> clips,
+            AnimatorState idleState, params AnimatorState[] otherLocomotionStates)
+        {
+            AnimatorState crouchDownState = stateMachine.AddState("CrouchDown");
+            crouchDownState.motion = clips[CrouchDownClip];
+            AnimatorState crouchState = stateMachine.AddState("Crouch");
+            crouchState.motion = clips[CrouchClip];
+            AnimatorState crouchUpState = stateMachine.AddState("CrouchUp");
+            crouchUpState.motion = clips[CrouchUpClip];
+
+            AddCrouchCondition(idleState, crouchDownState, isCrouched: true, CrouchEnterDuration);
+            foreach (AnimatorState locomotionState in otherLocomotionStates)
+                AddCrouchCondition(locomotionState, crouchDownState, isCrouched: true, CrouchEnterDuration);
+
+            AddChain(crouchDownState, crouchState);
+            AddCrouchCondition(crouchDownState, crouchUpState, isCrouched: false, CrouchCancelDuration);
+            AddCrouchCondition(crouchState, crouchUpState, isCrouched: false, CrouchEnterDuration);
+            AddChain(crouchUpState, idleState);
+            AddCrouchCondition(crouchUpState, crouchDownState, isCrouched: true, CrouchCancelDuration);
+        }
+
+        /// <summary>Shift를 누르거나 떼는 즉시 자세가 바뀌도록 종료 시간 없이 Crouch 값만으로 넘어가게 한다.</summary>
+        private static void AddCrouchCondition(AnimatorState fromState, AnimatorState toState, bool isCrouched, float duration)
+        {
+            AnimatorStateTransition transition = fromState.AddTransition(toState);
+            transition.AddCondition(isCrouched ? AnimatorConditionMode.If : AnimatorConditionMode.IfNot, 0f, CharacterAnimatorParameters.Crouch);
+            transition.hasExitTime = false;
+            transition.duration = duration;
+        }
+
+        /// <summary>한 번 재생하는 웅크리기·일어나기 동작이 끝나면 이어지는 상태로 넘어간다.</summary>
+        private static void AddChain(AnimatorState fromState, AnimatorState toState)
+        {
+            AnimatorStateTransition transition = fromState.AddTransition(toState);
+            transition.hasExitTime = true;
+            transition.exitTime = CrouchChainExitTime;
+            transition.duration = CrouchChainDuration;
         }
 
         /// <summary>공격은 걷든 기든 바로 나가도록 Any State에서 들어가고, 연타해도 처음부터 다시 시작하지 않게 한다.</summary>

@@ -46,6 +46,11 @@ namespace GuardVsMannequin.Player.Guard
         /// <summary>면을 따라 미끄러지는 속도를 닿을 때마다 줄여 계속 굴러가지 않게 한다.</summary>
         private const float SurfaceFriction = 0.7f;
 
+        /// <summary>
+        /// 튕긴 자리를 면에 딱 붙여 두면 다음 검사가 "처음부터 겹침"으로 잡혀 면 쪽으로 되튕기므로 조금 더 띄운다(m).
+        /// </summary>
+        private const float SurfaceGap = 0.02f;
+
         /// <summary>던진 순간부터 <paramref name="fuseTime"/>까지 튕기며 날아가는 구간을 구한다.</summary>
         /// <param name="ignoreRoot">던진 가드 자신에 맞아 튕기지 않도록 무시한다.</param>
         public static GrenadeSegment[] Simulate(Vector3 start, Vector3 velocity, float fuseTime, Transform ignoreRoot)
@@ -53,11 +58,12 @@ namespace GuardVsMannequin.Player.Guard
             var segments = new List<GrenadeSegment> { new(start, velocity, 0f, false) };
             var hits = new RaycastHit[8];
             float bounciness = GameTuning.GrenadeBounciness;
+            Collider bouncedFrom = null;
 
             while (true)
             {
                 GrenadeSegment segment = segments[segments.Count - 1];
-                if (!TryFindHit(segment, fuseTime, ignoreRoot, hits, out Vector3 hitPosition, out Vector3 hitNormal, out float hitTime))
+                if (!TryFindHit(segment, fuseTime, ignoreRoot, bouncedFrom, hits, out Vector3 hitPosition, out Vector3 hitNormal, out float hitTime, out bouncedFrom))
                     break;
 
                 Vector3 arrivalVelocity = segment.velocity + Physics.gravity * (hitTime - segment.startTime);
@@ -106,8 +112,9 @@ namespace GuardVsMannequin.Player.Guard
         /// <summary>구간을 따라가며 처음 닿는 면을 찾는다.</summary>
         /// <param name="hitPosition">면 안쪽에서 다음 구간이 시작되지 않도록 닿은 면에서 반지름만큼 띄운 곳.</param>
         /// <param name="hitTime">던진 순간부터의 시간(초).</param>
-        private static bool TryFindHit(GrenadeSegment segment, float fuseTime, Transform ignoreRoot, RaycastHit[] hits,
-            out Vector3 hitPosition, out Vector3 hitNormal, out float hitTime)
+        /// <param name="bouncedFrom">방금 튕긴 면. 거기서 떠나는 중에 닿아 있는 것은 새 충돌이 아니다.</param>
+        private static bool TryFindHit(GrenadeSegment segment, float fuseTime, Transform ignoreRoot, Collider bouncedFrom, RaycastHit[] hits,
+            out Vector3 hitPosition, out Vector3 hitNormal, out float hitTime, out Collider hitCollider)
         {
             Vector3 previousPosition = segment.start;
             for (float localTime = StepTime; segment.startTime + localTime <= fuseTime + StepTime; localTime += StepTime)
@@ -119,13 +126,14 @@ namespace GuardVsMannequin.Player.Guard
                 {
                     int count = Physics.SphereCastNonAlloc(previousPosition, Radius, delta / distance, hits, distance,
                         Physics.DefaultRaycastLayers, QueryTriggerInteraction.Ignore);
-                    if (TryNearestHit(hits, count, ignoreRoot, out RaycastHit hit))
+                    if (TryNearestHit(hits, count, ignoreRoot, bouncedFrom, out RaycastHit hit))
                     {
                         // 시작부터 겹쳐 있으면 point가 0이라 직전 위치에서 날아온 반대쪽으로 튕긴다.
-                        bool startedInside = hit.distance <= 0f && hit.point == Vector3.zero;
+                        bool startedInside = IsStartOverlap(hit);
                         hitNormal = startedInside ? -delta / distance : hit.normal;
-                        hitPosition = startedInside ? previousPosition : hit.point + hit.normal * Radius;
+                        hitPosition = startedInside ? previousPosition : hit.point + hit.normal * (Radius + SurfaceGap);
                         hitTime = segment.startTime + localTime - StepTime + StepTime * (hit.distance / distance);
+                        hitCollider = hit.collider;
                         return true;
                     }
                 }
@@ -135,19 +143,29 @@ namespace GuardVsMannequin.Player.Guard
             hitPosition = default;
             hitNormal = default;
             hitTime = 0f;
+            hitCollider = null;
             return false;
+        }
+
+        /// <summary>SphereCast는 시작부터 겹친 대상을 거리 0, 위치 0으로 돌려준다.</summary>
+        private static bool IsStartOverlap(RaycastHit hit)
+        {
+            return hit.distance <= 0f && hit.point == Vector3.zero;
         }
 
         /// <summary>
         /// SphereCastNonAlloc 결과는 거리순이 아니어서 무시할 대상을 빼고 가장 가까운 것을 직접 고른다.
+        /// 방금 튕긴 면과 처음부터 닿아 있는 것은 빼야 그 면 쪽으로 되튕기며 제자리에 멈추지 않는다.
         /// </summary>
-        private static bool TryNearestHit(RaycastHit[] hits, int count, Transform ignoreRoot, out RaycastHit nearest)
+        private static bool TryNearestHit(RaycastHit[] hits, int count, Transform ignoreRoot, Collider bouncedFrom, out RaycastHit nearest)
         {
             nearest = default;
             bool found = false;
             for (int i = 0; i < count; i++)
             {
                 if (ignoreRoot != null && hits[i].transform.IsChildOf(ignoreRoot))
+                    continue;
+                if (bouncedFrom != null && hits[i].collider == bouncedFrom && IsStartOverlap(hits[i]))
                     continue;
                 if (!found || hits[i].distance < nearest.distance)
                 {

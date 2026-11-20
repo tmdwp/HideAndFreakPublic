@@ -1,6 +1,7 @@
 using System.Text;
 using GuardVsMannequin.Core;
 using GuardVsMannequin.Localization;
+using GuardVsMannequin.Settings;
 using UnityEngine;
 using UnityEngine.InputSystem;
 using UnityEngine.UI;
@@ -57,7 +58,7 @@ namespace GuardVsMannequin.UI
         public void Refresh(GameState state)
         {
             bool isInMatch = state is GameState.Preparation or GameState.Playing or GameState.Hunting;
-            bool isVisible = isInMatch && context.LocalPlayer.Player != null;
+            bool isVisible = isInMatch && context.LocalPlayer.Player != null && !OptionsStore.Current.hideControlsHint;
             controlsPanel.SetActive(isVisible);
             if (!isVisible)
                 return;
@@ -88,7 +89,7 @@ namespace GuardVsMannequin.UI
             AppendLine("Secondary", HudText.GetRoleText(role, HudText.SecondaryPart, isHunting));
             if (isReloadShown)
                 AppendLine("Reload", Loc.Get("hud.controls.reload"));
-            AppendLine("Sprint", Loc.Get("hud.controls.sprint"));
+            AppendLine("Sprint", HudText.GetRoleText(role, HudText.SprintPart, isHunting));
             AppendLine("Jump", Loc.Get("hud.controls.jump"));
             return builder.ToString();
         }

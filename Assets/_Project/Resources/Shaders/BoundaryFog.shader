@@ -10,6 +10,8 @@ Shader "GuardVsMannequin/BoundaryFog"
         _NoiseStrength ("Noise Strength", Range(0, 1)) = 0.4
         _ScrollSpeed ("Scroll Speed", Float) = 0.25
         _NearFadeDistance ("Near Fade Distance", Float) = 2
+        _FarFadeStart ("Far Fade Start", Float) = 10
+        _FarFadeEnd ("Far Fade End", Float) = 30
         _SoftDistance ("Soft Distance", Float) = 3
         _TopFade ("Top Fade", Range(0.01, 1)) = 0.3
     }
@@ -40,6 +42,8 @@ Shader "GuardVsMannequin/BoundaryFog"
                 half _NoiseStrength;
                 float _ScrollSpeed;
                 float _NearFadeDistance;
+                float _FarFadeStart;
+                float _FarFadeEnd;
                 float _SoftDistance;
                 half _TopFade;
             CBUFFER_END
@@ -103,6 +107,9 @@ Shader "GuardVsMannequin/BoundaryFog"
                 // 벽에 붙었을 때 눈앞의 면이 칼같이 잘려 보이지 않도록 가까울수록 옅게 한다.
                 float cameraDistance = distance(GetCameraPositionWS(), input.positionWS);
                 alpha *= smoothstep(0.0, max(_NearFadeDistance, 0.01), cameraDistance);
+
+                // 멀리서 맵 끝이 흰 벽처럼 드러나지 않도록, 경계에 다가갈 때만 안개가 보이게 한다.
+                alpha *= 1.0 - smoothstep(_FarFadeStart, max(_FarFadeEnd, _FarFadeStart + 0.01), cameraDistance);
 
                 // 면 위쪽 끝이 하늘에 선으로 보이지 않도록 위로 갈수록 사라지게 한다.
                 alpha *= 1.0 - smoothstep(1.0 - _TopFade, 1.0, input.uv.y);

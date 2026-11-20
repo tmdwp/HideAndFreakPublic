@@ -44,6 +44,7 @@ GameObject:
   - component: {fileID: 2881373125637323731}
   - component: {fileID: 3698923241498591086}
   - component: {fileID: 3519428585864654902}
+  - component: {fileID: 8125519034671249157}
   - component: {fileID: 7713920465182736402}
   - component: {fileID: 6158412093847502231}
   - component: {fileID: 6158412093847502232}
@@ -778,6 +779,22 @@ MonoBehaviour:
   _componentIndexCache: 255
   _addedNetworkObject: {fileID: 5274660207253486401}
   _networkObjectCache: {fileID: 0}
+--- !u!114 &8125519034671249157
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 569088088292649313}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 1ddd6f1c51e946f6925fe21597a5f580, type: 3}
+  m_Name:
+  m_EditorClassIdentifier: GuardVsMannequin.Runtime::GuardVsMannequin.Player.Mannequin.GhoulStealth
+  _componentIndexCache: 255
+  _addedNetworkObject: {fileID: 5274660207253486401}
+  _networkObjectCache: {fileID: 0}
+  fallbackCrouchHeight: -0.45
 --- !u!1 &2691206167928112056
 GameObject:
   m_ObjectHideFlags: 0

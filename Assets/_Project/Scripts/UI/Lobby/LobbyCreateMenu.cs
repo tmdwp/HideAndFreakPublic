@@ -38,6 +38,9 @@ namespace GuardVsMannequin.UI
             if (hostTestButton != null)
                 hostTestButton.onClick.AddListener(() => SessionServices.Session?.HostTestRoom());
 
+            // 입력한 뒤 마우스로 버튼을 찾지 않아도 되도록 Enter로 바로 방을 만든다.
+            LobbyInputSubmit.Connect(hostSteamButton, hostPasswordInput, roomNameInput);
+
             hostPasswordInput.contentType = InputField.ContentType.Password;
             if (roomNameInput != null)
                 roomNameInput.characterLimit = SteamRoomOptions.MaxNameLength;

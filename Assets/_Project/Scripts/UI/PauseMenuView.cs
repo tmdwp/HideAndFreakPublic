@@ -34,7 +34,7 @@ namespace GuardVsMannequin.UI
 
             resumeButton.onClick.AddListener(CloseMenu);
             settingsButton.onClick.AddListener(() => settingsPanel.Open());
-            leaveButton.onClick.AddListener(RoomClient.LeaveRoom);
+            leaveButton.onClick.AddListener(RoomClient.RequestLeave);
 
             menuPanel.SetActive(false);
             settingsPanel.gameObject.SetActive(false);
@@ -70,7 +70,7 @@ namespace GuardVsMannequin.UI
         /// <summary>키 설정 중 ESC는 취소라 무시하고, 설정 화면이 열려 있으면 한 단계만 닫는다.</summary>
         private void OnMenuPressed(InputAction.CallbackContext context)
         {
-            if (RebindRowView.IsAnyRebinding)
+            if (RebindRowView.IsAnyRebinding || ConfirmDialog.ConsumeEscape())
                 return;
 
             if (settingsPanel.IsOpen)

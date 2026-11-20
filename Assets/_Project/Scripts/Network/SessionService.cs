@@ -37,6 +37,18 @@ namespace GuardVsMannequin.Network
         private string rejectNoticeKey;
         private string rejectNoticeDetail;
 
+        // 호스트가 방을 닫는다는 알림이 게스트에게 도착할 시간(초). 바로 끊으면 알림이 전송되지 못하고 사라진다.
+        private const float RoomClosingNoticeSeconds = 0.3f;
+
+        // 게스트: 호스트가 방을 닫는다고 알렸는지. 이 뒤의 끊김은 재참가 대상이 아니다.
+        private bool isRoomClosedByHost;
+
+        // 호스트: 닫는다는 알림을 이미 보냈는지. 종료 요청을 한 번 미룬 뒤 다시 받으면 그대로 종료한다.
+        private bool isClosingNoticeSent;
+
+        // 게스트: 지금 접속 시도가 자동 재참가인지. 자동 시도마저 실패하면 호스트가 사라진 것으로 본다.
+        private bool isAutoRejoinAttempt;
+
         // 언어를 바꾸면 바로 반영되도록 안내 문구는 key와 값으로 보관한다.
         private string noticeKey = string.Empty;
         private string noticeDetail = string.Empty;
@@ -95,6 +107,8 @@ namespace GuardVsMannequin.Network
 
             connector.NetworkManager.ClientManager.OnClientConnectionState += OnClientConnectionState;
             connector.NetworkManager.ClientManager.RegisterBroadcast<ConnectionRejectedBroadcast>(OnConnectionRejected);
+            connector.NetworkManager.ClientManager.RegisterBroadcast<RoomClosingBroadcast>(OnRoomClosing);
+            Application.wantsToQuit += OnWantsToQuit;
             SetupAuthenticator();
             ModSceneProcessor.Install(connector.NetworkManager);
         }
@@ -122,11 +136,56 @@ namespace GuardVsMannequin.Network
             steamLobby.JoinedLobby -= OnJoinedLobby;
             steamLobby.JoinRequested -= OnJoinRequested;
             steamLobby.Failed -= OnLobbyFailed;
+            Application.wantsToQuit -= OnWantsToQuit;
             if (connector != null && connector.NetworkManager != null)
             {
                 connector.NetworkManager.ClientManager.OnClientConnectionState -= OnClientConnectionState;
                 connector.NetworkManager.ClientManager.UnregisterBroadcast<ConnectionRejectedBroadcast>(OnConnectionRejected);
+                connector.NetworkManager.ClientManager.UnregisterBroadcast<RoomClosingBroadcast>(OnRoomClosing);
             }
+        }
+
+        /// <summary>
+        /// 이 알림 뒤에 끊기면 돌아갈 방이 없으므로 기억해 두고 재참가를 만들지 않는다.
+        /// </summary>
+        private void OnRoomClosing(RoomClosingBroadcast message, Channel channel)
+        {
+            if (!connector.IsServerRunning)
+                isRoomClosedByHost = true;
+        }
+
+        /// <summary>
+        /// 호스트가 창을 닫으면 게스트가 끊긴 이유를 몰라 재참가를 기다리므로, 종료를 잠깐 미루고 방을 닫는다고 먼저 알린다.
+        /// </summary>
+        /// <returns>지금 바로 종료해도 되면 true.</returns>
+        private bool OnWantsToQuit()
+        {
+            if (isClosingNoticeSent || !TrySendRoomClosing())
+                return true;
+
+            StartCoroutine(QuitAfterClosingNotice());
+            return false;
+        }
+
+        /// <summary>
+        /// 알림이 전송될 시간을 준 뒤 원래 하려던 종료를 마저 한다.
+        /// </summary>
+        private System.Collections.IEnumerator QuitAfterClosingNotice()
+        {
+            yield return new WaitForSecondsRealtime(RoomClosingNoticeSeconds);
+            Application.Quit();
+        }
+
+        /// <summary>게스트가 있는 방의 호스트일 때만 방을 닫는다고 알린다.</summary>
+        /// <returns>알림을 보냈으면 true.</returns>
+        private bool TrySendRoomClosing()
+        {
+            if (!connector.IsServerRunning || connector.NetworkManager.ServerManager.Clients.Count <= 1)
+                return false;
+
+            connector.NetworkManager.ServerManager.Broadcast(new RoomClosingBroadcast(), false);
+            isClosingNoticeSent = true;
+            return true;
         }
 
         /// <summary>
@@ -298,6 +357,7 @@ namespace GuardVsMannequin.Network
             {
                 rejoinTarget.autoAttemptTime = 0f;
                 Rejoin();
+                isAutoRejoinAttempt = IsBusy;
             }
         }
 
@@ -362,9 +422,20 @@ namespace GuardVsMannequin.Network
             Leave();
         }
 
-        /// <summary>다음 방을 깨끗하게 시작하도록 연결·로비·암호·재접속 대상을 모두 비운다.</summary>
+        /// <summary>
+        /// 다음 방을 깨끗하게 시작하도록 연결·로비·암호·재접속 대상을 모두 비운다.
+        /// 게스트가 있는 호스트는 재참가를 기다리지 않게 방을 닫는다고 먼저 알리고 잠시 뒤 닫는다.
+        /// </summary>
         public void Leave()
         {
+            if (!isClosingNoticeSent && TrySendRoomClosing())
+            {
+                isLeaving = true;
+                StartCoroutine(LeaveAfter(RoomClosingNoticeSeconds));
+                return;
+            }
+
+            isClosingNoticeSent = false;
             isLeaving = true;
             rejoinTarget = null;
             wasInMatch = false;
@@ -460,6 +531,8 @@ namespace GuardVsMannequin.Network
             {
                 IsBusy = false;
                 SetNotice("notice.hostConnectFailed");
+                if (AbandonFailedAutoRejoin())
+                    return;
                 if (rejoinTarget != null)
                     return;
                 ModService.Instance.ClearSessionMods();
@@ -485,9 +558,25 @@ namespace GuardVsMannequin.Network
         private void OnLobbyFailed(string reasonKey, string detail)
         {
             IsBusy = false;
+            if (AbandonFailedAutoRejoin())
+                return;
             if (rejoinTarget == null)
                 ModService.Instance.ClearSessionMods();
             SetNotice(reasonKey, detail);
+        }
+
+        /// <summary>
+        /// 끊긴 직후의 자동 재참가조차 호스트에 닿지 않으면 호스트가 게임을 끈 것으로 보고, 다시 참가 버튼을 남기지 않는다.
+        /// </summary>
+        /// <returns>자동 재참가 실패로 정리했으면 true.</returns>
+        private bool AbandonFailedAutoRejoin()
+        {
+            if (!isAutoRejoinAttempt)
+                return false;
+            isAutoRejoinAttempt = false;
+            DiscardRejoin();
+            SetNotice("notice.hostClosedRoom");
+            return true;
         }
 
         /// <summary>끊긴 이유에 따라 다른 안내를 보이고, 다시 참가할 수 있는 동안은 같은 맵을 위해 구성을 남긴다.</summary>
@@ -506,6 +595,17 @@ namespace GuardVsMannequin.Network
             bool wasConnecting = IsBusy;
             IsBusy = false;
             bool isRejected = !string.IsNullOrEmpty(rejectNoticeKey);
+            bool isRoomGone = isRoomClosedByHost || (wasConnecting && isAutoRejoinAttempt);
+            isRoomClosedByHost = false;
+            isAutoRejoinAttempt = false;
+            // 호스트가 방을 닫았거나 자동 재참가조차 닿지 않으면 돌아갈 방이 없으므로 재참가를 띄우지 않는다.
+            if (isRoomGone && !isRejected)
+            {
+                rejoinTarget = null;
+                rejectNoticeKey = "notice.hostClosedRoom";
+                rejectNoticeDetail = string.Empty;
+                isRejected = true;
+            }
             UpdateRejoinTarget(isRejected);
             wasInMatch = false;
             if (rejoinTarget == null)

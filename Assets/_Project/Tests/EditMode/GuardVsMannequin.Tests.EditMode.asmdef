@@ -5,6 +5,7 @@
         "GuardVsMannequin.Runtime",
         "GuardVsMannequin.Content",
         "GuardVsMannequin.Content.Editor",
+        "Unity.InputSystem",
         "UnityEngine.TestRunner",
         "UnityEditor.TestRunner"
     ],

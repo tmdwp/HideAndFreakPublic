@@ -52,12 +52,12 @@ namespace GuardVsMannequin.Core
     }
 
     /// <summary>
-    /// 역할 하나의 정의: 표시 이름·안내 문구 key, 소속 진영, 단계별 이동 속도 배율, HUD 목표 표시, 설정에서 능력치를 고르는 방법.
+    /// 역할 하나의 정의: 표시 이름·안내 문구 key, 소속 진영, 사냥 시간 이동 속도, HUD 목표 표시, 설정에서 능력치를 고르는 방법.
     /// </summary>
     public sealed class RoleDefinition
     {
         private readonly Func<GameSettings, RoleStats> selectStats;
-        private readonly Func<float> huntSpeedMultiplier;
+        private readonly Func<GameSettings, float> selectHuntMoveSpeed;
         private readonly ObjectiveCounter playingCounter;
         private readonly ObjectiveCounter huntingCounter;
 
@@ -74,12 +74,9 @@ namespace GuardVsMannequin.Core
 
         public SpawnPlacement Placement { get; }
 
-        /// <summary>조정 파일 값을 다시 읽어도 반영되도록 캐시하지 않고 매번 읽는다.</summary>
-        public float HuntSpeedMultiplier => huntSpeedMultiplier();
-
         /// <summary>역할마다 다른 값을 한 객체에 모아, 다른 코드가 역할로 분기하지 않게 한다.</summary>
-        /// <param name="huntSpeedMultiplier">조정 파일 값을 매번 읽도록 값 대신 받는 함수.</param>
-        public RoleDefinition(PlayerRole role, string nameKey, string guideKeyPrefix, MatchWinner side, Func<float> huntSpeedMultiplier,
+        /// <param name="selectHuntMoveSpeed">사냥 시간 이동 속도를 정하는 함수. 조정 파일 값을 매번 읽도록 값 대신 받고, null이면 평소 속도를 쓴다.</param>
+        public RoleDefinition(PlayerRole role, string nameKey, string guideKeyPrefix, MatchWinner side, Func<GameSettings, float> selectHuntMoveSpeed,
             ObjectiveCounter playingCounter, ObjectiveCounter huntingCounter, SpawnPlacement placement, Func<GameSettings, RoleStats> selectStats)
         {
             Placement = placement;
@@ -87,7 +84,7 @@ namespace GuardVsMannequin.Core
             NameKey = nameKey;
             GuideKeyPrefix = guideKeyPrefix;
             Side = side;
-            this.huntSpeedMultiplier = huntSpeedMultiplier;
+            this.selectHuntMoveSpeed = selectHuntMoveSpeed;
             this.playingCounter = playingCounter;
             this.huntingCounter = huntingCounter;
             this.selectStats = selectStats;
@@ -102,12 +99,13 @@ namespace GuardVsMannequin.Core
         }
 
         /// <summary>
-        /// 이동 코드와 서버 검증이 같은 속도를 쓰도록 사냥 시간 배율 적용을 여기서 한다.
+        /// 이동 코드와 서버 검증이 같은 속도를 쓰도록 사냥 시간 속도 선택을 여기서 한다.
         /// </summary>
         public float GetMoveSpeed(GameSettings settings, GameState state)
         {
-            float multiplier = state == GameState.Hunting ? HuntSpeedMultiplier : 1f;
-            return GetStats(settings).MoveSpeed * multiplier;
+            if (state == GameState.Hunting && selectHuntMoveSpeed != null)
+                return selectHuntMoveSpeed(settings);
+            return GetStats(settings).MoveSpeed;
         }
 
         /// <summary>
@@ -131,18 +129,19 @@ namespace GuardVsMannequin.Core
     public static class RoleDefinitions
     {
         private static readonly RoleDefinition None =
-            new(PlayerRole.None, "role.none", string.Empty, MatchWinner.None, () => 1f, ObjectiveCounter.None, ObjectiveCounter.None,
+            new(PlayerRole.None, "role.none", string.Empty, MatchWinner.None, null, ObjectiveCounter.None, ObjectiveCounter.None,
                 SpawnPlacement.FixedPoints, null);
 
         private static readonly Dictionary<PlayerRole, RoleDefinition> definitions = new()
         {
             // 가드: 탐색은 "포획", 사냥은 "생존".
-            [PlayerRole.Guard] = new RoleDefinition(PlayerRole.Guard, "role.guard", "hud.guide.guard", MatchWinner.Guard, () => 1f,
+            [PlayerRole.Guard] = new RoleDefinition(PlayerRole.Guard, "role.guard", "hud.guide.guard", MatchWinner.Guard, null,
                 ObjectiveCounter.None, ObjectiveCounter.None, SpawnPlacement.RandomInMap,
                 settings => new RoleStats(settings.guardMaxHealth, settings.guardMoveSpeed, settings.gunDamage)),
             // 마네킹: 탐색은 "전원 장치 파괴", 사냥은 "사냥".
             [PlayerRole.Mannequin] = new RoleDefinition(PlayerRole.Mannequin, "role.mannequin", "hud.guide.mannequin", MatchWinner.Mannequin,
-                () => GameTuning.MannequinHuntSpeedMultiplier,
+                // 구울 속도는 룸 설정과 따로 조정 파일에서 정한다.
+                _ => GameTuning.GhoulMoveSpeed,
                 ObjectiveCounter.RemainingGenerators, ObjectiveCounter.RemainingGuards, SpawnPlacement.FixedPoints,
                 settings => new RoleStats(settings.mannequinMaxHealth, settings.mannequinMoveSpeed, settings.mannequinAttackDamage)),
         };

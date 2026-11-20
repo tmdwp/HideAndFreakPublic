@@ -411,6 +411,9 @@ namespace GuardVsMannequin.Editor
             SetField(huntVision, "visionLight", CreateHuntVisionLight(followTarget));
             root.AddComponent<MannequinAttackTool>();
 
+            // 사냥 시간 Shift 은신(쭈그려 멈춤·소리 감소)과 도약 공격 판정.
+            root.AddComponent<GhoulStealth>();
+
             // 시선 동기화와 관전 시점.
             AddViewSync(root, null, followTarget, isThirdPerson: true);
 
@@ -549,7 +552,8 @@ namespace GuardVsMannequin.Editor
             if (!root.TryGetComponent(out GrenadeView view))
                 view = root.AddComponent<GrenadeView>();
             SetField(view, "grenadeMaterial", GrenadeAssets.GetGrenadeMaterial());
-            SetField(view, "blastMaterial", GrenadeAssets.GetBlastMaterial());
+            SetField(view, "grenadeModel", GrenadeAssets.GetSmokeGrenadeModel());
+            SetField(view, "smokeMaterial", GrenadeAssets.GetSmokeMaterial());
 
             if (!root.TryGetComponent(out GrenadeTool tool))
                 tool = root.AddComponent<GrenadeTool>();
@@ -825,6 +829,7 @@ namespace GuardVsMannequin.Editor
             SetField(generatorSpawner, "generatorPrefab", prefabs.generator);
 
             SetField(matchResult, "stateMachine", stateMachine);
+            SetField(matchResult, "objectiveTracker", objectiveTracker);
 
             SetField(matchRules, "playerRegistry", playerRegistry);
             SetField(matchRules, "objectiveTracker", objectiveTracker);

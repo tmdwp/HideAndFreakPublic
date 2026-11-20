@@ -42,6 +42,18 @@ namespace GuardVsMannequin.Settings
         /// <summary><see cref="StatsDisplaySettings.Modes"/>의 번호.</summary>
         public int statsDisplay;
 
+        /// <summary><see cref="FieldOfViewSettings.Modes"/>의 번호.</summary>
+        public int fieldOfView;
+
+        /// <summary><see cref="CrosshairSettings.Modes"/>의 번호.</summary>
+        public int crosshairColor;
+
+        /// <summary>마우스를 위로 밀면 아래를 보게 한다.</summary>
+        public bool invertLookY;
+
+        /// <summary>익숙해진 뒤 화면을 넓게 쓰도록 HUD 왼쪽 조작 안내를 숨긴다. 예전 설정이 숨김으로 읽히지 않게 "숨김"으로 저장한다.</summary>
+        public bool hideControlsHint;
+
         /// <summary>
         /// 해상도를 다시 적용하면 화면이 깜빡이므로, 화면 설정이 실제로 바뀌었을 때만 적용하려고 비교한다.
         /// </summary>

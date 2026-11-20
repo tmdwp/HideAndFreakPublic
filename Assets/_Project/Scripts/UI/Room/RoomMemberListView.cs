@@ -37,9 +37,21 @@ namespace GuardVsMannequin.UI
                 string displayName = room.GetDisplayName(member.Key);
                 string stateLabel = Loc.Get(member.Value.isHost ? "room.member.host" : (member.Value.isReady ? "room.member.ready" : "room.member.notReady"));
                 string modWarning = member.Value.modState == MemberModState.Missing ? "  " + Loc.Get("room.member.modsMissing") : string.Empty;
-                builder.AppendLine($"{displayName}  —  {stateLabel}{modWarning}");
+                string teamLabel = GetTeamLabel(member.Value.teamPreference);
+                builder.AppendLine($"{displayName}  —  {stateLabel}  ·  {teamLabel}{modWarning}");
             }
             memberListText.text = builder.ToString();
+        }
+
+        /// <summary>누가 어느 팀을 원하는지 보고 서로 조율할 수 있도록 희망 팀을 짧게 붙인다.</summary>
+        private static string GetTeamLabel(TeamPreference preference)
+        {
+            return preference switch
+            {
+                TeamPreference.Guard => Loc.Format("room.member.wants", HudText.GetRoleName(PlayerRole.Guard)),
+                TeamPreference.Mannequin => Loc.Format("room.member.wants", HudText.GetRoleName(PlayerRole.Mannequin)),
+                _ => Loc.Get("room.member.wantsRandom")
+            };
         }
     }
 }

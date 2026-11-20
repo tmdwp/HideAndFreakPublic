@@ -21,6 +21,7 @@ namespace GuardVsMannequin.Objectives
         private readonly Dictionary<int, IInteractor> participants = new();
         // 반복 중에 사전을 고칠 수 없어서 뺄 키를 모아 두는 버퍼
         private readonly List<int> removeBuffer = new();
+        private readonly List<int> destroyerClientIds = new();
         private Collider interactCollider;
         private NoiseEmitter noiseEmitter;
 
@@ -35,6 +36,9 @@ namespace GuardVsMannequin.Objectives
 
         /// <summary>서버 전용.</summary>
         public int ParticipantCount => participants.Count;
+
+        /// <summary>판 기록에 누가 부쉈는지 남기도록 파괴 순간 붙어 있던 사람들. 서버 전용.</summary>
+        public IReadOnlyList<int> DestroyerClientIds => destroyerClientIds;
 
         public float InteractRange => GameTuning.InteractRange;
 
@@ -146,6 +150,8 @@ namespace GuardVsMannequin.Objectives
         {
             progress.Value = 1f;
             isDestroyed.Value = true;
+            destroyerClientIds.Clear();
+            destroyerClientIds.AddRange(participants.Keys);
             participants.Clear();
             if (noiseEmitter != null)
                 noiseEmitter.Emit(NoiseType.GeneratorDestroyed);

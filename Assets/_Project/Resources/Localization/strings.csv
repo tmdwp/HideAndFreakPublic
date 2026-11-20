@@ -104,6 +104,7 @@ notice.rejected.banned,이 방에는 다시 들어갈 수 없습니다.,You can'
 notice.rejoinAvailable,연결이 끊겼습니다. 다시 참가를 시도합니다.,Connection lost. Trying to rejoin.
 notice.rejoinFailed,다시 참가하지 못했습니다. 아래 버튼으로 다시 시도할 수 있습니다.,Couldn't rejoin. You can try again with the button below.
 notice.rejoinExpired,돌아갈 수 있는 시간이 지났습니다.,The time to rejoin has run out.
+notice.hostClosedRoom,호스트가 나가거나 게임을 종료해 방이 닫혔습니다.,The host left or quit the game and the room has closed.
 notice.rejected.passwordLocked,암호를 여러 번 틀렸습니다. 1분 뒤 다시 시도하세요.,Too many wrong passwords. Try again in a minute.
 notice.modRejected,이 맵에 게임에서 허용하지 않는 구성 요소가 있어 방을 나왔습니다.,"This map contains components the game doesn't allow, so you left the room."
 notice.modLoadFailed,맵을 불러오지 못해 방을 나왔습니다. 모드 파일을 다시 설치해 보세요.,"Couldn't load the map, so you left the room. Try reinstalling the mod files."
@@ -130,6 +131,15 @@ room.players.confirmNo,취소,Cancel
 room.visibility.public,공개방,Public
 room.visibility.friends,친구 전용,Friends only
 room.member.modsMissing,[모드 없음],[Missing mods]
+room.member.wants,{0} 희망,Wants {0}
+room.member.wantsRandom,무작위,Any team
+room.team.title,시작 팀 선택,Starting Team
+room.team.guard,가드,Guard
+room.team.mannequin,마네킹,Mannequin
+room.team.random,무작위,Random
+room.team.slots,이번 판 가드 자리 {0}명 / 참가자 {1}명,Guard slots {0} / {1} players
+room.team.counts,"가드 희망 {0} · 마네킹 희망 {1} · 무작위 {2}","Want guard {0} · Want mannequin {1} · Any {2}"
+room.team.hint,"가드 자리는 가드 희망 → 무작위 → 마네킹 희망 순으로 채웁니다. 희망자가 자리보다 많으면 그중에서 무작위로 정합니다.","Guard slots go to guard volunteers first, then 'Any', then mannequin volunteers. If too many want the same team, it's decided at random."
 room.code,방 코드: {0},Room code: {0}
 room.copyCode,코드 복사,Copy Code
 room.invite,친구 초대,Invite Friends
@@ -139,6 +149,9 @@ room.start,게임 시작,Start Game
 room.ready,준비,Ready
 room.unready,준비 해제,Cancel Ready
 room.leave,나가기,Leave
+room.settingsWindow.on,게임 설정  ON,Game Settings  ON
+room.settingsWindow.off,게임 설정  OFF,Game Settings  OFF
+room.map.title,맵 설정,Map
 room.status.loading,방 정보를 불러오는 중...,Loading room...
 room.status.allReady,모든 준비가 끝났습니다.,Everyone is ready.
 room.status.waitingHost,호스트가 게임을 시작하기를 기다리는 중...,Waiting for the host to start...
@@ -179,7 +192,7 @@ setting.GunDamage,가드 총 피해량,Guard Gun Damage
 setting.MannequinAttackDamage,마네킹 공격 피해량,Mannequin Attack Damage
 setting.MannequinAttackRange,마네킹 공격 범위,Mannequin Attack Range
 setting.GuardMoveSpeed,가드 이동 속도,Guard Move Speed
-setting.MannequinMoveSpeed,마네킹 이동 속도 (사냥 시간 배율 별도),Mannequin Move Speed (Hunt multiplier applies)
+setting.MannequinMoveSpeed,마네킹 이동 속도 (사냥 시간 구울 속도는 별도),Mannequin Move Speed (Hunt ghoul speed is separate)
 
 # 단위 ({0} = 값)
 unit.seconds,{0}초,{0}s
@@ -315,19 +328,23 @@ hud.stats.ping,핑 {0}ms,Ping {0}ms
 hud.stats.pingHost,핑 - (호스트),Ping - (host)
 hud.spectatingDead,사망했습니다 · 관전 중,You died · Spectating
 hud.spectate.none,관전할 생존자가 없습니다.,No survivors to spectate.
-hud.spectate.target,{0} ({1})   ← / → : 관전 대상 전환,{0} ({1})   ← / → : Switch target
+hud.spectate.target,{0} ({1})   {2} / {3} : 관전 대상 전환,{0} ({1})   {2} / {3} : Switch target
 hud.guide.guard.objective.playing,포획,Capture
 hud.guide.guard.objective.hunting,생존,Survive
 hud.guide.guard.primary.playing,사격,Fire
 hud.guide.guard.primary.hunting,사격,Fire
 hud.guide.guard.secondary.playing,수류탄,Grenade
 hud.guide.guard.secondary.hunting,수류탄,Grenade
+hud.guide.guard.sprint.playing,달리기,Sprint
+hud.guide.guard.sprint.hunting,달리기,Sprint
 hud.guide.mannequin.objective.playing,전원 장치 파괴,Destroy Power Units
 hud.guide.mannequin.objective.hunting,사냥,Hunt
 hud.guide.mannequin.primary.playing,파괴 (누르고 있기),Destroy (Hold)
-hud.guide.mannequin.primary.hunting,공격,Attack
+hud.guide.mannequin.primary.hunting,공격 (은신 중: 도약 공격),Attack (While stalking: Lunge)
 hud.guide.mannequin.secondary.playing,변신 / 해제,Disguise / Undo
 hud.guide.mannequin.secondary.hunting,변신 / 해제,Disguise / Undo
+hud.guide.mannequin.sprint.playing,달리기,Sprint
+hud.guide.mannequin.sprint.hunting,은신 (누르고 있기),Stalk (Hold)
 
 # 역할과 도구
 role.guard,가드,Guard
@@ -353,3 +370,44 @@ result.survived,생존,Survived
 result.eliminated,탈락,Eliminated
 result.countdown,{0}초 후 자동으로 룸으로 돌아갑니다.,Returning to the room in {0}s.
 result.returnToRoom,룸으로 이동,Return to Room
+result.stat.eliminations,잡은 수 {0},Eliminations {0}
+result.stat.objectives,부순 장치 {0},Units destroyed {0}
+result.stat.aliveTime,버틴 시간 {0},Time alive {0}
+
+# 확인 창
+confirm.cancel,취소,Cancel
+confirm.leave.title,방을 나갈까요?,Leave the room?
+confirm.leave.host,방장이 나가면 방이 닫히고 다른 참가자도 모두 나가게 됩니다.,"If the host leaves, the room closes and everyone else leaves too."
+confirm.leave.inGame,"지금 나가면 이번 판에서 탈락하고, 판이 끝날 때까지 다시 들어올 수 없습니다.","If you leave now, you'll be eliminated and can't rejoin until this match ends."
+confirm.leave.confirm,나가기,Leave
+confirm.resetAll.title,모든 설정을 기본값으로 되돌릴까요?,Reset all settings?
+confirm.resetAll.message,"마우스 감도, 키 설정, 음량 등이 처음 값으로 돌아갑니다. 되돌릴 수 없습니다.","Mouse sensitivity, key bindings, volume and more return to their defaults. This can't be undone."
+confirm.resetAll.confirm,기본값으로,Reset
+
+# 단계 안내 · 탈락 알림
+hud.guide.guard.announce.playing,변신한 마네킹을 찾아 쏘세요,Find and shoot the disguised mannequins
+hud.guide.guard.announce.hunting,마네킹이 구울로 깨어났습니다. 살아남으세요!,The mannequins have become ghouls. Survive!
+hud.guide.mannequin.announce.playing,사물로 변신해 숨고 전원 장치를 파괴하세요,Disguise as objects and destroy the power units
+hud.guide.mannequin.announce.hunting,구울이 되었습니다. 가드를 사냥하세요!,You're a ghoul now. Hunt the guards!
+hud.feed.eliminated,{0} 1명 탈락,A {0} was eliminated
+
+# 공개방 목록 칸
+lobby.browse.tag.full,[가득 참],[Full]
+lobby.browse.column.name,방 이름,Room
+lobby.browse.column.map,맵,Map
+lobby.browse.column.players,인원,Players
+lobby.browse.column.ping,핑,Ping
+
+# 추가 개인 설정
+options.on,켜기,On
+options.off,끄기,Off
+options.fov,시야각,Field of View
+options.fov.default,기본,Default
+options.crosshairColor,조준점 색,Crosshair Color
+options.crosshairColor.white,흰색,White
+options.crosshairColor.green,초록,Green
+options.crosshairColor.yellow,노랑,Yellow
+options.crosshairColor.cyan,하늘색,Cyan
+options.crosshairColor.pink,분홍,Pink
+options.controlsHint,조작 안내 표시,Controls Hint
+options.invertLook,마우스 Y축 반전,Invert Mouse Y

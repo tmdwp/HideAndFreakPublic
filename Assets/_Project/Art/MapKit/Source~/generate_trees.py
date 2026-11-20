@@ -12,7 +12,7 @@ import os
 import sys
 
 import bpy
-from mathutils import Matrix
+from mathutils import Matrix, Vector
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from mapkit_common import configure, exportFbx, layoutGrid, renderPreview, resetScene, rotX, rotY
@@ -27,6 +27,7 @@ previewDir = argv[2] if len(argv) > 2 else None
 palette = {
     "Bark":       ((0.30, 0.19, 0.11), 0.0, 0.95, 0.0),
     "BarkBirch":  ((0.86, 0.85, 0.80), 0.0, 0.85, 0.0),
+    "BarkMark":   ((0.12, 0.11, 0.10), 0.0, 0.9, 0.0),
     "LeafPine":   ((0.10, 0.28, 0.14), 0.0, 0.9, 0.0),
     "LeafPineDark": ((0.07, 0.21, 0.12), 0.0, 0.9, 0.0),
     "Leaf":       ((0.24, 0.45, 0.15), 0.0, 0.9, 0.0),
@@ -49,8 +50,10 @@ def makePine(name, seed, height, layers, radius, matName):
         t = i / max(1, layers - 1)
         layerRadius = radius * (1.0 - 0.55 * t)
         layerHeight = step * 2.0 if i < layers - 1 else height - (foliageBase + step * i)
-        b.cone(layerRadius, layerHeight, foliageBase + step * i, matName, segments=8,
-               jitter=layerRadius * 0.08, twist=b.rng.uniform(0, 45))
+        b.cone(layerRadius, layerHeight, foliageBase + step * i, matName, segments=10,
+               jitter=layerRadius * 0.06, twist=b.rng.uniform(0, 45), serrate=0.55)
+    # 뿌리는 마지막에 붙인다: 앞의 무작위 값 순서를 바꾸지 않아 잎 모양이 그대로 남는다
+    b.roots(4, radius * 0.14, radius * 0.35, "Bark")
     return b.build()
 
 
@@ -76,6 +79,17 @@ def makeRoundTree(name, seed, height, crownRadius, clusters):
         color = "LeafLight" if i % 2 == 0 else "Leaf"
         b.blob(crownRadius * b.rng.uniform(0.5, 0.65), (r * math.cos(a), r * math.sin(a), z), color,
                scale=(1.0, 1.0, 0.8), jitter=crownRadius * 0.06)
+    # 수관 겉에 작은 잎 뭉치를 더해 큰 다면체 면이 그대로 드러나지 않게 한다
+    for i in range(3):
+        a = math.tau * (i + 0.5) / 3 + b.rng.uniform(-0.4, 0.4)
+        r = crownRadius * 0.85
+        b.blob(crownRadius * 0.28, (r * math.cos(a), r * math.sin(a), crownZ + crownRadius * b.rng.uniform(0.2, 0.55)),
+               "LeafLight" if i % 2 else "Leaf", scale=(1.0, 1.0, 0.8), jitter=crownRadius * 0.03)
+    # 줄기 중간에서 갈라진 굵은 가지 하나: 수관 아래로 줄기만 곧게 보이지 않게
+    forkAngle = b.rng.uniform(0, math.tau)
+    b.trunk(0.08, 0.05, crownRadius * 0.9, "Bark", segments=5, base=(0, 0, trunkHeight * 0.6),
+            rot=Matrix.Rotation(forkAngle, 4, "Z") @ rotY(35))
+    b.roots(4, 0.2, 0.45, "Bark")
     return b.build()
 
 
@@ -86,6 +100,19 @@ def makeBirch(name, seed, height):
     b.blob(height * 0.16, (0.05, 0.0, height * 0.72), "LeafLight", scale=(1.0, 1.0, 1.5), jitter=height * 0.015)
     b.blob(height * 0.12, (-0.25, 0.15, height * 0.55), "LeafLight", scale=(1.0, 1.0, 1.3), jitter=height * 0.012)
     b.blob(height * 0.11, (0.22, -0.2, height * 0.5), "Leaf", scale=(1.0, 1.0, 1.3), jitter=height * 0.012)
+    # 자작나무다운 검은 껍질 무늬: 줄기 둘레에 납작한 조각을 높이마다 엇갈려 붙인다
+    trunkHeight = height * 0.92
+    for k in range(10):
+        z = trunkHeight * (0.08 + 0.07 * k)
+        radius = 0.13 - 0.07 * z / trunkHeight
+        a = math.radians(k * 137.5)
+        b.box((radius * 1.1, 0.03, 0.05 + 0.03 * (k % 3)), (radius * 0.98 * math.cos(a), radius * 0.98 * math.sin(a), z),
+              "BarkMark", rot=Matrix.Rotation(a + math.pi / 2, 4, "Z"))
+    for target in ((-0.25, 0.15, height * 0.55), (0.22, -0.2, height * 0.5)):
+        a = math.atan2(target[1], target[0])
+        b.trunk(0.03, 0.015, math.hypot(target[0], target[1]) * 1.3, "BarkBirch", segments=4, base=(0, 0, target[2] - 0.35),
+                rot=Matrix.Rotation(a, 4, "Z") @ rotY(55))
+    b.roots(3, 0.13, 0.3, "BarkBirch")
     return b.build()
 
 
@@ -93,12 +120,25 @@ def makeDeadTree(name, seed, height):
     """잎 없이 가지만 남은 마른 나무(분위기용)."""
     b = TreeBuilder(name, seed)
     b.trunk(0.22, 0.07, height, "Bark", jitter=0.02)
+    branches = []
     for i in range(5):
         a = math.tau * i / 5 + b.rng.uniform(-0.4, 0.4)
         z = height * b.rng.uniform(0.4, 0.8)
         length = height * b.rng.uniform(0.25, 0.4)
+        tilt = b.rng.uniform(35, 60)
         b.trunk(0.06, 0.015, length, "Bark", segments=4, base=(0, 0, z),
-                rot=Matrix.Rotation(a, 4, "Z") @ rotY(b.rng.uniform(35, 60)))
+                rot=Matrix.Rotation(a, 4, "Z") @ rotY(tilt))
+        branches.append((a, z, length, tilt))
+    # 가지마다 잔가지 하나, 꺾인 꼭대기 끝, 뿌리: 앙상한 막대 몇 개보다 마른 나무답게
+    for a, z, length, tilt in branches:
+        rot = Matrix.Rotation(a, 4, "Z") @ rotY(tilt)
+        fork = rot.to_3x3() @ Vector((0, 0, length * 0.55))
+        side = 1 if b.rng.random() < 0.5 else -1
+        b.trunk(0.03, 0.008, length * 0.45, "Bark", segments=3, base=(fork.x, fork.y, z + fork.z),
+                rot=Matrix.Rotation(a + side * 0.7, 4, "Z") @ rotY(tilt - 20))
+    b.trunk(0.07, 0.03, height * 0.05, "Bark", segments=4, base=(0, 0, height - 0.02),
+            rot=Matrix.Rotation(b.rng.uniform(0, math.tau), 4, "Z") @ rotY(40))
+    b.roots(5, 0.22, 0.5, "Bark")
     return b.build()
 
 

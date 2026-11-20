@@ -646,6 +646,7 @@ MonoBehaviour:
   _addedNetworkObject: {fileID: 5982477161353681102}
   _networkObjectCache: {fileID: 5982477161353681102}
   firstPersonGun: {fileID: 8764221185249543946}
+  useHandGunInFirstPerson: 1
   thirdPersonGunPrefab: {fileID: 3553825433406614452, guid: d266346ac73803740a659f82a3b20130, type: 3}
   aimPivot: {fileID: 364191669701804959}
   firstPersonPosition: {x: 0.18, y: -0.2, z: 0.3}
@@ -663,6 +664,9 @@ MonoBehaviour:
     holdPitchLimit: 60
     rightElbowHint: {x: 0.35, y: -0.35, z: -0.1}
     leftElbowHint: {x: -0.3, y: -0.4, z: 0.15}
+    lockHandRotation: 1
+    rightHandRotationOffset: {x: 0, y: 0, z: 0}
+    leftHandRotationOffset: {x: 0, y: 0, z: 0}
 --- !u!114 &3184271152891881263
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -758,6 +762,8 @@ MonoBehaviour:
   _addedNetworkObject: {fileID: 5982477161353681102}
   _networkObjectCache: {fileID: 5982477161353681102}
   spotLight: {fileID: 7826898903791666731}
+  ownerShadowNearPlane: 0.8
+  beamMaterial: {fileID: 2100000, guid: 456edf050fd308a4dab1c3aeb6a4f301, type: 2}
 --- !u!114 &2438291166181811712
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -782,11 +788,11 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: cef6d0979869961408c60a28d829b2db, type: 3}
   m_Name: 
   m_EditorClassIdentifier: GuardVsMannequin.Runtime::GuardVsMannequin.Player.Guard.GrenadeView
-  grenadeModel: {fileID: 0}
+  grenadeModel: {fileID: 919132149155446097, guid: 7850e0ce79298c0459f0d847ee9aee82, type: 3}
   explosionEffect: {fileID: 0}
   grenadeMaterial: {fileID: 2100000, guid: c57ad404b4607ab4693b524c80d0e43c, type: 2}
-  blastMaterial: {fileID: 2100000, guid: 5626442ea9abbfa47bfb11170b7d9175, type: 2}
-  flashColor: {r: 1, g: 0.6, b: 0.25, a: 1}
+  smokeMaterial: {fileID: 2100000, guid: 3597f51a0abe7624fa7d7f59845892d5, type: 2}
+  smokeColor: {r: 0.72, g: 0.88, b: 1, a: 1}
 --- !u!114 &400117237004093162
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -819,8 +825,64 @@ MonoBehaviour:
   smoothTime: 0.35
   axisWeights: {x: 0.6, y: 1, z: 0.3}
   maxOffset: 0.08
+  upperBodySmoothTime: 1.2
+  upperBodyAxisWeights: {x: 0.5, y: 1, z: 0.5}
+  upperBodyMaxOffset: 0.05
   debugBone: {fileID: 0}
   debugWorldOffset: {x: 0, y: 0, z: 0}
+  debugUpperBodyOffset: {x: 0, y: 0, z: 0}
+--- !u!114 &7713920465182736403
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 3154698559590718275}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5696d3f6d3164d408245b745d5b23d1a, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: GuardVsMannequin.Runtime::GuardVsMannequin.Player.FirstPersonBodyView
+  showOnSpawn: 1
+--- !u!114 &7713920465182736420
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 3154698559590718275}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 869afaeaedd64a049260c38a96140fdf, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: GuardVsMannequin.Runtime::GuardVsMannequin.Player.Guard.GuardDreadEffect
+  profileTemplate: {fileID: 11400000, guid: 30b6bc66a52d8e141aa34c0ca5cf1a4c, type: 2}
+  maxGrain: 1
+  maxChromatic: 0.8
+  maxDesaturate: -60
+  blendSpeed: 2.5
+  maxHeartbeatPitch: 1.8
+  shakeDuration: 0.8
+  shakeAngle: 2.5
+--- !u!114 &5565078179149458433
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 3154698559590718275}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 7028177c3c0e40bab780fa41ea7c1142, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: GuardVsMannequin.Movement.ECM2::GuardVsMannequin.Player.ClimbAbility
+  climbSpeedScale: 0.7
+  detectRadius: 0.8
+  standOff: {x: 0.25, y: 0.12}
+  holdGain: 8
+  reattachDelay: 0.4
+  exitLift: 0.35
+  jumpOffVelocity: {x: 2.5, y: 2}
 --- !u!1 &4523014314682797257
 GameObject:
   m_ObjectHideFlags: 0
@@ -1506,53 +1568,3 @@ Transform:
   m_CorrespondingSourceObject: {fileID: 2923423802053708048, guid: d266346ac73803740a659f82a3b20130, type: 3}
   m_PrefabInstance: {fileID: 5850970648894361114}
   m_PrefabAsset: {fileID: 0}
---- !u!114 &7713920465182736403
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 3154698559590718275}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 5696d3f6d3164d408245b745d5b23d1a, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: GuardVsMannequin.Runtime::GuardVsMannequin.Player.FirstPersonBodyView
---- !u!114 &7713920465182736420
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 3154698559590718275}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 869afaeaedd64a049260c38a96140fdf, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: GuardVsMannequin.Runtime::GuardVsMannequin.Player.Guard.GuardDreadEffect
-  maxGrain: 1
-  maxChromatic: 0.8
-  maxDesaturate: -60
-  blendSpeed: 2.5
-  maxHeartbeatPitch: 1.8
-  shakeDuration: 0.8
-  shakeAngle: 2.5
---- !u!114 &5565078179149458433
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 3154698559590718275}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 7028177c3c0e40bab780fa41ea7c1142, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: GuardVsMannequin.Movement.ECM2::GuardVsMannequin.Player.ClimbAbility
-  climbSpeedScale: 0.7
-  detectRadius: 0.8
-  standOff: {x: 0.25, y: 0.12}
-  holdGain: 8
-  reattachDelay: 0.4
-  exitLift: 0.35
-  jumpOffVelocity: {x: 2.5, y: 2}

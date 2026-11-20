@@ -97,7 +97,8 @@ namespace GuardVsMannequin.Player.Mannequin
         }
 
         /// <summary>
-        /// 체력과 변신 상태는 서버 권한이라 서버에서 변신을 풀고 사냥 시간 체력을 가득 채운다.
+        /// 체력과 변신 상태는 서버 권한이라 서버에서 변신을 풀고 사냥 시간 체력 배율을 적용한다.
+        /// 숨기 시간에 맞은 피해가 변신으로 사라지지 않도록 현재 체력도 같은 배율로만 늘린다.
         /// </summary>
         private void ApplyOnServer()
         {
@@ -107,7 +108,7 @@ namespace GuardVsMannequin.Player.Mannequin
             GameSettings settings = GameServices.State.Settings;
             int baseMaxHealth = settings.GetStats(PlayerRole.Mannequin).MaxHealth;
             int huntMaxHealth = Mathf.Max(1, Mathf.RoundToInt(baseMaxHealth * settings.huntHealthMultiplier));
-            health.SetMaxHealth(huntMaxHealth, refill: true);
+            health.SetMaxHealth(huntMaxHealth, refill: false);
         }
 
         /// <summary>카메라·시야 제한은 본인 화면에만 적용돼야 해서 소유자에서만 1인칭으로 바꾼다.</summary>

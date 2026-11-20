@@ -19,6 +19,8 @@ namespace GuardVsMannequin.Cameras
         {
             sceneCamera = GetComponent<UnityEngine.Camera>();
             sceneListener = GetComponent<AudioListener>();
+            // 관전 화면도 내 시야각 설정을 따르도록 한다.
+            ViewFieldOfView.Attach(sceneCamera);
 
             LocalPlayerEvents.Spawned += OnLocalPlayerSpawned;
             LocalPlayerEvents.Despawned += OnLocalPlayerDespawned;

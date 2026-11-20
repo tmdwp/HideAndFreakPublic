@@ -17,7 +17,18 @@ namespace GuardVsMannequin.Player.Guard
                  "손전등 바로 앞의 몸 그림자가 빛을 막지 않도록 이 거리 안의 물체는 그림자를 만들지 않게 한다.")]
         [SerializeField] private float ownerShadowNearPlane = 0.8f;
 
+        [Tooltip("다른 사람 화면에 보이는 빛줄기·렌즈 빛 머티리얼. 비우면 실행 중에 같은 설정으로 만든다.")]
+        [SerializeField] private Material beamMaterial;
+
         private readonly SyncVar<bool> isOn = new();
+        private FlashlightBeamView beamView;
+
+        // 외형이 정한 손전등 위치를 따르고, 외형이 지점을 안 주면 프리팹 위치로 되돌리려고 기억한다.
+        private CharacterSkinView skinView;
+        private CharacterSkin appliedSkin;
+        private Transform mountPoint;
+        private Vector3 defaultLocalPosition;
+        private Color defaultColor;
         private readonly ToolCooldown cooldown = new();
 
         private IPlayerInput playerInput;
@@ -41,6 +52,39 @@ namespace GuardVsMannequin.Player.Guard
             spotLight.innerSpotAngle = Mathf.Min(spotLight.innerSpotAngle, spotLight.spotAngle);
             spotLight.enabled = false;
             isOn.OnChange += OnIsOnChanged;
+
+            skinView = GetComponent<CharacterSkinView>();
+            defaultLocalPosition = spotLight.transform.localPosition;
+            defaultColor = spotLight.color;
+            // 빛줄기가 만들어질 때 색을 읽으므로 그 전에 외형 색을 넣는다.
+            ApplySkinLook();
+        }
+
+        /// <summary>
+        /// 위치는 애니메이션이 끝난 뒤의 지점을 따라가고, 방향은 시선을 따르는 부모 회전을 그대로 둔다.
+        /// 외형이 바뀌면(맵 외형 적용 등) 지점과 색을 다시 찾는다.
+        /// </summary>
+        private void LateUpdate()
+        {
+            if (skinView != null && skinView.ActiveSkin != appliedSkin)
+                ApplySkinLook();
+            if (mountPoint != null)
+                spotLight.transform.position = mountPoint.position;
+        }
+
+        /// <summary>
+        /// 외형마다 손전등 위치·색을 다르게 쓸 수 있도록 지금 외형에서 읽고, 지점이 없으면 프리팹 기본 위치를 쓴다.
+        /// 밝기·범위·각도는 외형으로 바꾸면 유불리가 생겨 건드리지 않는다.
+        /// </summary>
+        private void ApplySkinLook()
+        {
+            appliedSkin = skinView != null ? skinView.ActiveSkin : null;
+            mountPoint = appliedSkin != null ? skinView.FindModelPoint(FlashlightLook.MountPointName) : null;
+            if (mountPoint == null)
+                spotLight.transform.localPosition = defaultLocalPosition;
+            spotLight.color = appliedSkin != null && appliedSkin.flashlight != null
+                ? appliedSkin.flashlight.GetNormalizedColor()
+                : defaultColor;
         }
 
         /// <summary>
@@ -51,12 +95,20 @@ namespace GuardVsMannequin.Player.Guard
             isOn.OnChange -= OnIsOnChanged;
         }
 
-        /// <summary>그림자 비용을 줄이도록 다른 가드의 손전등은 그림자를 끄고, 입력은 소유자만 듣는다.</summary>
+        /// <summary>
+        /// 그림자 비용을 줄이도록 다른 가드의 손전등은 그림자를 끄고, 어둠 속에서도 손전등을 든 가드를 찾을 수 있게 빛줄기를 붙인다. 입력은 소유자만 듣는다.
+        /// </summary>
         public override void OnStartClient()
         {
             base.OnStartClient();
             if (!IsOwner)
+            {
                 spotLight.shadows = LightShadows.None;
+                beamView = FlashlightBeamView.Create(spotLight, beamMaterial,
+                    GameTuning.FlashlightBeamLength, GameTuning.FlashlightBeamAlpha, GameTuning.FlashlightLensGlowSize);
+                // 이미 켜진 채 들어온 경우(늦게 접속·재접속)에도 보이도록 지금 상태를 맞춘다.
+                beamView?.SetVisible(isOn.Value);
+            }
             else
                 spotLight.shadowNearPlane = Mathf.Max(spotLight.shadowNearPlane, ownerShadowNearPlane);
             if (IsOwner && playerInput != null)
@@ -116,6 +168,7 @@ namespace GuardVsMannequin.Player.Guard
                 return;
 
             spotLight.enabled = nextValue;
+            beamView?.SetVisible(nextValue);
             if (noiseEmitter != null)
                 noiseEmitter.PlayLocal(NoiseType.FlashlightClick);
         }

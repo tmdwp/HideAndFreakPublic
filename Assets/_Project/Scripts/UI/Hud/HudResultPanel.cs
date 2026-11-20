@@ -57,12 +57,27 @@ namespace GuardVsMannequin.UI
             {
                 string statusLabel = Loc.Get(participant.survived ? "result.survived" : "result.eliminated");
                 string participantName = DisplayTextSanitizer.Clean(participant.displayName, DisplayTextSanitizer.MaxPlayerNameLength);
-                builder.AppendLine($"{participantName}  ·  {HudText.GetRoleName(participant.role)}  ·  {statusLabel}");
+                builder.Append($"{participantName}  ·  {HudText.GetRoleName(participant.role)}  ·  {statusLabel}");
+                AppendStats(participant);
+                builder.AppendLine();
             }
             resultParticipantsText.text = builder.ToString();
 
             resultCountdownText.text = Loc.Format("result.countdown", Mathf.CeilToInt(context.State.RemainingTime));
             returnToRoomButton.gameObject.SetActive(context.MatchControl.CanControlMatch);
+        }
+
+        /// <summary>
+        /// 판을 돌아볼 수 있도록 간단한 기록을 덧붙이되, 0인 항목은 줄을 어지럽히지 않게 뺀다.
+        /// </summary>
+        private void AppendStats(ParticipantResult participant)
+        {
+            if (participant.eliminations > 0)
+                builder.Append("  ·  ").Append(Loc.Format("result.stat.eliminations", participant.eliminations));
+            if (participant.objectives > 0)
+                builder.Append("  ·  ").Append(Loc.Format("result.stat.objectives", participant.objectives));
+            if (participant.aliveSeconds >= 0f)
+                builder.Append("  ·  ").Append(Loc.Format("result.stat.aliveTime", HudText.FormatTime(participant.aliveSeconds)));
         }
 
         /// <summary>진영 승패만으로는 내가 이겼는지 알기 어려워 나의 승패를 덧붙인다.</summary>

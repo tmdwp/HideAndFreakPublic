@@ -40,7 +40,7 @@ namespace GuardVsMannequin.Editor
         /// <summary>설정 항목이 많아 찾기 어렵지 않도록 탭으로 페이지를 나눈 기본 모양을 만든다.</summary>
         private static SettingsPanelView BuildSettingsPanel(Transform canvas)
         {
-            RectTransform panel = EditorUiFactory.CreatePanel(canvas, "SettingsPanel", new Vector2(0.2f, 0.06f), new Vector2(0.8f, 0.94f), new Color(0.06f, 0.07f, 0.09f, 0.98f));
+            RectTransform panel = EditorUiFactory.CreatePanel(canvas, "SettingsPanel", SettingsPanelLayout.PanelAnchorMin, SettingsPanelLayout.PanelAnchorMax, new Color(0.06f, 0.07f, 0.09f, 0.98f));
             EditorUiFactory.AddVerticalLayout(panel, 10f, 28);
 
             Text title = EditorUiFactory.CreateText(panel, "Title", "options.title", 36, TextAnchor.MiddleLeft, EditorUiFactory.AccentColor);
@@ -79,6 +79,9 @@ namespace GuardVsMannequin.Editor
             TestEnvironmentSetupTool.SetArray(view, "pages", new Object[] { graphicsPage.gameObject, soundPage.gameObject, controlsPage.gameObject });
             TestEnvironmentSetupTool.SetField(view, "resetAllButton", resetAll);
             TestEnvironmentSetupTool.SetField(view, "closeButton", close);
+            // 항목이 늘어도 페이지 밖으로 넘치지 않게 끌거나 휠로 내려 보도록 한다.
+            SettingsPanelLayout.MakePagesScrollable(panel.gameObject);
+            SettingsPanelLayout.SeparateBackground(panel.gameObject);
 
             panel.gameObject.SetActive(false);
             return view;
@@ -97,7 +100,10 @@ namespace GuardVsMannequin.Editor
 
             CreateFrameLimitRow(page);
             CreateCameraSwayRow(page);
+            CreateOptionRow<FieldOfViewSettingsSection>(page, "FieldOfView", "options.fov");
             CreateStatsDisplayRow(page);
+            CreateOptionRow<CrosshairColorSettingsSection>(page, "CrosshairColor", "options.crosshairColor");
+            CreateOptionRow<ControlsHintSettingsSection>(page, "ControlsHint", "options.controlsHint");
 
             // 언어: strings.csv에 열을 추가하면 목록에 나타남
             CreateSelectorRow(page, "Language", "options.language", out Button previousLanguage, out Text languageValue, out Button nextLanguage);
@@ -136,6 +142,7 @@ namespace GuardVsMannequin.Editor
         private static void BuildControlsPage(RectTransform page)
         {
             Slider sensitivity = CreateSliderRow(page, "Sensitivity", "options.sensitivity", out Text sensitivityValue);
+            CreateOptionRow<InvertLookSettingsSection>(page, "InvertLook", "options.invertLook");
             Text keyHeader = EditorUiFactory.CreateText(page, "KeyHeader", "options.keyHeader", 24, TextAnchor.MiddleLeft, EditorUiFactory.TextColor);
             EditorUiFactory.SetHeight(keyHeader, 36f);
 
@@ -268,6 +275,7 @@ namespace GuardVsMannequin.Editor
             HudBottomPanel bottomSection = canvas.gameObject.AddComponent<HudBottomPanel>();
             TestEnvironmentSetupTool.SetField(bottomSection, "bottomPanel", bottom.gameObject);
             TestEnvironmentSetupTool.SetField(bottomSection, "spectatorText", spectator);
+            TestEnvironmentSetupTool.SetField(bottomSection, "inputActions", AssetDatabase.LoadAssetAtPath<InputActionAsset>(InputActionsPath));
 
             HudResultPanel resultSection = canvas.gameObject.AddComponent<HudResultPanel>();
             TestEnvironmentSetupTool.SetField(resultSection, "resultPanel", result.gameObject);
@@ -328,6 +336,28 @@ namespace GuardVsMannequin.Editor
             if (canvas.GetComponent<HudCooldownRing>() == null)
             {
                 CreateCooldownRingSection(canvas);
+                added++;
+            }
+            // 관전 안내가 바꾼 키를 따라가도록 입력 에셋이 비어 있으면 넣는다.
+            HudBottomPanel bottomSection = canvas.GetComponent<HudBottomPanel>();
+            if (bottomSection != null && new SerializedObject(bottomSection).FindProperty("inputActions").objectReferenceValue == null)
+            {
+                TestEnvironmentSetupTool.SetField(bottomSection, "inputActions", AssetDatabase.LoadAssetAtPath<InputActionAsset>(InputActionsPath));
+                added++;
+            }
+            if (canvas.GetComponent<HudHitMarker>() == null)
+            {
+                CreateHitMarkerSection(canvas);
+                added++;
+            }
+            if (canvas.GetComponent<HudEliminationFeed>() == null)
+            {
+                InsertBeforeOverlays(canvas, CreateEliminationFeedSection(canvas));
+                added++;
+            }
+            if (canvas.GetComponent<HudPhaseAnnouncement>() == null)
+            {
+                InsertBeforeOverlays(canvas, CreatePhaseAnnouncementSection(canvas));
                 added++;
             }
             // 예전 HUD의 남은 글자를 지우고 빠진 손전등 아이콘을 넣는다.
@@ -702,6 +732,107 @@ namespace GuardVsMannequin.Editor
             TestEnvironmentSetupTool.SetField(section, "ringFill", fill);
         }
 
+        /// <summary>시선을 옮기지 않고 명중을 알도록 조준점 바로 둘레에 대각선 네 개로 X를 그린다.</summary>
+        private static void CreateHitMarkerSection(Transform canvas)
+        {
+            RectTransform marker = EditorUiFactory.CreateRect(canvas, "HitMarker");
+            marker.anchorMin = marker.anchorMax = new Vector2(0.5f, 0.5f);
+            marker.sizeDelta = new Vector2(40f, 40f);
+
+            var lines = new Graphic[4];
+            for (int i = 0; i < lines.Length; i++)
+            {
+                // 가운데를 비워 조준점을 가리지 않도록 중심에서 떨어진 곳에 짧은 선을 둔다.
+                float angle = 45f + 90f * i;
+                Vector2 direction = Quaternion.Euler(0f, 0f, angle) * Vector2.right;
+                RectTransform line = EditorUiFactory.CreateRect(marker, "Line" + i);
+                line.anchorMin = line.anchorMax = new Vector2(0.5f, 0.5f);
+                line.sizeDelta = new Vector2(11f, 3f);
+                line.anchoredPosition = direction * 12f;
+                line.localRotation = Quaternion.Euler(0f, 0f, angle);
+                Image image = line.gameObject.AddComponent<Image>();
+                image.raycastTarget = false;
+                line.gameObject.AddComponent<Shadow>().effectColor = new Color(0f, 0f, 0f, 0.8f);
+                lines[i] = image;
+            }
+
+            Transform crosshair = canvas.Find("Crosshair");
+            if (crosshair != null)
+                marker.SetSiblingIndex(crosshair.GetSiblingIndex() + 1);
+            else
+                InsertBeforeOverlays(canvas, marker);
+
+            HudHitMarker section = canvas.gameObject.AddComponent<HudHitMarker>();
+            TestEnvironmentSetupTool.SetField(section, "marker", marker);
+            TestEnvironmentSetupTool.SetArray(section, "markerLines", lines);
+            marker.gameObject.SetActive(false);
+        }
+
+        /// <summary>시야 중앙을 가리지 않도록 FPS 표시 아래 오른쪽 위에 새 소식이 위로 쌓이는 목록을 둔다.</summary>
+        private static RectTransform CreateEliminationFeedSection(Transform canvas)
+        {
+            RectTransform panel = EditorUiFactory.CreateRect(canvas, "EliminationFeed");
+            panel.anchorMin = new Vector2(0.7f, 0.68f);
+            panel.anchorMax = new Vector2(0.99f, 0.88f);
+            panel.offsetMin = panel.offsetMax = Vector2.zero;
+            VerticalLayoutGroup layout = panel.gameObject.AddComponent<VerticalLayoutGroup>();
+            layout.spacing = 4f;
+            layout.childAlignment = TextAnchor.UpperRight;
+            layout.childControlWidth = true;
+            layout.childControlHeight = false;
+            layout.childForceExpandWidth = true;
+            layout.childForceExpandHeight = false;
+
+            Text template = EditorUiFactory.CreateText(panel, "RowTemplate", string.Empty, 20, TextAnchor.MiddleRight, EditorUiFactory.TextColor);
+            template.rectTransform.sizeDelta = new Vector2(0f, 28f);
+            template.raycastTarget = false;
+            template.horizontalOverflow = HorizontalWrapMode.Overflow;
+            template.gameObject.AddComponent<Outline>().effectColor = new Color(0f, 0f, 0f, 0.8f);
+
+            HudEliminationFeed section = canvas.gameObject.AddComponent<HudEliminationFeed>();
+            TestEnvironmentSetupTool.SetField(section, "feedPanel", panel);
+            TestEnvironmentSetupTool.SetField(section, "rowTemplate", template);
+            template.gameObject.SetActive(false);
+            panel.gameObject.SetActive(false);
+            return panel;
+        }
+
+        /// <summary>할 일이 바뀌는 순간을 놓치지 않도록 조준점 위쪽에 크게 띄우되, 조준점 자체는 가리지 않는다.</summary>
+        private static RectTransform CreatePhaseAnnouncementSection(Transform canvas)
+        {
+            RectTransform panel = EditorUiFactory.CreateRect(canvas, "PhaseAnnouncement");
+            panel.anchorMin = new Vector2(0.15f, 0.62f);
+            panel.anchorMax = new Vector2(0.85f, 0.8f);
+            panel.offsetMin = panel.offsetMax = Vector2.zero;
+            CanvasGroup group = panel.gameObject.AddComponent<CanvasGroup>();
+            group.blocksRaycasts = false;
+            group.interactable = false;
+
+            Text title = EditorUiFactory.CreateText(panel, "Title", string.Empty, 64, TextAnchor.MiddleCenter, EditorUiFactory.AccentColor);
+            title.rectTransform.anchorMin = new Vector2(0f, 0.42f);
+            title.rectTransform.anchorMax = Vector2.one;
+            title.rectTransform.offsetMin = title.rectTransform.offsetMax = Vector2.zero;
+            title.fontStyle = FontStyle.Bold;
+            title.raycastTarget = false;
+            title.horizontalOverflow = HorizontalWrapMode.Overflow;
+            title.gameObject.AddComponent<Outline>().effectColor = new Color(0f, 0f, 0f, 0.85f);
+
+            Text subtitle = EditorUiFactory.CreateText(panel, "Subtitle", string.Empty, 30, TextAnchor.MiddleCenter, EditorUiFactory.TextColor);
+            subtitle.rectTransform.anchorMin = Vector2.zero;
+            subtitle.rectTransform.anchorMax = new Vector2(1f, 0.42f);
+            subtitle.rectTransform.offsetMin = subtitle.rectTransform.offsetMax = Vector2.zero;
+            subtitle.raycastTarget = false;
+            subtitle.gameObject.AddComponent<Outline>().effectColor = new Color(0f, 0f, 0f, 0.85f);
+
+            HudPhaseAnnouncement section = canvas.gameObject.AddComponent<HudPhaseAnnouncement>();
+            TestEnvironmentSetupTool.SetField(section, "announcementPanel", panel.gameObject);
+            TestEnvironmentSetupTool.SetField(section, "canvasGroup", group);
+            TestEnvironmentSetupTool.SetField(section, "titleText", title);
+            TestEnvironmentSetupTool.SetField(section, "subtitleText", subtitle);
+            panel.gameObject.SetActive(false);
+            return panel;
+        }
+
         /// <summary>탄 게이지와 쿨타임 고리가 같은 모양이 되도록 바탕·채움 고리 생성을 한곳에 둔다.</summary>
         private static Image CreateCrosshairGauge(Transform canvas, string name)
         {
@@ -814,7 +945,60 @@ namespace GuardVsMannequin.Editor
                 InsertAfter(page, CreateStatsDisplayRow(page), "CameraSwayRow");
                 added++;
             }
+            added += AddOptionRowIfMissing<FieldOfViewSettingsSection>(settingsPanel, page, "FieldOfView", "options.fov", "CameraSwayRow");
+            added += RemoveObsoleteRows(page);
+            added += AddOptionRowIfMissing<CrosshairColorSettingsSection>(settingsPanel, page, "CrosshairColor", "options.crosshairColor", "StatsDisplayRow");
+            added += AddOptionRowIfMissing<ControlsHintSettingsSection>(settingsPanel, page, "ControlsHint", "options.controlsHint", "CrosshairColorRow");
+
+            // 마우스 조작과 함께 찾도록 Y축 반전은 조작 페이지의 감도 아래에 둔다.
+            ControlSettingsSection controls = settingsPanel.GetComponentInChildren<ControlSettingsSection>(true);
+            if (controls != null)
+                added += AddOptionRowIfMissing<InvertLookSettingsSection>(settingsPanel, controls.transform, "InvertLook", "options.invertLook", "SensitivityRow");
             return added;
+        }
+
+        // 기능을 뺀 설정 줄. 스크립트가 지워져 빈 컴포넌트로 남으므로 이름으로 찾아 지운다.
+        private static readonly string[] ObsoleteRowNames = { "UiScaleRow" };
+
+        /// <summary>
+        /// 뺀 설정의 줄과, 그 설정 스크립트가 지워져 페이지에 남은 빈(Missing) 컴포넌트를 지운다.
+        /// </summary>
+        /// <returns>지운 줄·컴포넌트 수.</returns>
+        private static int RemoveObsoleteRows(Transform page)
+        {
+            int removed = 0;
+            foreach (string rowName in ObsoleteRowNames)
+            {
+                Transform row = page.Find(rowName);
+                if (row == null)
+                    continue;
+                Object.DestroyImmediate(row.gameObject, true);
+                removed++;
+            }
+            removed += GameObjectUtility.RemoveMonoBehavioursWithMissingScript(page.gameObject);
+            return removed;
+        }
+
+        /// <summary>손으로 다듬은 설정 화면을 지키려고 그 항목이 없을 때만 기준 줄 아래에 더한다.</summary>
+        /// <returns>더했으면 1.</returns>
+        private static int AddOptionRowIfMissing<T>(GameObject settingsPanel, Transform page, string name, string labelKey, string anchorRowName)
+            where T : OptionSelectorSection
+        {
+            if (settingsPanel.GetComponentInChildren<T>(true) != null)
+                return 0;
+            InsertAfter(page, CreateOptionRow<T>(page, name, labelKey), anchorRowName);
+            return 1;
+        }
+
+        /// <summary>◀ ▶ 개인 설정 줄은 모양과 연결이 같아 종류만 받아 만든다.</summary>
+        private static Transform CreateOptionRow<T>(Transform page, string name, string labelKey) where T : OptionSelectorSection
+        {
+            CreateSelectorRow(page, name, labelKey, out Button previous, out Text value, out Button next);
+            T section = page.gameObject.AddComponent<T>();
+            TestEnvironmentSetupTool.SetField(section, "previousButton", previous);
+            TestEnvironmentSetupTool.SetField(section, "nextButton", next);
+            TestEnvironmentSetupTool.SetField(section, "valueText", value);
+            return previous.transform.parent;
         }
 
         /// <summary>새 설정 화면과 기존 프리팹 보강이 같은 줄을 쓰도록 생성을 한곳에 둔다.</summary>

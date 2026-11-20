@@ -40,6 +40,9 @@ namespace GuardVsMannequin.UI
 
         private LobbyScreen currentScreen;
 
+        // 입력칸은 ESC를 먼저 받아 초점을 풀어 버리므로, 같은 프레임의 ESC를 구별하려고 앞 프레임 상태를 기억한다.
+        private bool wasTypingLastFrame;
+
         /// <summary>뒤로 가는 곳이 달라도 동작은 같아 모두 Back에 연결하고, 켜진 채 저장된 패널은 시작할 때 정리한다.</summary>
         private void Start()
         {
@@ -57,9 +60,31 @@ namespace GuardVsMannequin.UI
         {
             RefreshStatus();
 
-            // 설정·크레딧이 열려 있으면 그쪽이 ESC를 처리한다.
-            bool isOverlayOpen = settingsPanel.IsOpen || creditsPanel.gameObject.activeSelf;
-            if (!isOverlayOpen && Keyboard.current != null && Keyboard.current.escapeKey.wasPressedThisFrame)
+            if (Keyboard.current != null && Keyboard.current.escapeKey.wasPressedThisFrame)
+                HandleEscape();
+        }
+
+        /// <summary>
+        /// 다음 프레임에 쓰도록 이번 프레임 끝의 입력칸 초점 상태를 남긴다.
+        /// </summary>
+        private void LateUpdate()
+        {
+            wasTypingLastFrame = UiInputFocus.IsTyping();
+        }
+
+        /// <summary>
+        /// 가장 위에 떠 있는 것부터 한 단계만 닫는다. 글자를 치던 중의 ESC는 입력칸이 입력 취소로 쓰므로 화면을 옮기지 않는다.
+        /// </summary>
+        private void HandleEscape()
+        {
+            if (ConfirmDialog.ConsumeEscape() || RebindRowView.IsAnyRebinding || wasTypingLastFrame || UiInputFocus.IsTyping())
+                return;
+
+            if (settingsPanel.IsOpen)
+                settingsPanel.Close();
+            else if (creditsPanel.gameObject.activeSelf)
+                creditsPanel.Close();
+            else
                 Back();
         }
 

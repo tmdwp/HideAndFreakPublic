@@ -10,6 +10,7 @@ import bpy
 import bmesh
 import math
 import os
+from contextlib import contextmanager
 from mathutils import Matrix, Vector
 
 # 머티리얼 이름 → (색, 금속도, 거칠기, 발광세기). configure()로 정한다.
@@ -77,6 +78,29 @@ def rotZ(deg):
     return Matrix.Rotation(math.radians(deg), 4, "Z")
 
 
+# 디테일을 붙일 면 방향 → 면 좌표계(u: 가로 = X, v: 세로 = Z, 바깥 = -Y)를 그 방향으로 돌리는 회전.
+FACING = {
+    "-Y": Matrix(),
+    "+Y": Matrix.Rotation(math.pi, 4, "Z"),
+    "+X": Matrix.Rotation(math.pi / 2, 4, "Z"),
+    "-X": Matrix.Rotation(-math.pi / 2, 4, "Z"),
+    "+Z": Matrix.Rotation(-math.pi / 2, 4, "X"),
+}
+
+# 작은 디테일이 베벨을 받으면 박스 하나가 12 → 44 삼각형으로 불어나서, 디테일 엣지만 빼고 베벨하려고 쓰는 엣지 속성.
+BEVEL_WEIGHT_ATTR = "bevel_weight_edge"
+
+
+def _faceRot(facing):
+    """facing이 이름이면 FACING에서 찾고, 기울어진 판처럼 따로 계산한 회전 행렬이면 그대로 쓴다."""
+    return FACING[facing] if isinstance(facing, str) else facing
+
+
+def surfaceOf(center, rot, halfDepth):
+    """rot으로 돌린 판(두께 2*halfDepth)의 앞면(-Y쪽) 중심. 기울어진 판에 면 디테일을 붙일 때 facing=rot과 함께 쓴다."""
+    return Vector(center) + rot.to_3x3() @ Vector((0.0, -halfDepth, 0.0))
+
+
 class MeshBuilder:
     """기본 도형을 하나의 bmesh에 쌓아 오브젝트 하나로 만드는 도우미."""
 
@@ -86,6 +110,10 @@ class MeshBuilder:
         self.bevel = bevel
         self.bm = bmesh.new()
         self.materialNames = []
+        self.noBevelDepth = 0
+        self.usedNoBevel = False
+        # 레이어를 도중에 추가하면 이미 만든 BMVert 참조가 무효가 되므로 처음에 만들어 둔다(build에서 지운다)
+        self.detailLayer = self.bm.verts.layers.int.new("detail")
 
     def materialIndex(self, matName):
         """머티리얼 슬롯 번호를 돌려준다(없으면 추가)."""
@@ -100,6 +128,92 @@ class MeshBuilder:
         for face in faces:
             face.material_index = index
             face.smooth = smooth(face) if callable(smooth) else smooth
+        if self.noBevelDepth > 0:
+            for v in verts:
+                v[self.detailLayer] = 1
+            self.usedNoBevel = True
+
+    @contextmanager
+    def noBevel(self):
+        """이 블록 안에서 만든 도형은 베벨을 받지 않는다(볼트·라벨·슬릿 같은 작은 디테일용)."""
+        self.noBevelDepth += 1
+        try:
+            yield
+        finally:
+            self.noBevelDepth -= 1
+
+    # ------------------------------------------------------------ 면 디테일
+    # 아래 도우미는 모두 '면 좌표'를 쓴다: center는 붙일 면 위의 점, (u, v)는 그 면의 가로·세로 오프셋.
+    # 같은 디테일을 앞면·옆면·윗면에 그대로 재사용하려고 facing으로 방향만 바꾼다.
+
+    def _facePoint(self, facing, center, u, v, out):
+        """면 좌표(u, v, 바깥쪽 거리)를 월드 위치로 바꾼다."""
+        return Vector(center) + _faceRot(facing).to_3x3() @ Vector((u, -out, v))
+
+    def plate(self, facing, center, width, height, depth, matName, u=0.0, v=0.0, tilt=0.0):
+        """면에 붙는 얇은 판(라벨·명판·패드). tilt는 면 가로축 기준 기울기(도)."""
+        with self.noBevel():
+            rot = _faceRot(facing) @ rotX(tilt)
+            self.box((width, depth, height), self._facePoint(facing, center, u, v, depth / 2), matName, rot=rot)
+
+    def bolts(self, facing, center, points, matName, radius=0.012, depth=0.008):
+        """면 위 (u, v) 점마다 육각 볼트 머리."""
+        with self.noBevel():
+            rot = _faceRot(facing) @ rotX(90)
+            for u, v in points:
+                self.cylinder(radius, radius * 0.9, depth, self._facePoint(facing, center, u, v, depth / 2),
+                              matName, segments=6, rot=rot)
+
+    def cornerBolts(self, facing, center, width, height, matName, inset=0.03, radius=0.012, depth=0.008):
+        """width x height 판의 네 모서리 안쪽에 볼트."""
+        du, dv = width / 2 - inset, height / 2 - inset
+        self.bolts(facing, center, [(-du, -dv), (du, -dv), (-du, dv), (du, dv)], matName, radius, depth)
+
+    def handle(self, facing, center, length, matName, vertical=True, standoff=0.03, thickness=0.02, u=0.0, v=0.0):
+        """막대 손잡이와 양끝 받침(문·서랍·카트)."""
+        with self.noBevel():
+            rot = _faceRot(facing)
+            bar = (thickness, thickness, length) if vertical else (length, thickness, thickness)
+            self.box(bar, self._facePoint(facing, center, u, v, standoff + thickness / 2), matName, rot=rot)
+            for end in (-1, 1):
+                du, dv = (0.0, end * (length / 2 - thickness)) if vertical else (end * (length / 2 - thickness), 0.0)
+                self.box((thickness * 0.8, standoff, thickness * 0.8),
+                         self._facePoint(facing, center, u + du, v + dv, standoff / 2), matName, rot=rot)
+
+    def frame(self, facing, center, width, height, border, depth, matName, u=0.0, v=0.0):
+        """면 위 직사각 테두리(화면 베젤·창틀·투입구 테두리). width x height는 바깥 크기."""
+        with self.noBevel():
+            rot = _faceRot(facing)
+            for side in (-1, 1):
+                self.box((width, depth, border),
+                         self._facePoint(facing, center, u, v + side * (height - border) / 2, depth / 2), matName, rot=rot)
+                self.box((border, depth, height - 2 * border),
+                         self._facePoint(facing, center, u + side * (width - border) / 2, v, depth / 2), matName, rot=rot)
+
+    def louver(self, facing, center, width, height, count, matName, depth=0.015, u=0.0, v=0.0):
+        """가로 슬릿 환기구: 기울어진 날개 count개."""
+        with self.noBevel():
+            pitch = height / count
+            for i in range(count):
+                dv = -height / 2 + pitch * (i + 0.5)
+                self.box((width, depth, pitch * 0.55), self._facePoint(facing, center, u, v + dv, depth / 2),
+                         matName, rot=_faceRot(facing) @ rotX(-35))
+
+    def hinges(self, facing, center, u, vs, matName, radius=0.012, length=0.07):
+        """문 옆선(u)의 세로 경첩 원통(vs 높이마다)."""
+        with self.noBevel():
+            for v in vs:
+                self.cylinder(radius, radius, length, self._facePoint(facing, center, u, v, radius * 0.6),
+                              matName, segments=8)
+
+    def textBars(self, facing, center, width, lineHeight, lines, matName, depth=0.003, u=0.0, v=0.0, gap=1.8):
+        """글자 대신 쓰는 짧은 막대 줄(안내판·라벨의 글씨 느낌). lines는 줄마다 폭 비율."""
+        with self.noBevel():
+            for i, ratio in enumerate(lines):
+                dv = -i * lineHeight * gap
+                w = width * ratio
+                self.box((w, depth, lineHeight), self._facePoint(facing, center, u - (width - w) / 2, v + dv, depth / 2),
+                         matName, rot=_faceRot(facing))
 
     def box(self, size, center, matName, rot=None):
         """직육면체. size=(x,y,z), center=중심 위치."""
@@ -115,6 +229,13 @@ class MeshBuilder:
         matrix = Matrix.Translation(center) @ (rot or Matrix())
         bmesh.ops.transform(self.bm, matrix=matrix, verts=verts)
         self.applyFaces(verts, matName, lambda f: len(f.verts) == 4)
+
+    def tube(self, start, end, radius, matName, segments=8):
+        """두 점을 잇는 원기둥(자전거 뼈대·지지대처럼 비스듬한 막대를 끝점으로 놓으려고)."""
+        start, end = Vector(start), Vector(end)
+        axis = end - start
+        rot = axis.to_track_quat("Z", "Y").to_matrix().to_4x4()
+        self.cylinder(radius, radius, axis.length, (start + end) / 2, matName, segments=segments, rot=rot)
 
     def hollowCylinder(self, radiusBottom, radiusTop, depth, wall, center, matName, floor=None, innerMat=None, segments=16, rot=None):
         """
@@ -231,6 +352,9 @@ class MeshBuilder:
         bmesh.ops.recalc_face_normals(self.bm, faces=self.bm.faces)
         self.bm.normal_update()
         self.boxProjectUv()
+        if self.usedNoBevel and self.bevel > 0:
+            self._writeBevelWeights()
+        self.bm.verts.layers.int.remove(self.bm.verts.layers.int["detail"])
         mesh = bpy.data.meshes.new("SM_" + self.name)
         self.bm.to_mesh(mesh)
         self.bm.free()
@@ -246,7 +370,21 @@ class MeshBuilder:
             mod.limit_method = "ANGLE"
             mod.angle_limit = math.radians(40)
             mod.harden_normals = False
+            if self.usedNoBevel:
+                # 베벨 모디파이어는 각도 제한과 정점 그룹 제한을 함께 못 써서, 각도 판정을 미리 해 엣지 가중치로 넘긴다
+                mod.limit_method = "WEIGHT"
+                mod.edge_weight = BEVEL_WEIGHT_ATTR
         return obj
+
+    def _writeBevelWeights(self):
+        """각도 40도 넘는 엣지 중 디테일(NoBevel) 정점끼리의 엣지를 뺀 것에만 베벨 가중치 1을 준다."""
+        weights = self.bm.edges.layers.float.new(BEVEL_WEIGHT_ATTR)
+        detail = self.bm.verts.layers.int["detail"]
+        limit = math.radians(40)
+        for edge in self.bm.edges:
+            isDetail = all(v[detail] for v in edge.verts)
+            angle = edge.calc_face_angle(None)
+            edge[weights] = 1.0 if (not isDetail and angle is not None and angle > limit) else 0.0
 
 
 def resetScene():

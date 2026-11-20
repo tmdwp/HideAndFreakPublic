@@ -2,6 +2,7 @@ using GuardVsMannequin.Cameras;
 using GuardVsMannequin.Core;
 using GuardVsMannequin.Objectives;
 using GuardVsMannequin.Player;
+using GuardVsMannequin.Settings;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -25,6 +26,7 @@ namespace GuardVsMannequin.UI
         private HudContext context;
         private IHudSection[] sections;
         private GameState previousState = GameState.Waiting;
+        private Graphic crosshairGraphic;
 
         /// <summary>영역을 추가해도 고치지 않도록 하위 영역을 모두 찾고, 아바타가 바로 스폰될 수 있어 추적을 먼저 시작한다.</summary>
         private void Awake()
@@ -36,15 +38,29 @@ namespace GuardVsMannequin.UI
             foreach (IHudSection section in sections)
                 section.Bind(context);
 
+            crosshairGraphic = crosshair.GetComponent<Graphic>();
+            ApplyCrosshairColor();
+            OptionsStore.OptionsChanged += ApplyCrosshairColor;
+
             SetAllHidden();
         }
 
         /// <summary>
-        /// 추적기는 정적 이벤트를 구독하므로 끊지 않으면 파괴된 HUD가 계속 불린다.
+        /// 추적기·설정 알림은 정적 이벤트를 구독하므로 끊지 않으면 파괴된 HUD가 계속 불린다.
         /// </summary>
         private void OnDestroy()
         {
             localPlayer.Detach();
+            OptionsStore.OptionsChanged -= ApplyCrosshairColor;
+        }
+
+        /// <summary>
+        /// 배경에 묻히지 않도록 사용자가 고른 조준점 색을 쓴다.
+        /// </summary>
+        private void ApplyCrosshairColor()
+        {
+            if (crosshairGraphic != null)
+                crosshairGraphic.color = CrosshairSettings.GetColor(OptionsStore.Current);
         }
 
         /// <summary>영역마다 상태를 따로 읽지 않도록 한 번 읽은 상태를 나눠 주고, 대기 중에는 역할을 지운다.</summary>

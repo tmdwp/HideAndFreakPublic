@@ -106,8 +106,10 @@ namespace GuardVsMannequin.Player
         private void ApplyLook()
         {
             Vector2 lookInput = playerInput.Look;
-            float sensitivityScale = OptionsStore.Current.mouseSensitivity;
-            lookControllable?.AddLookInput(Vector2.Scale(lookInput, lookSensitivity) * sensitivityScale);
+            GameOptions options = OptionsStore.Current;
+            if (options.invertLookY)
+                lookInput.y = -lookInput.y;
+            lookControllable?.AddLookInput(Vector2.Scale(lookInput, lookSensitivity) * options.mouseSensitivity);
         }
     }
 }

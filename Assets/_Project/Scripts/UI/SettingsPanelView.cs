@@ -46,7 +46,7 @@ namespace GuardVsMannequin.UI
                 tabButtons[i].onClick.AddListener(() => ShowPage(pageIndex));
             }
 
-            resetAllButton.onClick.AddListener(ResetAll);
+            resetAllButton.onClick.AddListener(RequestResetAll);
             closeButton.onClick.AddListener(Close);
             Loc.LanguageChanged += OnLanguageChanged;
         }
@@ -109,11 +109,22 @@ namespace GuardVsMannequin.UI
         }
 
         /// <summary>
+        /// 감도·키 설정까지 한 번에 사라져 되돌릴 수 없으므로 확인을 거친다.
+        /// </summary>
+        private void RequestResetAll()
+        {
+            if (RebindRowView.IsAnyRebinding)
+                return;
+            ConfirmDialog.Show("confirm.resetAll.title", "confirm.resetAll.message", "confirm.resetAll.confirm", ResetAll);
+        }
+
+        /// <summary>
         /// 언어·화면처럼 되돌리면 곤란한 설정은 각 묶음이 알아서 유지하므로, 여기서는 모든 묶음에 기본값을 요청하기만 한다.
         /// </summary>
         private void ResetAll()
         {
-            if (RebindRowView.IsAnyRebinding)
+            // 창이 떠 있는 사이 화면이 닫혔으면 보이지 않는 곳을 바꾸지 않는다.
+            if (RebindRowView.IsAnyRebinding || !IsOpen)
                 return;
 
             foreach (ISettingsSection section in sections)

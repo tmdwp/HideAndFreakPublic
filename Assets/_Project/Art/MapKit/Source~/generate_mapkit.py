@@ -16,7 +16,7 @@ from mathutils import Matrix, Vector
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from mapkit_common import (MeshBuilder, configure, exportFbx, layoutGrid, renderPreview, resetScene,
-                           rotX, rotY, rotZ)
+                           rotX, rotY, rotZ, surfaceOf)
 
 argv = sys.argv[sys.argv.index("--") + 1:] if "--" in sys.argv else []
 outDir = argv[0] if len(argv) > 0 else os.path.join(os.path.dirname(__file__), "..", "Models")
@@ -56,6 +56,10 @@ def makeWall(width):
     b = MeshBuilder(f"Wall_{width:g}m", "Structure")
     b.box((width, 0.2, 3.0), (0, 0, 1.5), "Plaster")
     b.box((width, 0.24, 0.12), (0, 0, 0.06), "WoodDark")
+    # 걸이 몰딩(허리 높이). 벽은 끝끼리 이어 붙이므로 폭을 넘지 않게 한다
+    with b.noBevel():
+        b.box((width, 0.23, 0.05), (0, 0, 0.9), "WoodDark")
+        b.box((width, 0.22, 0.04), (0, 0, 2.98), "Plaster")
     return b.build()
 
 
@@ -68,6 +72,12 @@ def makeWallDoor():
         b.box((0.08, 0.26, 2.24), (side * 0.64, 0, 1.12), "WoodDark")
     b.box((1.2, 0.2, 0.8), (0, 0, 2.6), "Plaster")
     b.box((1.36, 0.26, 0.08), (0, 0, 2.24), "WoodDark")
+    with b.noBevel():
+        for side in (-1, 1):
+            b.box((1.32, 0.23, 0.05), (side * 1.34, 0, 0.9), "WoodDark")
+        b.box((4.0, 0.22, 0.04), (0, 0, 2.98), "Plaster")
+        for side in (-1, 1):
+            b.box((0.12, 0.27, 0.16), (side * 0.64, 0, 0.08), "WoodDark")
     return b.build()
 
 
@@ -82,6 +92,10 @@ def makeWallWindow():
         b.box((0.08, 0.26, 1.28), (side * 0.84, 0, 1.6), "WoodDark")
     b.box((1.76, 0.26, 0.08), (0, 0, 2.24), "WoodDark")
     b.box((1.8, 0.34, 0.06), (0, 0, 0.97), "WoodDark")
+    with b.noBevel():
+        b.box((4.0, 0.23, 0.05), (0, 0, 0.9), "WoodDark")
+        b.box((4.0, 0.22, 0.04), (0, 0, 2.98), "Plaster")
+        b.box((1.76, 0.26, 0.04), (0, 0, 1.02), "WoodDark")
     return b.build()
 
 
@@ -90,6 +104,11 @@ def makeWallHalf():
     b = MeshBuilder("Wall_Low_2m", "Structure")
     b.box((2.0, 0.2, 1.1), (0, 0, 0.55), "Concrete")
     b.box((2.04, 0.26, 0.06), (0, 0, 1.1), "ConcreteDark")
+    # 거푸집 타이 구멍: 콘크리트 벽다운 점 무늬
+    for facing, y in (("-Y", -0.1), ("+Y", 0.1)):
+        b.bolts(facing, (0, y, 0), [(x, z) for x in (-0.7, 0.0, 0.7) for z in (0.3, 0.75)], "ConcreteDark", radius=0.018, depth=0.004)
+        b.plate(facing, (0, y, 0), 0.006, 1.04, 0.002, "ConcreteDark", u=0.35 if facing == "-Y" else -0.35, v=0.53)
+        b.plate(facing, (0, y, 0), 0.006, 1.04, 0.002, "ConcreteDark", u=-0.35 if facing == "-Y" else 0.35, v=0.53)
     return b.build()
 
 
@@ -106,6 +125,11 @@ def makePillarSquare():
     b.box((0.4, 0.4, 3.0), (0, 0, 1.5), "Concrete")
     b.box((0.52, 0.52, 0.15), (0, 0, 0.075), "ConcreteDark")
     b.box((0.52, 0.52, 0.15), (0, 0, 2.925), "ConcreteDark")
+    with b.noBevel():
+        b.box((0.44, 0.44, 0.06), (0, 0, 1.2), "ConcreteDark")
+    for facing, center in (("-Y", (0, -0.2, 0)), ("+Y", (0, 0.2, 0)), ("-X", (-0.2, 0, 0)), ("+X", (0.2, 0, 0))):
+        b.plate(facing, center, 0.24, 0.9, 0.003, "ConcreteDark", v=0.7)
+        b.plate(facing, center, 0.2, 0.86, 0.004, "Concrete", v=0.7)
     return b.build()
 
 
@@ -115,6 +139,9 @@ def makePillarRound():
     b.cylinder(0.22, 0.22, 3.0, (0, 0, 1.5), "Concrete", segments=20)
     b.box((0.55, 0.55, 0.15), (0, 0, 0.075), "ConcreteDark")
     b.box((0.55, 0.55, 0.15), (0, 0, 2.925), "ConcreteDark")
+    with b.noBevel():
+        for z in (0.22, 1.2, 2.78):
+            b.cylinder(0.232, 0.232, 0.05, (0, 0, z), "ConcreteDark", segments=20)
     return b.build()
 
 
@@ -124,6 +151,12 @@ def makeStairs():
     for i in range(10):
         height = (i + 1) * 0.2
         b.box((1.2, 0.3, height), (0, -1.5 + i * 0.3 + 0.15, height / 2), "Concrete")
+    # 디딤판 앞 미끄럼 방지 띠 (걷는 면이라 두께는 3mm만)
+    for i in range(10):
+        height = (i + 1) * 0.2
+        y = -1.5 + i * 0.3 + 0.04
+        b.plate("+Z", (0, y, height), 1.1, 0.05, 0.003, "Yellow")
+        b.plate("-Y", (0, -1.5 + i * 0.3, 0), 1.2, 0.02, 0.003, "ConcreteDark", v=height - 0.01)
     return b.build()
 
 
@@ -133,6 +166,13 @@ def makeRamp():
     points = [(-1, -2, 0), (1, -2, 0), (1, 2, 0), (-1, 2, 0), (-1, 2, 1), (1, 2, 1)]
     faces = [(0, 3, 2, 1), (3, 4, 5, 2), (0, 1, 5, 4), (0, 4, 3), (1, 2, 5)]
     b.polyhedron(points, faces, "ConcreteDark")
+    # 경사면 미끄럼 방지 홈 띠, 옆 노란 경계선
+    slope = rotX(math.degrees(math.atan2(1.0, 4.0)) - 90)
+    for k in range(7):
+        t = (k + 0.5) / 7
+        b.plate(slope, (0, -2 + 4 * t, t), 1.8, 0.04, 0.003, "Concrete")
+    for u in (-0.94, 0.94):
+        b.plate(slope, (0, 0, 0.5), 0.06, 4.1, 0.003, "Yellow", u=u)
     return b.build()
 
 
@@ -140,6 +180,11 @@ def makePlatform():
     """2 x 2 x 1m 단상/엄폐물."""
     b = MeshBuilder("Platform_2x2x1", "Structure")
     b.box((2.0, 2.0, 1.0), (0, 0, 0.5), "ConcreteDark")
+    # 앞뒤 경고 줄무늬 (단상은 붙여 깔기도 해서 바깥 크기는 그대로 둔다)
+    for facing, y in (("-Y", -1.0), ("+Y", 1.0)):
+        b.plate(facing, (0, y, 0), 1.7, 0.08, 0.004, "Yellow", v=0.92)
+        for k in range(6):
+            b.plate(facing, (0, y * 1.004, 0), 0.06, 0.08, 0.004, "Rubber", u=-0.7 + k * 0.28, v=0.92, tilt=0)
     return b.build()
 
 
@@ -150,6 +195,14 @@ def makeRailing():
         b.box((0.05, 0.05, 1.0), (x, 0, 0.5), "MetalDark")
     b.box((2.0, 0.06, 0.06), (0, 0, 1.0), "Metal")
     b.box((2.0, 0.04, 0.04), (0, 0, 0.5), "Metal")
+    with b.noBevel():
+        for x in (-0.975, 0, 0.975):
+            b.box((0.1, 0.1, 0.012), (x, 0, 0.006), "MetalDark")
+            b.box((0.07, 0.07, 0.02), (x, 0, 1.04), "MetalDark")
+        b.box((2.0, 0.025, 0.025), (0, 0, 0.75), "Metal")
+        b.box((2.0, 0.025, 0.1), (0, 0, 0.06), "Yellow")
+    for x in (-0.975, 0, 0.975):
+        b.bolts("+Z", (x, 0, 0.012), [(-0.033, -0.033), (0.033, -0.033), (-0.033, 0.033), (0.033, 0.033)], "Metal", radius=0.007, depth=0.006)
     return b.build()
 
 
@@ -160,6 +213,15 @@ def makeDoor():
     for side in (-1, 1):
         b.box((0.03, 0.04, 0.03), (1.02, side * 0.045, 1.0), "Metal")
         b.box((0.13, 0.03, 0.03), (0.97, side * 0.07, 1.0), "Metal")
+    # 양면 패널 몰딩, 경첩(피벗 쪽 x=0), 열쇠 구멍
+    for facing, y in (("-Y", -0.025), ("+Y", 0.025)):
+        mirror = 1 if facing == "-Y" else -1
+        for v, h in ((1.6, 0.8), (0.55, 0.75)):
+            b.frame(facing, (0.59, y, 0), 0.86, h, 0.04, 0.006, "WoodDark", u=0.0, v=v)
+        b.bolts(facing, (0.59, y, 0), [(mirror * 0.43, 0.92)], "MetalDark", radius=0.01, depth=0.006)
+    with b.noBevel():
+        for z in (0.3, 1.1, 1.9):
+            b.cylinder(0.012, 0.012, 0.1, (0.0, 0, z), "Metal", segments=8)
     return b.build()
 
 
@@ -169,6 +231,12 @@ def makeBeam():
     b.box((4.0, 0.2, 0.03), (0, 0, 0.015), "Rust")
     b.box((4.0, 0.2, 0.03), (0, 0, 0.285), "Rust")
     b.box((4.0, 0.03, 0.24), (0, 0, 0.15), "Rust")
+    for x in (-1.5, -0.5, 0.5, 1.5):
+        b.bolts("-Y", (0, -0.015, 0), [(x, 0.09), (x, 0.21)], "MetalDark", radius=0.014, depth=0.01)
+        b.bolts("+Y", (0, 0.015, 0), [(-x, 0.09), (-x, 0.21)], "MetalDark", radius=0.014, depth=0.01)
+    with b.noBevel():
+        for x in (-1.98, 1.98):
+            b.box((0.02, 0.2, 0.3), (x, 0, 0.15), "Rust")
     return b.build()
 
 
@@ -187,6 +255,23 @@ def makeContainer():
         b.box((6.0, 0.14, 0.14), (0, sx * 1.13, 0.07), "MetalDark")
     for y in (-0.6, -0.35, 0.35, 0.6):
         b.box((0.04, 0.05, 2.3), (2.97, y, 1.3), "Metal")
+    # 문(+X) 쪽: 잠금 막대 손잡이·캠, 경첩, 명판 / 옆면: 등록 번호 글씨, 모서리 주물 구멍
+    with b.noBevel():
+        for y in (-0.6, -0.35, 0.35, 0.6):
+            b.box((0.05, 0.08, 0.04), (2.99, y, 2.38), "MetalDark")
+            b.box((0.05, 0.08, 0.04), (2.99, y, 0.22), "MetalDark")
+            b.box((0.03, 0.04, 0.32), (3.0, y + (0.06 if y > 0 else -0.06), 1.0), "Metal", rot=rotX(90))
+        for y in (-1.1, 1.1):
+            for z in (0.4, 1.0, 1.6, 2.2):
+                b.cylinder(0.03, 0.03, 0.14, (2.98, y, z), "MetalDark", segments=8)
+        for sx in (-1, 1):
+            for sy in (-1, 1):
+                for z in (0.07, 2.53):
+                    b.box((0.08, 0.02, 0.06), (sx * 2.92, sy * 1.205, z), "Rubber")
+    b.plate("+X", (2.985, 0, 0), 0.5, 0.3, 0.004, "White", u=0.0, v=1.6)
+    b.textBars("+X", (2.989, 0, 0), 0.4, 0.035, (1.0, 0.7, 0.85), "Rubber", u=0.0, v=1.68)
+    for facing, y in (("-Y", -1.21), ("+Y", 1.21)):
+        b.textBars(facing, (0, y, 0), 1.6, 0.12, (1.0, 0.6), "White", u=0.6 if facing == "-Y" else -0.6, v=2.1, gap=1.6)
     return b.build()
 
 
@@ -203,6 +288,15 @@ def makeCrate(size, name):
             b.box((size, t, t), (0, s1 * h, size / 2 + s2 * h), "WoodDark")
             b.box((t, size, t), (s1 * h, 0, size / 2 + s2 * h), "WoodDark")
             b.box((t, t, size), (s1 * h, s2 * h, size / 2), "WoodDark")
+    # 판자 이음선(각목 사이 몸통 면), 앞면 검은 스텐실
+    inner = size * 0.47
+    for facing, center in (("-Y", (0, -inner, 0)), ("+Y", (0, inner, 0)), ("-X", (-inner, 0, 0)), ("+X", (inner, 0, 0)), ("+Z", (0, 0, size * 0.97))):
+        for k in (-1, 1):
+            if facing == "+Z":
+                b.plate(facing, center, size * 0.84, 0.01 * size, 0.002 * size, "WoodDark", v=k * size * 0.14)
+            else:
+                b.plate(facing, center, size * 0.84, 0.01 * size, 0.002 * size, "WoodDark", v=size / 2 + k * size * 0.14)
+    b.textBars("-Y", (0, -inner - 0.002 * size, 0), size * 0.5, size * 0.05, (1.0, 0.6), "WoodDark", v=size * 0.55, gap=2.0)
     return b.build()
 
 
@@ -214,6 +308,12 @@ def makeBarrel():
         b.cylinder(0.31, 0.31, 0.03, (0, 0, z), "PaintBlue", segments=20)
     for z in (0.012, 0.888):
         b.cylinder(0.305, 0.305, 0.024, (0, 0, z), "MetalDark", segments=20)
+    with b.noBevel():
+        b.cylinder(0.302, 0.302, 0.2, (0, 0, 0.45), "White", segments=20)
+        b.hollowCylinder(0.3, 0.3, 0.02, 0.02, (0, 0, 0.905), "MetalDark", segments=20)
+        b.cylinder(0.035, 0.035, 0.015, (0.18, 0.05, 0.9075), "MetalDark", segments=6)
+        b.cylinder(0.022, 0.022, 0.015, (-0.17, -0.08, 0.9075), "MetalDark", segments=6)
+    b.textBars("-Y", (0, -0.303, 0), 0.24, 0.025, (1.0, 0.6), "MetalDark", v=0.47)
     return b.build()
 
 
@@ -228,6 +328,10 @@ def makePallet():
         b.box((1.2, 0.12, 0.02), (0, y, 0.01), "Wood")
         for x in (-0.54, 0, 0.54):
             b.box((0.12, 0.12, 0.09), (x, y, 0.065), "WoodDark")
+    # 윗판 못 머리 (걷는 면이라 1mm)
+    for i in range(5):
+        y = -0.43 + i * 0.215
+        b.bolts("+Z", (0, y, 0.15), [(x, d) for x in (-0.54, 0, 0.54) for d in (-0.03, 0.03)], "MetalDark", radius=0.005, depth=0.001)
     return b.build()
 
 
@@ -242,6 +346,14 @@ def addCardboardBox(b, size, center, angle=0.0):
         ((sx + 0.01, 0.07, 0.006), (0, 0, sz), "Tape"),
         ((0.006, 0.07, 0.1), (sx / 2, 0, sz - 0.05), "Tape"),
         ((0.006, 0.07, 0.1), (-sx / 2, 0, sz - 0.05), "Tape"),
+    ]
+    # 앞면 배송 라벨·위로 화살표, 윗면 날개 이음선
+    parts += [
+        ((0.14, 0.004, 0.09), (-sx * 0.18, -sy / 2 - 0.002, sz * 0.62), "White"),
+        ((0.1, 0.004, 0.01), (-sx * 0.18, -sy / 2 - 0.004, sz * 0.64), "Rubber"),
+        ((0.06, 0.004, 0.008), (-sx * 0.2, -sy / 2 - 0.004, sz * 0.6), "Rubber"),
+        ((0.012, 0.004, 0.07), (sx * 0.3, -sy / 2 - 0.002, sz * 0.7), "Rubber"),
+        ((sx - 0.02, 0.006, 0.002), (0, 0, sz + 0.001), "Rubber"),
     ]
     for partSize, partCenter, mat in parts:
         world = offset @ rot @ Vector(partCenter)
@@ -272,6 +384,18 @@ def makeShelf():
             b.box((0.04, 0.04, 1.9), (sx * 0.58, sy * 0.205, 0.95), "MetalDark")
     for z in (0.1, 0.55, 1.0, 1.45, 1.88):
         b.box((1.2, 0.45, 0.025), (0, 0, z), "Metal")
+    # 기둥 구멍 줄, 뒤 X자 보강대, 발판
+    for x in (-0.58, 0.58):
+        b.bolts("-Y", (0, -0.225, 0), [(x, 0.2 + k * 0.15) for k in range(11)], "Rubber", radius=0.006, depth=0.002)
+    with b.noBevel():
+        for z0, z1 in ((0.1, 1.0), (1.0, 1.88)):
+            b.tube((-0.56, 0.21, z0), (0.56, 0.21, z1), 0.008, "MetalDark", segments=4)
+            b.tube((0.56, 0.21, z0), (-0.56, 0.21, z1), 0.008, "MetalDark", segments=4)
+        for sx in (-1, 1):
+            for sy in (-1, 1):
+                b.box((0.05, 0.05, 0.01), (sx * 0.58, sy * 0.205, 0.005), "MetalDark")
+        for z in (0.1, 0.55, 1.0, 1.45):
+            b.box((1.16, 0.006, 0.04), (0, -0.228, z - 0.01), "MetalDark")
     return b.build()
 
 
@@ -282,6 +406,14 @@ def makeTable():
     for sx in (-1, 1):
         for sy in (-1, 1):
             b.box((0.06, 0.06, 0.71), (sx * 0.74, sy * 0.34, 0.355), "WoodDark")
+    with b.noBevel():
+        for sy in (-1, 1):
+            b.box((1.42, 0.025, 0.08), (0, sy * 0.34, 0.67), "WoodDark")
+        for sx in (-1, 1):
+            b.box((0.025, 0.62, 0.08), (sx * 0.74, 0, 0.67), "WoodDark")
+        b.box((1.42, 0.03, 0.03), (0, 0, 0.15), "WoodDark")
+    for v in (-0.2, 0.0, 0.2):
+        b.plate("+Z", (0, 0, 0.75), 1.6, 0.006, 0.001, "WoodDark", v=v)
     return b.build()
 
 
@@ -293,6 +425,13 @@ def makeChair():
         b.box((0.035, 0.035, 0.43), (sx * 0.2, -0.2, 0.215), "WoodDark")
         b.box((0.035, 0.035, 0.9), (sx * 0.2, 0.2, 0.45), "WoodDark")
     b.box((0.44, 0.03, 0.22), (0, 0.2, 0.76), "Wood")
+    with b.noBevel():
+        b.box((0.44, 0.025, 0.08), (0, 0.2, 0.55), "Wood")
+        for sx in (-1, 1):
+            b.box((0.02, 0.4, 0.02), (sx * 0.2, 0, 0.15), "WoodDark")
+        b.box((0.4, 0.02, 0.02), (0, -0.2, 0.25), "WoodDark")
+    for v in (-0.11, 0.0, 0.11):
+        b.plate("+Z", (0, 0, 0.47), 0.45, 0.006, 0.001, "WoodDark", v=v)
     return b.build()
 
 
@@ -305,6 +444,13 @@ def makeStool():
             b.box((0.03, 0.03, 0.6), (sx * 0.11, sy * 0.11, 0.3), "MetalDark")
     b.box((0.25, 0.02, 0.02), (0, -0.11, 0.25), "MetalDark")
     b.box((0.25, 0.02, 0.02), (0, 0.11, 0.25), "MetalDark")
+    with b.noBevel():
+        b.hollowCylinder(0.185, 0.185, 0.015, 0.01, (0, 0, 0.61), "MetalDark", segments=16)
+        b.box((0.02, 0.25, 0.02), (-0.11, 0, 0.25), "MetalDark")
+        b.box((0.02, 0.25, 0.02), (0.11, 0, 0.25), "MetalDark")
+        for sx in (-1, 1):
+            for sy in (-1, 1):
+                b.cylinder(0.022, 0.022, 0.02, (sx * 0.11, sy * 0.11, 0.01), "Rubber", segments=8)
     return b.build()
 
 
@@ -315,6 +461,15 @@ def addLocker(b, x):
     b.box((0.44, 0.012, 1.7), (x, -0.256, 0.99), "PaintGreen")
     for z in (1.62, 1.67, 1.72):
         b.box((0.3, 0.012, 0.02), (x, -0.264, z), "MetalDark")
+    # 아래 환기 줄, 번호판, 경첩, 자물쇠 고리
+    for z in (0.22, 0.27, 0.32):
+        b.box((0.3, 0.012, 0.02), (x, -0.264, z), "MetalDark")
+    with b.noBevel():
+        b.box((0.08, 0.006, 0.05), (x, -0.265, 1.5), "White")
+        b.box((0.05, 0.004, 0.012), (x, -0.269, 1.5), "Rubber")
+        for z in (0.4, 1.0, 1.6):
+            b.cylinder(0.01, 0.01, 0.06, (x - 0.22, -0.264, z), "MetalDark", segments=6)
+        b.box((0.04, 0.03, 0.03), (x + 0.17, -0.275, 0.88), "MetalDark")
     b.box((0.03, 0.03, 0.16), (x + 0.17, -0.27, 1.0), "Metal")
 
 
@@ -348,6 +503,19 @@ def makeHospitalBed():
         b.cylinder(0.025, 0.025, 0.85, (sx * 0.45, -1.03, 0.425), "Metal", segments=10)
     b.box((0.86, 0.03, 0.35), (0, 1.03, 0.85), "White")
     b.box((0.86, 0.03, 0.22), (0, -1.03, 0.72), "White")
+    # 접는 옆 난간, 머리판 테두리, 바퀴 브레이크, 발치 차트 판
+    with b.noBevel():
+        for sx in (-1, 1):
+            for z in (0.8, 0.9):
+                b.tube((sx * 0.49, -0.1, z), (sx * 0.49, 0.85, z), 0.012, "Metal", segments=6)
+            for y in (-0.1, 0.85):
+                b.tube((sx * 0.49, y, 0.53), (sx * 0.49, y, 0.9), 0.012, "Metal", segments=6)
+            for sy in (-1, 1):
+                b.box((0.05, 0.03, 0.015), (sx * 0.44, sy * 0.98 + 0.05 * sy, 0.09), "Orange")
+        b.box((0.3, 0.02, 0.36), (0, -1.06, 0.82), "PaintBlue")
+        b.box((0.26, 0.006, 0.3), (0, -1.071, 0.82), "White")
+    b.frame("-Y", (0, 1.015, 0), 0.86, 0.35, 0.03, 0.006, "Metal", v=0.85)
+    b.textBars("-Y", (0, -1.074, 0), 0.2, 0.012, (1.0, 0.7, 0.85, 0.6), "Rubber", v=0.92, gap=2.2)
     return b.build()
 
 
@@ -358,6 +526,12 @@ def makeFileCabinet():
     for z in (0.19, 0.51, 0.83):
         b.box((0.74, 0.02, 0.29), (0, -0.255, z), "Metal")
         b.box((0.22, 0.03, 0.025), (0, -0.275, z + 0.08), "MetalDark")
+    for z in (0.19, 0.51, 0.83):
+        b.frame("-Y", (0, -0.265, 0), 0.12, 0.05, 0.006, 0.004, "MetalDark", v=z + 0.03)
+        b.plate("-Y", (0, -0.265, 0), 0.1, 0.034, 0.002, "White", v=z + 0.03)
+    b.bolts("-Y", (0, -0.265, 0), [(0.3, 0.95)], "MetalDark", radius=0.012, depth=0.006)
+    with b.noBevel():
+        b.box((0.8, 0.51, 0.04), (0, 0.005, 0.02), "MetalDark")
     return b.build()
 
 
@@ -366,6 +540,10 @@ def makeTrashBin():
     b = MeshBuilder("TrashBin", "Prop", bevel=0.003)
     b.hollowCylinder(0.21, 0.24, 0.65, 0.012, (0, 0, 0.325), "MetalDark", floor=0.02, segments=18)
     b.hollowCylinder(0.255, 0.255, 0.03, 0.025, (0, 0, 0.645), "Metal", segments=18)
+    with b.noBevel():
+        for z in (0.2, 0.45):
+            radius = 0.24 - 0.03 * z / 0.65 + 0.004
+            b.hollowCylinder(radius, radius, 0.02, 0.006, (0, 0, z), "Metal", segments=18)
     return b.build()
 
 
@@ -381,6 +559,9 @@ def makeTrafficCone():
     b.cylinder(bottom, top, height, (0, 0, 0.03 + height / 2), "Orange", segments=18)
     for z0, z1 in ((0.2, 0.27), (0.36, 0.42)):
         b.cylinder(radiusAt(z0) + 0.004, radiusAt(z1) + 0.004, z1 - z0, (0, 0, (z0 + z1) / 2), "White", segments=18)
+    with b.noBevel():
+        b.hollowCylinder(0.155, 0.155, 0.02, 0.01, (0, 0, 0.04), "Rubber", segments=18)
+        b.cylinder(0.025, 0.025, 0.015, (0, 0, 0.585), "Orange", segments=10)
     return b.build()
 
 
@@ -389,6 +570,13 @@ def makeBucket():
     b = MeshBuilder("Bucket", "Prop", bevel=0.003)
     b.hollowCylinder(0.12, 0.15, 0.3, 0.01, (0, 0, 0.15), "Yellow", floor=0.015, segments=16)
     b.hollowCylinder(0.158, 0.158, 0.02, 0.012, (0, 0, 0.29), "Yellow", segments=16)
+    # 옆으로 눕힌 손잡이(활 모양 철사) + 귀
+    with b.noBevel():
+        points = [(math.cos(math.radians(a)) * 0.165, 0, 0.29 + math.sin(math.radians(a)) * 0.05) for a in range(0, 181, 30)]
+        for p0, p1 in zip(points, points[1:]):
+            b.tube(p0, p1, 0.005, "MetalDark", segments=4)
+        for sx in (-1, 1):
+            b.box((0.015, 0.03, 0.04), (sx * 0.158, 0, 0.27), "Yellow")
     return b.build()
 
 
@@ -398,6 +586,14 @@ def makePipeStraight():
     b.cylinder(0.1, 0.1, 2.0, (0, 0, 0), "PaintGreen", segments=16, rot=rotY(90))
     for x in (-0.98, 0.98):
         b.cylinder(0.14, 0.14, 0.04, (x, 0, 0), "MetalDark", segments=16, rot=rotY(90))
+    # 플랜지 볼트, 흐름 방향 띠와 화살표
+    for x, facing in ((-0.96, "+X"), (0.96, "-X")):
+        b.bolts(facing, (x + (0.002 if facing == "+X" else -0.002), 0, 0),
+                [(0.115 * math.cos(math.radians(a)), 0.115 * math.sin(math.radians(a))) for a in range(0, 360, 45)], "Metal", radius=0.012, depth=0.012)
+    with b.noBevel():
+        b.cylinder(0.102, 0.102, 0.12, (0.4, 0, 0), "Yellow", segments=16, rot=rotY(90))
+        b.box((0.1, 0.205, 0.02), (0.15, 0, 0), "Yellow")
+        b.box((0.04, 0.206, 0.04), (0.2, 0, 0), "Yellow", rot=rotX(45))
     return b.build()
 
 
@@ -407,6 +603,10 @@ def makePipeElbow():
     b.pipeBend(0.3, 0.1, "PaintGreen")
     b.cylinder(0.14, 0.14, 0.04, (0.3, 0.02, 0), "MetalDark", segments=16, rot=rotX(90))
     b.cylinder(0.14, 0.14, 0.04, (0.02, 0.3, 0), "MetalDark", segments=16, rot=rotY(90))
+    b.bolts("+Y", (0.3, 0.04, 0), [(0.115 * math.cos(math.radians(a)), 0.115 * math.sin(math.radians(a))) for a in range(0, 360, 45)],
+            "Metal", radius=0.012, depth=0.012)
+    b.bolts("+X", (0.04, 0.3, 0), [(0.115 * math.cos(math.radians(a)), 0.115 * math.sin(math.radians(a))) for a in range(0, 360, 45)],
+            "Metal", radius=0.012, depth=0.012)
     return b.build()
 
 
@@ -416,6 +616,14 @@ def makeDuct():
     b.box((2.0, 0.5, 0.4), (0, 0, 0), "Metal")
     for x in (-0.97, 0.97):
         b.box((0.04, 0.56, 0.46), (x, 0, 0), "MetalDark")
+    # 이음 띠, 점검구(나사 4개), 아래 매달이 철물
+    with b.noBevel():
+        b.box((0.03, 0.52, 0.42), (0.0, 0, 0), "MetalDark")
+        for x in (-0.6, 0.6):
+            b.box((0.04, 0.12, 0.06), (x, 0, 0.23), "MetalDark")
+    b.plate("-Y", (0, -0.25, 0), 0.4, 0.26, 0.006, "Metal", u=-0.45, v=0.0)
+    b.cornerBolts("-Y", (-0.45, -0.256, 0), 0.4, 0.26, "MetalDark", inset=0.025, radius=0.008, depth=0.004)
+    b.textBars("-Y", (0, -0.25, 0), 0.5, 0.03, (1.0,), "MetalDark", u=0.5, v=0.0, depth=0.002)
     return b.build()
 
 
@@ -427,6 +635,12 @@ def makeCeilingLamp():
     b.hollowCylinder(0.25, 0.06, 0.2, 0.008, (0, 0, -0.7), "MetalDark", segments=20)
     b.cylinder(0.06, 0.06, 0.01, (0, 0, -0.605), "MetalDark", segments=20)
     b.sphere(0.06, (0, 0, -0.79), "Light")
+    # 전선 고정구와 갓 아래 보호망
+    with b.noBevel():
+        b.cylinder(0.015, 0.015, 0.04, (0, 0, -0.05), "MetalDark", segments=8)
+        b.hollowCylinder(0.252, 0.252, 0.015, 0.01, (0, 0, -0.795), "MetalDark", segments=20)
+        for k in range(4):
+            b.box((0.5, 0.008, 0.008), (0, 0, -0.81), "MetalDark", rot=rotZ(k * 45))
     return b.build()
 
 
@@ -439,6 +653,14 @@ def makeSandbags():
         for i in range(count):
             x = (i - (count - 1) / 2) * bagWidth
             b.box((bagWidth - 0.02, 0.5, 0.24), (x, 0, z), "Cardboard", rot=rotZ(3 if (i + rowIndex) % 2 else -3))
+    # 자루 양끝을 묶은 귀
+    with b.noBevel():
+        for rowIndex, count in enumerate((4, 3, 2)):
+            z = 0.12 + rowIndex * 0.24
+            for i in range(count):
+                x = (i - (count - 1) / 2) * bagWidth
+                for side in (-1, 1):
+                    b.sphere(0.04, (x + side * (bagWidth / 2 - 0.02), -0.2, z), "Cardboard", segments=6, scale=(0.8, 1.0, 0.7))
     return b.build()
 
 

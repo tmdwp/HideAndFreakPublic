@@ -10,6 +10,12 @@
 - Ghoul_Attack  (한 번) 두 팔을 치켜들었다가 휘두르는 할퀴기 — 맞는 순간 ATTACK_HIT_FRAME
 - Ghoul_Twitch  (반복, 덧입히는 레이어) 가끔 경련 — 첫 프레임이 기준(0)이고 나머지는 차이만 담는다
 - Ghoul_Shriek  (한 번) 머리를 젖히고 떨며 비명
+- Ghoul_Crouch     (반복) 은신: 깊게 웅크려 앞 바닥을 짚고 숨죽임
+- Ghoul_CrouchDown (한 번) 선 자세 → 은신 자세로 웅크림
+- Ghoul_CrouchUp   (한 번) 은신 자세 → 선 자세로 일어남
+- Ghoul_Lunge      (한 번) 은신 자세에서 날아들어 덮치는 도약 공격 — 맞는 순간 LUNGE_HIT_FRAME
+- Ghoul_Peek       (정지) 로비 편의점 유리에 손을 대고 안을 들여다보는 자세
+- Ghoul_Stare      (정지) 로비에서 목을 빼고 머리를 꺾어 노려보는 자세(진열대 뒤·카메라 앞)
 일부 키는 보간 없이(CONSTANT) 찍어 뚝뚝 끊기는 움직임을 만든다.
 
 실행:
@@ -44,11 +50,14 @@ palette = {
     "GhoulTeeth":  ((0.82, 0.78, 0.66), 0.0, 0.5, 0.0),
     "GhoulClaw":   ((0.10, 0.09, 0.08), 0.2, 0.4, 0.0),
     "GhoulEye":    ((1.00, 0.28, 0.12), 0.0, 0.3, 6.0),
+    "GhoulWrap":   ((0.52, 0.47, 0.37), 0.0, 0.95, 0.0),
+    "GhoulBruise": ((0.36, 0.33, 0.33), 0.0, 0.9, 0.0),
 }
 configure(palette, "M_Char_")
 
 SKIN, JOINT, CRACK, SOCKET, TEETH, CLAW, EYE = ("GhoulSkin", "GhoulJoint", "GhoulCrack", "GhoulSocket",
                                                 "GhoulTeeth", "GhoulClaw", "GhoulEye")
+WRAP, BRUISE = "GhoulWrap", "GhoulBruise"
 
 FPS = 24
 HEIGHT_SCALE = 2.4 / 1.8   # 사람 뼈대를 2.4m로 키운다.
@@ -81,6 +90,20 @@ def makeTorso(b):
     b.boxOn("Chest", (0.012, 0.008, 0.16), b.along("Chest", 0.6) + Vector((0.05, -0.1, 0)), CRACK, rot=rotY(25))
     b.boxOn("Spine", (0.01, 0.008, 0.11), b.along("Spine", 0.6) + Vector((-0.03, -0.072, 0)), CRACK, rot=rotY(-30))
     b.boxOn("UpperChest", (0.01, 0.008, 0.1), b.along("UpperChest", 0.4) + Vector((-0.07, -0.095, 0)), CRACK, rot=rotY(10))
+    # 가죽 밑으로 비치는 갈비뼈: 가운데서 바깥 아래로 처지는 V자 막대 세 쌍
+    for t in (0.2, 0.47, 0.74):
+        center = b.along("Chest", t)
+        for sx in (-1, 1):
+            b.boxOn("Chest", (0.1, 0.014, 0.014), center + Vector((sx * 0.055, -0.094 + 0.006 * t, -0.012)), JOINT, rot=rotY(sx * 18))
+    # 척추 마디를 골반·목까지 잇고, 엉덩이·허리 쪽 틈을 더한다
+    for bone, t, back in (("Hips", 0.4, 0.09), ("Spine", 0.15, 0.072), ("Chest", 0.5, 0.108), ("UpperChest", 0.75, 0.085)):
+        b.boxOn(bone, (0.035, 0.045, 0.04), b.along(bone, t) + Vector((0, back, 0)), JOINT, rot=rotX(30))
+    b.boxOn("Neck", (0.025, 0.03, 0.03), b.along("Neck", 0.35) + Vector((0, 0.03, 0)), JOINT, rot=rotX(25))
+    b.boxOn("Hips", (0.01, 0.008, 0.12), b.along("Hips", -0.3) + Vector((0.07, -0.088, 0)), CRACK, rot=rotY(-35))
+    b.boxOn("Spine", (0.08, 0.008, 0.01), b.along("Spine", 0.2) + Vector((0.02, -0.072, 0)), CRACK, rot=rotY(8))
+    # 썩은 멍 자국
+    b.boxOn("Chest", (0.06, 0.006, 0.05), b.along("Chest", 0.3) + Vector((-0.07, -0.085, 0)), BRUISE, rot=rotY(20))
+    b.boxOn("Hips", (0.07, 0.006, 0.05), b.along("Hips", 0.1) + Vector((-0.06, 0.088, 0)), BRUISE, rot=rotY(-15))
 
 
 def makeHead(b):
@@ -95,6 +118,14 @@ def makeHead(b):
     for k in (-1, 0, 1):
         for side in (-1, 1):
             b.boxOn("Head", (0.012, 0.012, 0.02), head + Vector((side * 0.019, -0.12, -0.05 + k * 0.04)), TEETH)
+    # 눈두덩(비대칭으로 한쪽이 더 처짐), 이마에서 정수리로 번진 금, 한쪽으로 비틀린 아래턱
+    for side, droop in ((-1, 0.0), (1, -0.01)):
+        b.boxOn("Head", (0.05, 0.022, 0.016), head + Vector((side * 0.045, -0.103, 0.066 + droop)), JOINT, rot=rotY(side * -14))
+    for x, z, length, angle in ((0.02, 0.1, 0.07, 25), (0.04, 0.135, 0.05, -40), (-0.01, 0.12, 0.04, 70)):
+        b.boxOn("Head", (0.008, 0.008, length), head + Vector((x, -0.085, z)), CRACK, rot=rotX(-35) @ rotY(angle))
+    b.boxOn("Head", (0.085, 0.06, 0.03), head + Vector((0.012, -0.06, -0.125)), SKIN, rot=rotY(9))
+    for side in (-1, 1):
+        b.boxOn("Head", (0.01, 0.012, 0.022), head + Vector((0.012 + side * 0.022, -0.092, -0.108)), TEETH, rot=rotY(9))
 
 
 def makeArm(b, side):
@@ -116,6 +147,22 @@ def makeArm(b, side):
     for offset in (-0.022, 0.0, 0.022):
         center = palmEnd + Vector((sign * 0.115, offset, -0.015))
         b.boxOn(side + "Hand", (0.24, 0.013, 0.012), center, CLAW, rot=rotY(sign * 14))
+        # 손톱 마디: 뿌리의 관절 혹과 끝에서 한 번 더 아래로 꺾인 갈고리
+        b.boxOn(side + "Hand", (0.022, 0.02, 0.02), palmEnd + Vector((sign * 0.008, offset, -0.012)), JOINT)
+        tip = center + Vector((sign * 0.145, 0, -0.045))
+        b.boxOn(side + "Hand", (0.07, 0.011, 0.01), tip, CLAW, rot=rotY(sign * 40))
+    # 터진 이음선(마네킹 몸이 찢어진 자리)과 더러운 붕대: 왼쪽은 손목, 오른쪽은 위팔에만 둬 좌우를 어긋나게
+    if side == "Left":
+        b.segment("LeftLowerArm", 0.032, 0.03, WRAP, start=0.8, end=0.93, segments=6)
+        # 풀린 붕대 끝: 팔을 내려도 막대처럼 튀어나오지 않게 팔 아랫면을 따라 붙인다
+        b.boxOn("LeftLowerArm", (0.1, 0.014, 0.004), b.along("LeftLowerArm", 0.76) + Vector((0, -0.008, -0.03)), WRAP, rot=rotX(-10))
+        b.boxOn("LeftUpperArm", (0.01, 0.008, 0.09), b.along("LeftUpperArm", 0.4) + Vector((0, -0.044, 0)), CRACK, rot=rotY(60))
+    else:
+        b.segment("RightUpperArm", 0.048, 0.046, CRACK, start=0.47, end=0.53, segments=ROUND)
+        for k in range(4):
+            b.boxOn("RightUpperArm", (0.02, 0.012, 0.02), b.along("RightUpperArm", 0.5) + Vector((0, -0.04 if k % 2 else 0.04, 0.03 if k < 2 else -0.03)),
+                    SKIN, rot=rotY(30 + k * 25))
+        b.segment("RightUpperArm", 0.04, 0.038, WRAP, start=0.75, end=0.88, segments=6)
 
 
 def makeLeg(b, side):
@@ -132,6 +179,15 @@ def makeLeg(b, side):
     b.boxOn(side + "Foot", (0.06, 0.24, 0.06), Vector((heel.x, (heel.y + toe.y) / 2, 0.05)), SKIN, rot=rotX(-8))
     for offset in (-0.02, 0.0, 0.02):
         b.boxOn(side + "Toes", (0.012, 0.1, 0.012), Vector((toe.x + offset, toe.y - 0.07, 0.012)), CLAW)
+        b.boxOn(side + "Toes", (0.011, 0.035, 0.011), Vector((toe.x + offset, toe.y - 0.13, 0.004)), CLAW, rot=rotX(30))
+    # 무릎 옆 혹과 정강이 금: 왼쪽 정강이는 이음선이 터져 벌어진 틈
+    sign = 1 if side == "Left" else -1
+    b.boxOn(side + "LowerLeg", (0.03, 0.035, 0.04), b.head(side + "LowerLeg") + Vector((sign * 0.04, 0.0, -0.02)), JOINT)
+    if side == "Left":
+        b.segment("LeftLowerLeg", 0.043, 0.041, CRACK, start=0.4, end=0.45, segments=ROUND)
+    else:
+        b.boxOn("RightUpperLeg", (0.008, 0.008, 0.14), b.along("RightUpperLeg", 0.5) + Vector((-0.02, -0.055, 0)), CRACK, rot=rotY(20))
+        b.boxOn("RightUpperLeg", (0.05, 0.006, 0.07), b.along("RightUpperLeg", 0.3) + Vector((0.01, -0.058, 0)), BRUISE)
 
 
 def makeGhoul():
@@ -288,11 +344,11 @@ CRAWL_ELBOW = 45         # 팔꿈치 굽힘 (팔이 장대처럼 곧게 바닥�
 CRAWL_WRIST = 40         # 손목을 펴서 손바닥·손톱을 앞으로
 
 
-def crawlArm(pose, side, forward):
-    """기어갈 때의 앞발(팔) 자세. forward는 머리 쪽으로 딛는 각도(도)."""
+def crawlArm(pose, side, forward, down=None, elbow=None):
+    """기어갈 때의 앞발(팔) 자세. forward는 머리 쪽으로 딛는 각도(도), down·elbow를 비우면 기어가기 값을 쓴다."""
     s = 1 if side == "Left" else -1
-    pose[side + "UpperArm"] = (forward, 0, -s * CRAWL_ARM_DOWN)
-    pose[side + "LowerArm"] = (-CRAWL_ELBOW, 0, 0)
+    pose[side + "UpperArm"] = (forward, 0, -s * (CRAWL_ARM_DOWN if down is None else down))
+    pose[side + "LowerArm"] = (-(CRAWL_ELBOW if elbow is None else elbow), 0, 0)
     pose[side + "Hand"] = (CRAWL_WRIST, 0, 0)
 
 
@@ -357,12 +413,213 @@ def animateTwitch(armature):
     a.key(144, rest)
 
 
-ANIMATIONS = [animateIdle, animateStalk, animateCrawl, animateAttack, animateShriek, animateTwitch]
+# 은신 자세 골반 높이(m). 확인 미리보기: preview_ghoul_crouch_*_side.png
+CROUCH_HIPS_DROP = 0.82
+
+
+def crouchPose(breath=0.0):
+    """
+    은신 자세(도약 준비): 네 발 포식자처럼 몸통을 거의 수평으로 눕혀 바닥 가까이 낮추고, 머리는 어깨보다 낮게 앞으로 내민다.
+    앞발(팔)은 팔꿈치를 바깥으로 굽혀 어깨를 낮춘 채 짚고, 뒷다리는 몸 밑으로 깊게 접어 언제든 튀어 나갈 힘을 모은다.
+    breath(0~1)만큼 등이 부풀었다 가라앉는다.
+    """
+    pose = {
+        "Spine": (58, 0, 0), "Chest": (20 - breath * 4, 0, 0), "UpperChest": (16 - breath * 3, 0, 0),
+        "Neck": (-48 - breath * 2, 0, 0), "Head": (-28, 0, 4), "LeftShoulder": (10, 0, 0),
+    }
+    crawlArm(pose, "Left", CROUCH_ARM_FORWARD + 4, down=CROUCH_ARM_DOWN, elbow=CROUCH_ELBOW)
+    crawlArm(pose, "Right", CROUCH_ARM_FORWARD - 4, down=CROUCH_ARM_DOWN, elbow=CROUCH_ELBOW)
+    leg(pose, "Left", -92, 140, -40)
+    leg(pose, "Right", -84, 134, -42)
+    return pose
+
+
+# 은신 앞발(팔) 자세 값(도)
+CROUCH_ARM_FORWARD = 55
+CROUCH_ARM_DOWN = 40
+CROUCH_ELBOW = 55
+
+
+def animateCrouch(armature):
+    """은신 자세를 유지하며 낮게 숨 쉬고, 가끔 머리를 홱 꺾는다. (48프레임 = 2초 반복)"""
+    a = Animator(armature, "Ghoul_Crouch")
+    a.key(0, crouchPose(), hipsDrop=CROUCH_HIPS_DROP)
+    a.key(20, crouchPose(1.0), hipsDrop=CROUCH_HIPS_DROP - 0.02)
+    a.key(32, crouchPose(), hipsDrop=CROUCH_HIPS_DROP)
+    # 숨죽이고 있다가 소리 나는 쪽으로 머리만 홱 돌림 (보간 없음)
+    a.key(36, merged(crouchPose(), Head=(-32, 0, 38)), hipsDrop=CROUCH_HIPS_DROP, interpolation="CONSTANT")
+    a.key(40, crouchPose(), hipsDrop=CROUCH_HIPS_DROP)
+    a.key(48, crouchPose(), hipsDrop=CROUCH_HIPS_DROP)
+
+
+def animateCrouchDown(armature):
+    """선 자세(대기)에서 은신 자세로 빠르게 웅크린다. 끝 프레임이 Ghoul_Crouch 첫 프레임과 같다. (8프레임)"""
+    a = Animator(armature, "Ghoul_CrouchDown")
+    a.key(0, hunch(), hipsDrop=0.16)
+    # 무릎이 먼저 꺾이고 몸통·팔이 뒤따라 떨어진다
+    halfway = merged(hunch(spine=34, chest=18, upper=12, neck=-30, head=-22))
+    leg(halfway, "Left", -70, 105, -36)
+    leg(halfway, "Right", -64, 98, -36)
+    crawlArm(halfway, "Left", 10)
+    crawlArm(halfway, "Right", 4)
+    a.key(3, halfway, hipsDrop=0.52)
+    a.key(8, crouchPose(), hipsDrop=CROUCH_HIPS_DROP)
+
+
+def animateCrouchUp(armature):
+    """은신 자세에서 몸을 펴며 선 자세(대기)로 일어난다. 끝 프레임이 Ghoul_Idle 첫 프레임과 같다. (12프레임)"""
+    a = Animator(armature, "Ghoul_CrouchUp")
+    a.key(0, crouchPose(), hipsDrop=CROUCH_HIPS_DROP)
+    # 손으로 바닥을 밀어 상체부터 들고, 다리가 펴지며 살짝 솟았다 가라앉는다
+    push = merged(crouchPose(), Spine=(30, 0, 0), Chest=(14, 0, 0), Neck=(-30, 0, 0))
+    crawlArm(push, "Left", 22, down=70, elbow=55)
+    crawlArm(push, "Right", 16, down=70, elbow=55)
+    a.key(4, push, hipsDrop=0.68)
+    rise = hunch(spine=20, chest=12, upper=8)
+    a.key(9, rise, hipsDrop=0.1)
+    a.key(12, hunch(), hipsDrop=0.16)
+
+
+# 도약 공격에서 손톱이 상대를 내리찍는 프레임. (Unity의 lungeHitDelay = 전환 시간 + 이 프레임 / FPS)
+LUNGE_HIT_FRAME = 11
+
+
+def animateLunge(armature):
+    """
+    은신 자세에서 뛰어올라 위에서 덮치는 런지. (32프레임)
+    0 도약 준비 → 1 뒷다리에 힘을 싣고 어깨·머리를 더 낮춤 → 3 뒷다리를 차며 몸을 앞으로 쭉 폄
+    → 6 정점: 몸통을 편 채 고개를 들고 두 팔을 머리 앞 위로 뻗음 → 9 내려오며 팔을 앞 아래로 내뻗고 다리를 앞으로 끌어옴
+    → LUNGE_HIT_FRAME 착지하며 앞발 손톱으로 내리찍음 → 17 몸을 접어 짓누름 → 32 대기 자세.
+    실제 이동(뛰어올랐다 떨어지는 약 0.45초 = 11프레임)은 게임 코드가 하므로 골반은 앞·위로 밀지 않는다.
+    """
+    a = Animator(armature, "Ghoul_Lunge")
+    a.key(0, crouchPose(), hipsDrop=CROUCH_HIPS_DROP)
+
+    coil = merged(crouchPose(), Spine=(62, 0, 0), Neck=(-54, 0, 0), Head=(-30, 0, 0))
+    crawlArm(coil, "Left", CROUCH_ARM_FORWARD, down=CROUCH_ARM_DOWN - 4, elbow=CROUCH_ELBOW + 6)
+    crawlArm(coil, "Right", CROUCH_ARM_FORWARD - 6, down=CROUCH_ARM_DOWN - 4, elbow=CROUCH_ELBOW + 6)
+    leg(coil, "Left", -100, 148, -44)
+    leg(coil, "Right", -92, 142, -46)
+    a.key(1, coil, hipsDrop=CROUCH_HIPS_DROP + 0.03, interpolation="LINEAR")
+
+    # 뒷다리를 차는 순간: 다리가 뒤로 펴지고 팔은 앞으로 내뻗기 시작한다
+    push = {
+        "Spine": (80, 0, 0), "Chest": (10, 0, 0), "UpperChest": (4, 0, 0),
+        "Neck": (-55, 0, 0), "Head": (-30, 0, 0), "LeftShoulder": (12, 0, 0),
+    }
+    crawlArm(push, "Left", 62, down=40, elbow=20)
+    crawlArm(push, "Right", 58, down=40, elbow=20)
+    leg(push, "Left", 50, 35, 30)
+    leg(push, "Right", 38, 55, 25)
+    a.key(3, push, hipsDrop=LUNGE_FLIGHT_DROP + 0.08, interpolation="LINEAR")
+
+    # 정점: 몸을 쭉 편 채 고개를 들고, 두 팔을 머리 앞 위로 치켜 뻗어 위에서 덮칠 준비를 한다
+    peak = {
+        "Spine": (78, 0, 0), "Chest": (4, 0, 0), "UpperChest": (-4, 0, 0),
+        "Neck": (-50, 0, 0), "Head": (-30, 0, 0), "LeftShoulder": (16, 0, 0),
+    }
+    crawlArm(peak, "Left", 96, down=4, elbow=10)
+    crawlArm(peak, "Right", 92, down=4, elbow=10)
+    leg(peak, "Left", 55, 25, 40)
+    leg(peak, "Right", 45, 40, 35)
+    a.key(6, peak, hipsDrop=LUNGE_FLIGHT_DROP)
+
+    # 내려오는 중: 몸통이 앞으로 기울고, 팔을 앞 아래로 내뻗어 손톱을 세우며, 뒷다리를 앞으로 끌어온다
+    descend = {
+        "Spine": (92, 0, 0), "Chest": (12, 0, 0), "UpperChest": (6, 0, 0),
+        "Neck": (-60, 0, 0), "Head": (-32, 0, 0), "LeftShoulder": (12, 0, 0),
+    }
+    crawlArm(descend, "Left", 68, down=36, elbow=8)
+    crawlArm(descend, "Right", 64, down=36, elbow=8)
+    leg(descend, "Left", 30, 80, 20)
+    leg(descend, "Right", 20, 90, 15)
+    a.key(9, descend, hipsDrop=LUNGE_FLIGHT_DROP, interpolation="LINEAR")
+
+    # 착지하며 내리찍기: 앞발이 앞 바닥을 찍고, 뒷다리는 몸 밑으로 끌려온다
+    strike = {
+        "Spine": (64, 0, 0), "Chest": (22, 0, 0), "UpperChest": (14, 0, 0),
+        "Neck": (-56, 0, 0), "Head": (-34, 0, 0), "LeftShoulder": (10, 0, 0),
+    }
+    crawlArm(strike, "Left", 58, down=62, elbow=22)
+    crawlArm(strike, "Right", 54, down=62, elbow=22)
+    leg(strike, "Left", -60, 120, -30)
+    leg(strike, "Right", -45, 110, -25)
+    a.key(LUNGE_HIT_FRAME, strike, hipsDrop=0.48)
+
+    pin = merged(crouchPose(), Spine=(62, 0, 0), Neck=(-54, 0, 0), Head=(-22, 0, 10))
+    crawlArm(pin, "Left", 62, down=40, elbow=45)
+    crawlArm(pin, "Right", 58, down=40, elbow=45)
+    a.key(17, pin, hipsDrop=CROUCH_HIPS_DROP - 0.04)
+    a.key(32, hunch(), hipsDrop=0.16)
+
+
+# 런지 비행 중 골반 높이(m). 낮고 길게 날아가도록 서 있을 때보다 낮다.
+LUNGE_FLIGHT_DROP = 0.45
+
+
+def peekPose():
+    """
+    로비 편의점 유리 밖에서 안을 들여다보는 정지 자세: 상체를 앞으로 기울여 얼굴을 유리에 바짝 대고,
+    두 팔을 얼굴 양옆 높이로 들어 손바닥과 손톱을 유리에 붙인다. 머리는 한쪽으로 꺾어 섬뜩하게 한다.
+    """
+    pose = hunch(spine=PEEK_SPINE, chest=8, upper=2, neck=-24, head=-14, headTilt=PEEK_HEAD_TILT, shoulderUp=16)
+    # 위팔은 옆으로 벌리고 아래팔은 위로 세워(LowerArm X) 손이 얼굴 양옆 위에서 유리를 짚게 한다. 오른팔은 조금 낮춰 비대칭으로.
+    for side, s, lower in (("Left", 1, 0), ("Right", -1, 5)):
+        pose[side + "UpperArm"] = (PEEK_ARM_DOWN - lower, 0, s * PEEK_ARM_FORWARD)
+        pose[side + "LowerArm"] = (PEEK_FOREARM_UP - lower, 0, 0)
+        pose[side + "Hand"] = (PEEK_WRIST, 0, 0)
+    leg(pose, "Left", -14, 24, -10)
+    leg(pose, "Right", -6, 18, -12)
+    return pose
+
+
+# 들여다보기 자세 값(도). 확인 미리보기: preview_ghoul_peek_0*.png
+PEEK_SPINE = 34          # 상체를 유리 쪽으로 기울임
+PEEK_HEAD_TILT = 24      # 한쪽으로 꺾은 머리
+PEEK_ARM_DOWN = -25      # 벌린 위팔을 어깨보다 조금 내림
+PEEK_ARM_FORWARD = -15   # 위팔을 앞으로 내미는 정도(작을수록 옆으로 벌림)
+PEEK_FOREARM_UP = 95     # 아래팔을 위로 세움
+PEEK_WRIST = 40          # 손목을 젖혀 손바닥을 유리에 댐
+
+
+def animatePeek(armature):
+    """들여다보기 정지 자세. 움직임 없이 같은 자세를 두 번 찍어 1초짜리 반복 클립으로 만든다."""
+    a = Animator(armature, "Ghoul_Peek")
+    a.key(0, peekPose(), hipsDrop=0.08, hipsForward=0.04)
+    a.key(24, peekPose(), hipsDrop=0.08, hipsForward=0.04)
+
+
+def starePose():
+    """
+    로비에서 진열대 뒤로 머리만 내밀거나 카메라 바로 앞에 나타날 때의 정지 자세:
+    목을 앞으로 길게 빼고 머리를 크게 꺾어 노려보며, 긴 팔은 기본 구부정 자세처럼 축 늘어뜨린다.
+    """
+    return hunch(spine=28, chest=14, upper=10, neck=STARE_NECK, head=-10, headTilt=STARE_HEAD_TILT, shoulderUp=18)
+
+
+# 노려보기 자세 값(도). 확인 미리보기: preview_ghoul_stare_0*.png
+STARE_NECK = -34       # 목을 앞으로 빼는 정도
+STARE_HEAD_TILT = 40   # 머리를 옆으로 꺾는 정도
+
+
+def animateStare(armature):
+    """노려보기 정지 자세. 같은 자세를 두 번 찍어 1초짜리 반복 클립으로 만든다."""
+    a = Animator(armature, "Ghoul_Stare")
+    a.key(0, starePose(), hipsDrop=0.14)
+    a.key(24, starePose(), hipsDrop=0.14)
+
+
+ANIMATIONS = [animateIdle, animateStalk, animateCrawl, animateAttack, animateShriek, animateTwitch,
+              animateCrouch, animateCrouchDown, animateCrouchUp, animateLunge, animatePeek, animateStare]
 
 # 미리보기로 찍을 (액션, 프레임)
 PREVIEW_SHOTS = [("Ghoul_Idle", 0, 35), ("Ghoul_Stalk", 0, 35), ("Ghoul_Crawl", 0, 35), ("Ghoul_Crawl", 0, 90),
                  ("Ghoul_Crawl", 4, 90), ("Ghoul_Crawl", 8, 90), ("Ghoul_Attack", 7, 35),
-                 ("Ghoul_Attack", ATTACK_HIT_FRAME, 35), ("Ghoul_Shriek", 10, 35), ("Ghoul_Twitch", 40, 35)]
+                 ("Ghoul_Attack", ATTACK_HIT_FRAME, 35), ("Ghoul_Shriek", 10, 35), ("Ghoul_Twitch", 40, 35),
+                 ("Ghoul_Crouch", 0, 35), ("Ghoul_Crouch", 0, 90), ("Ghoul_CrouchDown", 3, 90), ("Ghoul_CrouchUp", 4, 90),
+                 ("Ghoul_Lunge", 3, 90), ("Ghoul_Lunge", 6, 90), ("Ghoul_Lunge", 9, 90), ("Ghoul_Lunge", LUNGE_HIT_FRAME, 90),
+                 ("Ghoul_Lunge", 17, 90), ("Ghoul_Lunge", 6, 35), ("Ghoul_Peek", 0, 0), ("Ghoul_Peek", 0, 90),
+                 ("Ghoul_Stare", 0, 0), ("Ghoul_Stare", 0, 90)]
 
 
 # =============================================================== 실행

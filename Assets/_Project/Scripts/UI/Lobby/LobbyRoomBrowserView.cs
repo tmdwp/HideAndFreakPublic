@@ -19,7 +19,11 @@ namespace GuardVsMannequin.UI
         [SerializeField] private Toggle hideMissingMapToggle;
         [SerializeField] private Text statusText;
 
+        [Tooltip("화면을 열어 둔 동안 목록을 다시 찾는 간격(초). 0이면 자동으로 찾지 않는다.")]
+        [SerializeField] private float autoRefreshInterval = 20f;
+
         private readonly List<GameObject> rows = new();
+        private float nextAutoRefreshTime;
         private ILobbyNavigator navigator;
         private IRoomBrowser browser;
         private bool isQuickJoinPending;
@@ -61,6 +65,20 @@ namespace GuardVsMannequin.UI
             openButton.interactable = session.CanOpenSteamMenu();
             refreshButton.interactable = session.CanConnectSteam() && (browser == null || !browser.IsRefreshing);
             quickJoinButton.interactable = session.CanConnectSteam() && !isQuickJoinPending;
+            AutoRefresh(session);
+        }
+
+        /// <summary>
+        /// 화면을 오래 열어 두면 목록이 낡아 찬 방을 누르게 되므로, 목록 화면이 보이는 동안만 일정 간격으로 다시 찾는다.
+        /// </summary>
+        private void AutoRefresh(ISessionService session)
+        {
+            if (autoRefreshInterval <= 0f || !listContent.gameObject.activeInHierarchy || !session.CanConnectSteam())
+                return;
+            if (Time.unscaledTime < nextAutoRefreshTime || (browser != null && browser.IsRefreshing))
+                return;
+            nextAutoRefreshTime = Time.unscaledTime + autoRefreshInterval;
+            StartRefresh();
         }
 
         /// <summary>이전 목록은 낡았을 수 있어 열 때마다 새로 찾는다.</summary>
@@ -81,6 +99,8 @@ namespace GuardVsMannequin.UI
             if (browser == null || !browser.Refresh())
                 return false;
 
+            // 직접 새로고침했으면 곧바로 자동 검색이 겹치지 않게 다음 시각을 미룬다.
+            nextAutoRefreshTime = Time.unscaledTime + autoRefreshInterval;
             statusText.text = Loc.Get("lobby.browse.searching");
             return true;
         }
@@ -176,22 +196,39 @@ namespace GuardVsMannequin.UI
         {
             Button row = Instantiate(rowTemplate, listContent);
             row.gameObject.SetActive(true);
-            Text label = row.GetComponentInChildren<Text>();
-            label.supportRichText = false;
-            label.text = Describe(room);
+
+            string roomName = room.name.Length > 0 ? room.name : Loc.Get("lobby.browse.unnamed");
+            string mapName = ModService.Instance.FindMapName(room.mapId) ?? Loc.Get(room.mapId.Length > 0 ? "lobby.browse.modMap" : "lobby.browse.unknownMap");
+            string players = $"{room.playerCount}/{room.maxPlayers}";
+            string ping = room.pingMs >= 0 ? $"{room.pingMs}ms" : "-";
+            string tags = DescribeTags(room);
+
+            // 칸이 나뉜 줄이 없는 예전 프리팹은 한 줄 글자로 보여 준다.
+            if (row.TryGetComponent(out RoomListRowView columns))
+            {
+                columns.SetRoom(roomName, mapName, players, ping, tags, room.hasMap && !RoomListingRules.IsFull(room));
+            }
+            else
+            {
+                Text label = row.GetComponentInChildren<Text>();
+                label.supportRichText = false;
+                label.text = $"{roomName}   |   {mapName}   |   {players}   |   {ping}  {tags}";
+            }
             row.onClick.AddListener(() => Join(room));
             rows.Add(row.gameObject);
         }
 
-        /// <summary>들어가기 전에 판단하도록 이름·맵·인원·핑과 암호 표시를 한 줄에 보여 준다.</summary>
-        private static string Describe(RoomListing room)
+        /// <summary>들어가기 전에 판단하도록 암호·모드 없음·가득 참을 짧은 표시로 모은다.</summary>
+        private static string DescribeTags(RoomListing room)
         {
-            string roomName = room.name.Length > 0 ? room.name : Loc.Get("lobby.browse.unnamed");
-            string mapName = ModService.Instance.FindMapName(room.mapId) ?? Loc.Get(room.mapId.Length > 0 ? "lobby.browse.modMap" : "lobby.browse.unknownMap");
-            string ping = room.pingMs >= 0 ? $"{room.pingMs}ms" : "-";
-            string passwordTag = room.hasPassword ? "  " + Loc.Get("lobby.browse.tag.password") : string.Empty;
-            string missingMapTag = room.hasMap ? string.Empty : "  " + Loc.Get("lobby.browse.tag.missingMap");
-            return $"{roomName}   |   {mapName}   |   {room.playerCount}/{room.maxPlayers}   |   {ping}{passwordTag}{missingMapTag}";
+            var tags = new List<string>(3);
+            if (room.hasPassword)
+                tags.Add(Loc.Get("lobby.browse.tag.password"));
+            if (!room.hasMap)
+                tags.Add(Loc.Get("lobby.browse.tag.missingMap"));
+            if (RoomListingRules.IsFull(room))
+                tags.Add(Loc.Get("lobby.browse.tag.full"));
+            return string.Join(" ", tags);
         }
     }
 }

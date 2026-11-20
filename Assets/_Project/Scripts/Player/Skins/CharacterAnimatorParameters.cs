@@ -15,6 +15,8 @@ namespace GuardVsMannequin.Player
         public const string Emote = "Emote";
         public const string EmoteId = "EmoteId";
         public const string Interact = "Interact";
+        public const string Crouch = "Crouch";
+        public const string Lunge = "Lunge";
 
         /// <summary>번호마다 상수를 따로 두지 않도록 이름 규칙으로 만든다.</summary>
         public static string EmoteTrigger(int emoteId) => Emote + emoteId;

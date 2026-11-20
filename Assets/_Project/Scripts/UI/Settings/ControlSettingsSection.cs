@@ -82,10 +82,18 @@ namespace GuardVsMannequin.UI
         }
 
         /// <summary>
-        /// 저장해야 게임 중인 입력에도 새 키가 적용되므로 바뀔 때마다 저장한다.
+        /// 한 키가 두 동작에 묶이면 하나가 먹히지 않으므로 겹친 동작과 키를 맞바꾸고, 게임 중인 입력에도 적용되도록 바로 저장한다.
         /// </summary>
-        private void OnBindingEdited()
+        private void OnBindingEdited(RebindRowView changedRow, string previousPath)
         {
+            if (KeyBindingCatalog.TryFind(changedRow.ActionName, changedRow.PartName, out KeyBindingCatalog.Entry changedEntry)
+                && BindingConflictResolver.TrySwap(editingActions, changedEntry, previousPath, out KeyBindingCatalog.Entry swappedEntry))
+            {
+                RebindRowView swappedRow = System.Array.Find(rebindRows, row =>
+                    row.ActionName == swappedEntry.actionName && (string.IsNullOrEmpty(row.PartName) ? null : row.PartName) == swappedEntry.partName);
+                if (swappedRow != null)
+                    swappedRow.FlashSwapped();
+            }
             OptionsStore.SaveBindings(editingActions);
         }
     }

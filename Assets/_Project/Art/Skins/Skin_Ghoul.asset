@@ -20,6 +20,7 @@ MonoBehaviour:
   fireAnimationEvents: 0
   keepRootBoneInPlace: 0
   attackHitDelay: 0.5083333
+  lungeHitDelay: 0.5083333
   weaponGrip:
     followHandRotation: 0
     handPositionOffset: {x: 0, y: 0.02, z: 0.06}
